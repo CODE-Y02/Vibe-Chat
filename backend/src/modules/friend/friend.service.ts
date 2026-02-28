@@ -86,6 +86,14 @@ export class FriendService {
 
         return friends.map(f => (f.userId === userId ? f.friend : f.user));
     }
+
+    async listRequests(userId: string): Promise<User[]> {
+        const requests = await prisma.friend.findMany({
+            where: { friendId: userId, status: 'PENDING' },
+            include: { user: true },
+        });
+        return requests.map(r => r.user);
+    }
 }
 
 export const friendService = new FriendService();

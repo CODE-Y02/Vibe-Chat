@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { sendRequest, acceptRequest, rejectRequest, removeFriend, listFriends } from '../modules/friend/friend.controller.js';
+import { sendRequest, acceptRequest, rejectRequest, removeFriend, listFriends, listRequests } from '../modules/friend/friend.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import { Env } from '../types.js';
 
@@ -73,10 +73,17 @@ const listFriendsRoute = createRoute({
     responses: { 200: { description: 'List of friends' } },
 });
 
+const listRequestsRoute = createRoute({
+    method: 'get',
+    path: '/requests',
+    responses: { 200: { description: 'List of friend requests' } },
+});
+
 friendRoutes.openapi(sendRequestRoute, sendRequest);
 friendRoutes.openapi(acceptRequestRoute, acceptRequest);
 friendRoutes.openapi(rejectRequestRoute, rejectRequest);
 friendRoutes.openapi(removeFriendRoute, removeFriend);
 friendRoutes.openapi(listFriendsRoute, listFriends);
+friendRoutes.openapi(listRequestsRoute, listRequests);
 
 export default friendRoutes;

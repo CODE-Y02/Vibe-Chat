@@ -18,4 +18,33 @@ export const registerChatHandlers = (io: Server, socket: AuthenticatedSocket) =>
             io.to(peerSocket).emit('typing', { from: user.userId, isTyping });
         }
     });
+
+    socket.on('call-user', async ({ to, signalData, fromName, fromAvatar }: { to: string, signalData: any, fromName: string, fromAvatar: string }) => {
+        const peerSocket = await matchmakingService.getUserSocket(to);
+        if (peerSocket) {
+            io.to(peerSocket).emit('call-made', {
+                offer: signalData,
+                from: user.userId,
+                fromName,
+                fromAvatar
+            });
+        }
+    });
+
+    socket.on('make-answer', async ({ to, answer }: { to: string, answer: any }) => {
+        const peerSocket = await matchmakingService.getUserSocket(to);
+        if (peerSocket) {
+            io.to(peerSocket).emit('answer-made', {
+                answer,
+                from: user.userId
+            });
+        }
+    });
+
+    socket.on('reject-call', async ({ to }: { to: string }) => {
+        const peerSocket = await matchmakingService.getUserSocket(to);
+        if (peerSocket) {
+            io.to(peerSocket).emit('call-rejected', { from: user.userId });
+        }
+    });
 };

@@ -35,3 +35,9 @@ export const listFriends = async (c: Context<Env>) => {
     const result = await friendService.listFriends(user.userId);
     return c.json(result);
 };
+
+export const listRequests = async (c: Context<Env>) => {
+    const user = c.get('user');
+    const result = await friendService.listRequests(user.userId);
+    return c.json(result);
+};
