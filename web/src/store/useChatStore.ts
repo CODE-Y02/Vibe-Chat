@@ -1,0 +1,60 @@
+import { create } from 'zustand';
+
+export interface Message {
+    id: string;
+    senderId: string;
+    text: string;
+    timestamp: number;
+}
+
+interface ChatSession {
+    roomId: string | null;
+    strangerId: string | null;
+    isMatched: boolean;
+    messages: Message[];
+    peerName?: string;
+    peerAvatar?: string;
+}
+
+interface IncomingCall {
+    from: string;
+    fromName: string;
+    fromAvatar: string;
+    offer: any;
+}
+
+interface ChatState {
+    session: ChatSession;
+    isSearching: boolean;
+    incomingCall: IncomingCall | null;
+    setMatched: (roomId: string, strangerId: string, peerName?: string, peerAvatar?: string) => void;
+    setSearching: (searching: boolean) => void;
+    addMessage: (message: Message) => void;
+    setIncomingCall: (call: IncomingCall | null) => void;
+    disconnect: () => void;
+}
+
+export const useChatStore = create<ChatState>((set) => ({
+    session: {
+        roomId: null,
+        strangerId: null,
+        isMatched: false,
+        messages: []
+    },
+    isSearching: false,
+    incomingCall: null,
+    setMatched: (roomId, strangerId, peerName, peerAvatar) => set((state) => ({
+        session: { ...state.session, roomId, strangerId, isMatched: true, peerName, peerAvatar },
+        isSearching: false
+    })),
+    setSearching: (searching) => set({ isSearching: searching }),
+    setIncomingCall: (call) => set({ incomingCall: call }),
+    addMessage: (message) => set((state) => ({
+        session: { ...state.session, messages: [...state.session.messages, message] }
+    })),
+    disconnect: () => set({
+        session: { roomId: null, strangerId: null, isMatched: false, messages: [] },
+        isSearching: false,
+        incomingCall: null
+    })
+}));
