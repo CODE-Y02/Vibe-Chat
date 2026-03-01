@@ -19,11 +19,20 @@ export const setupSockets = (io: Server) => {
     io.adapter(createAdapter(pubClient, subClient));
     io.use(async (socket, next) => {
         const token = socket.handshake.auth.token;
-        if (!token) return next(new Error('Authentication error'));
+        console.log(`[Socket Auth Loop] Attempting connection for socket: ${socket.id}`);
+
+        if (!token) {
+            console.error(`[Socket Auth Error] No token provided for socket: ${socket.id}`);
+            return next(new Error('Authentication error'));
+        }
 
         const payload = verifyAccessToken(token);
-        if (!payload) return next(new Error('Invalid token'));
+        if (!payload) {
+            console.error(`[Socket Auth Error] Invalid/Expired token for socket: ${socket.id}`);
+            return next(new Error('Invalid token'));
+        }
 
+        console.log(`[Socket Auth Success] User ${payload.userId} authenticated for socket: ${socket.id}`);
         (socket as AuthenticatedSocket).user = payload;
         next();
     });

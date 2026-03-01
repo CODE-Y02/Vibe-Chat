@@ -49,6 +49,17 @@ export default function ChatPage() {
 
     // Main Socket Management
     useEffect(() => {
+        if (status !== 'authenticated' || !sessionData?.accessToken) return;
+
+        console.log("[Client Auth Ready] Setting socket token and connecting...");
+        // Ensure socket has the latest token from the session before connecting
+        socket.auth = { token: sessionData.accessToken };
+
+        // Disconnect first to ensure we aren't using an old session/handshake
+        if (socket.connected) {
+            socket.disconnect();
+        }
+
         socket.connect();
 
         // 🟢 High-Scale Heartbeat (Point #4)

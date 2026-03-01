@@ -24,5 +24,5 @@ socket.on("disconnect", () => {
 
 socket.on("connect_error", (error) => {
     useSocketStore.getState().setStatus("error");
-    console.error("Socket connection error:", error);
+    console.error("Socket error [Auth Check]:", error.message, "| Has Token:", !!(socket.auth as any)?.token);
 });
