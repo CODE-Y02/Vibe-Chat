@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useChatStore } from '@/store/useChatStore';
 import { socket } from '@/lib/socket';
 import { VideoPanel } from '@/components/chat/VideoPanel';
@@ -23,8 +23,11 @@ export default function ChatPage() {
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [isBlurred, setIsBlurred] = useState(true);
 
+    // Refs for intervals to prevent leaks
+    const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
+    const retryInterval = useRef<NodeJS.Timeout | null>(null);
+
     const handleMatch = useCallback((data: { peerId: string, peerName?: string, peerAvatar?: string }) => {
-        // For anonymous rooms, we don't store or show the peer's actual identity
         setMatched("anonymous-room", data.peerId, "Stranger", "");
         setIsBlurred(true);
         toast({ title: 'Matched!', description: 'Say hello to your new vibe buddy.' });
@@ -34,16 +37,35 @@ export default function ChatPage() {
         toast({ title: 'Stranger disconnected', description: 'They left the vibe.' });
         disconnect();
         webrtc.cleanup();
+        setIsBlurred(true);
     }, [disconnect, toast]);
 
+    // Handle Auth redirect
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login');
         }
     }, [status, router]);
 
+    // Main Socket Management
     useEffect(() => {
         socket.connect();
+
+        // 🟢 High-Scale Heartbeat (Point #4)
+        // Keeps the user "active" in Redis so the backend doesn't clean them up as a zombie.
+        heartbeatInterval.current = setInterval(() => {
+            if (socket.connected) {
+                socket.emit('heartbeat');
+            }
+        }, 15000); // Every 15 seconds
+
+        // 🟠 Auto-Matchmaking Retry (Point #2)
+        // If the server restarts or a race condition happens, this "pokes" the Lua script again.
+        retryInterval.current = setInterval(() => {
+            if (isSearching && !session.isMatched && socket.connected) {
+                socket.emit('joinQueue');
+            }
+        }, 5000); // Every 5 seconds
 
         socket.on('matched', handleMatch);
         socket.on('peerDisconnected', handlePeerDisconnect);
@@ -79,26 +101,10 @@ export default function ChatPage() {
             });
         });
 
-        // If we are already matched (direct call initiated or accepted)
-        if (session.isMatched && session.roomId === "direct-room") {
-            const initiateFriendCall = async () => {
-                if (incomingCall) {
-                    // We are the receiver, handle the offer already stored
-                    await webrtc.handleOffer(incomingCall.from, incomingCall.offer);
-                } else {
-                    // We are the caller, send invitation
-                    socket.emit('call-user', {
-                        to: session.strangerId,
-                        fromName: sessionData?.user?.name || "Someone",
-                        fromAvatar: sessionData?.user?.image || "",
-                        signalData: null
-                    });
-                }
-            };
-            initiateFriendCall();
-        }
-
         return () => {
+            if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
+            if (retryInterval.current) clearInterval(retryInterval.current);
+
             socket.off('matched');
             socket.off('peerDisconnected');
             socket.off('call-rejected');
@@ -111,8 +117,9 @@ export default function ChatPage() {
             disconnect();
             webrtc.cleanup();
         };
-    }, [handleMatch, handlePeerDisconnect, addMessage, disconnect, session.isMatched, session.roomId, session.strangerId, incomingCall, sessionData, router, toast, status]);
+    }, [handleMatch, handlePeerDisconnect, addMessage, disconnect, isSearching, session.isMatched, sessionData, router, toast, status]);
 
+    // Audio/Video Toggles
     useEffect(() => {
         webrtc.toggleAudio(audioEnabled);
     }, [audioEnabled]);
@@ -133,6 +140,7 @@ export default function ChatPage() {
         }
         disconnect();
         webrtc.cleanup();
+        setIsBlurred(true);
         handleStart();
     };
 
@@ -150,7 +158,9 @@ export default function ChatPage() {
 
     const initiateCall = async () => {
         if (session.strangerId) {
+            // Signal the peer to reveal as well
             await webrtc.initiateOffer(session.strangerId);
+            setIsBlurred(false);
         }
     };
 
@@ -182,7 +192,10 @@ export default function ChatPage() {
                 </div>
 
                 <div className="pointer-events-auto">
-                    <Button onClick={isSearching ? () => { socket.emit('leaveQueue'); disconnect(); } : handleSkip} disabled={!session.isMatched && !isSearching} className="rounded-full px-8 h-12 font-black uppercase tracking-widest text-xs bg-white text-black hover:scale-105 active:scale-95 shadow-2xl transition-all">
+                    <Button
+                        onClick={isSearching ? () => { socket.emit('leaveQueue'); disconnect(); } : handleSkip}
+                        className="rounded-full px-8 h-12 font-black uppercase tracking-widest text-xs bg-white text-black hover:scale-105 active:scale-95 shadow-2xl transition-all disabled:opacity-50"
+                    >
                         {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : "Next Match"}
                     </Button>
                 </div>
@@ -219,15 +232,14 @@ export default function ChatPage() {
                                 <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
                                     <Sparkles className="w-8 h-8 text-green-500" />
                                 </div>
-                                <h3 className="text-2xl font-black mb-2 uppercase tracking-tight">
-                                    {session.peerName || "Stranger"} Connected
-                                </h3>
-                                <p className="text-white/50 font-medium mb-8">
-                                    {session.roomId === "direct-room" ? "The vibe is waiting for you." : "Ready to reveal the vibe?"}
-                                </p>
-                                <Button onClick={() => { setIsBlurred(false); initiateCall(); }} size="lg" className="rounded-full shadow-2xl px-12 h-16 gap-3 font-black text-lg bg-primary hover:scale-105 active:scale-95 transition-all">
+                                <h3 className="text-2xl font-black mb-2 uppercase tracking-tight">Connected</h3>
+                                <p className="text-white/50 font-medium mb-8">Ready to reveal the vibe with a stranger?</p>
+                                <Button onClick={initiateCall} size="lg" className="rounded-full shadow-2xl px-12 h-16 gap-3 font-black text-lg bg-primary hover:scale-105 active:scale-95 transition-all">
                                     <Eye className="w-6 h-6" /> REVEAL CHAT
                                 </Button>
+                                <button onClick={handleSkip} className="mt-8 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">
+                                    Skip this vibe
+                                </button>
                             </div>
                         </div>
                     )}
@@ -237,7 +249,7 @@ export default function ChatPage() {
                             variant="ghost"
                             size="icon"
                             onClick={handleReport}
-                            className="absolute bottom-10 right-10 z-30 bg-white/5 hover:bg-red-500/20 text-white/50 hover:text-red-500 rounded-full h-12 w-12 transition-all border border-white/5 backdrop-blur-md"
+                            className="absolute bottom-10 right-10 z-30 bg-white/5 hover:bg-red-50/20 text-white/50 hover:text-red-500 rounded-full h-12 w-12 transition-all border border-white/5 backdrop-blur-md"
                             title="Report User"
                         >
                             <Flag className="w-5 h-5" />
