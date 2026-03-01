@@ -21,11 +21,10 @@ export default function AuthPage() {
         setLoading(true);
 
         if (isLogin) {
-            // Login: username OR email + password
+            // Login: email + password (as requested, only email/pass)
             try {
                 await login({
-                    username: formData.username || undefined,
-                    email: formData.email || undefined,
+                    email: formData.email,
                     password: formData.password,
                 });
             } catch (err: any) {
@@ -35,14 +34,14 @@ export default function AuthPage() {
                 setLoading(false);
             }
         } else {
-            // Signup: call backend directly then auto-login
+            // Signup: username, email, password
             try {
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signup`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        username: formData.username || undefined,
-                        email: formData.email || undefined,
+                        username: formData.username,
+                        email: formData.email,
                         password: formData.password,
                     }),
                 });
@@ -55,8 +54,7 @@ export default function AuthPage() {
 
                 // Auto-login after successful signup
                 await login({
-                    username: formData.username || undefined,
-                    email: formData.email || undefined,
+                    email: formData.email,
                     password: formData.password,
                 });
             } catch (err: any) {
@@ -95,21 +93,31 @@ export default function AuthPage() {
                 <Card className="p-8 bg-white/5 border-white/10 backdrop-blur-2xl shadow-2xl rounded-[32px]">
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="space-y-4">
-                            <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                                <Input
-                                    placeholder="Username"
-                                    className="pl-12 h-14 rounded-2xl bg-white/5 border-white/5 focus:border-primary/50 transition-all text-white placeholder:text-white/20"
-                                    value={formData.username}
-                                    onChange={e => setFormData({ ...formData, username: e.target.value })}
-                                />
-                            </div>
+                            {!isLogin && (
+                                <div className="relative">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                                    <Input
+                                        name="username"
+                                        id="username"
+                                        placeholder="Username"
+                                        autoComplete="username"
+                                        required={!isLogin}
+                                        className="pl-12 h-14 rounded-2xl bg-white/5 border-white/5 focus:border-primary/50 transition-all text-white placeholder:text-white/20"
+                                        value={formData.username}
+                                        onChange={e => setFormData({ ...formData, username: e.target.value })}
+                                    />
+                                </div>
+                            )}
 
                             <div className="relative">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                                 <Input
                                     type="email"
+                                    name="email"
+                                    id="email"
                                     placeholder="Email address"
+                                    autoComplete="email"
+                                    required
                                     className="pl-12 h-14 rounded-2xl bg-white/5 border-white/5 focus:border-primary/50 transition-all text-white placeholder:text-white/20"
                                     value={formData.email}
                                     onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -120,7 +128,10 @@ export default function AuthPage() {
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                                 <Input
                                     type="password"
+                                    name="password"
+                                    id="password"
                                     placeholder="Password"
+                                    autoComplete={isLogin ? "current-password" : "new-password"}
                                     className="pl-12 h-14 rounded-2xl bg-white/5 border-white/5 focus:border-primary/50 transition-all text-white placeholder:text-white/20"
                                     required
                                     value={formData.password}

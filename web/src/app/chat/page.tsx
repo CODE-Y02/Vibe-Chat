@@ -212,116 +212,151 @@ export default function ChatPage() {
     };
 
     return (
-        <div className="h-screen flex flex-col bg-[#050505] text-white selection:bg-primary/30 overflow-hidden">
-            {/* Dynamic Header */}
-            <div className="absolute top-0 inset-x-0 h-20 z-40 px-6 flex items-center justify-between pointer-events-none">
-                <div className="pointer-events-auto">
-                    <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full bg-white/5 hover:bg-white/10 border border-white/5 h-12 w-12 transition-all">
-                        <X className="w-5 h-5 text-white/70" />
+        <div className="h-screen w-full flex flex-col bg-[#050505] text-white selection:bg-primary/30 overflow-hidden relative">
+            {/* 1. ULTRA-RESPONSIVE HEADER */}
+            <header className="absolute top-0 inset-x-0 h-14 md:h-24 z-50 px-2 sm:px-4 md:px-8 flex items-center gap-2 pointer-events-none">
+                {/* Left: Close */}
+                <div className="pointer-events-auto flex justify-start">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleClose}
+                        className="rounded-full bg-black/40 backdrop-blur-3xl border border-white/10 h-9 w-9 md:h-14 md:w-14 hover:bg-white/10 transition-all shrink-0 shadow-2xl"
+                    >
+                        <X className="w-4 h-4 md:w-6 md:h-6 text-white" />
                     </Button>
                 </div>
 
-                <div className="bg-black/40 backdrop-blur-3xl border border-white/10 px-6 py-2.5 rounded-full flex items-center gap-4 pointer-events-auto">
-                    <div className="flex items-center gap-2 pr-4 border-r border-white/10">
-                        <div className={cn("w-2 h-2 rounded-full transition-all duration-500", isSearching ? "bg-primary animate-pulse shadow-[0_0_10px_rgba(var(--primary),0.5)]" : session.isMatched ? "bg-green-500" : "bg-red-500")} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
-                            {isSearching ? "Searching" : session.isMatched ? "Live" : "Standby"}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" onClick={() => setAudioEnabled(!audioEnabled)} className={cn("h-8 w-8 rounded-lg hover:bg-white/10", !audioEnabled && "text-red-500 bg-red-500/10")}>
-                            {audioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setVideoEnabled(!videoEnabled)} className={cn("h-8 w-8 rounded-lg hover:bg-white/10", !videoEnabled && "text-red-500 bg-red-500/10")}>
-                            {videoEnabled ? <VideoIcon className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
-                        </Button>
+                {/* Center: Status Pill */}
+                <div className="pointer-events-auto flex-1 flex justify-center overflow-hidden">
+                    <div className="bg-black/60 backdrop-blur-3xl border border-white/10 px-2.5 md:px-6 py-1.5 md:py-3 rounded-full flex items-center gap-1.5 md:gap-4 shrink-1 shadow-2xl transition-all min-w-0">
+                        <div className="flex items-center gap-1 md:gap-2 pr-1.5 md:pr-4 border-r border-white/10">
+                            <div className={cn(
+                                "w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full transition-all duration-500 flex-shrink-0",
+                                isSearching ? "bg-primary animate-pulse" : session.isMatched ? "bg-green-500" : "bg-red-500"
+                            )} />
+                            <span className="text-[6px] md:text-[10px] font-black uppercase tracking-widest opacity-80 whitespace-nowrap overflow-hidden text-ellipsis">
+                                {isSearching ? (
+                                    <span className="hidden sm:inline">Searching</span>
+                                ) : session.isMatched ? (
+                                    <span className="hidden sm:inline">Live</span>
+                                ) : (
+                                    <span className="hidden sm:inline">Standby</span>
+                                )}
+                                <span className="sm:hidden">{isSearching ? "..." : session.isMatched ? "On" : "Off"}</span>
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 md:gap-5 flex-shrink-0 text-white/60">
+                            <button onClick={() => setAudioEnabled(!audioEnabled)} className={cn("transition-colors", !audioEnabled && "text-red-500")}>
+                                {audioEnabled ? <Mic className="w-3.5 h-3.5 md:w-5 md:h-5" /> : <MicOff className="w-3.5 h-3.5 md:w-5 md:h-5" />}
+                            </button>
+                            <button onClick={() => setVideoEnabled(!videoEnabled)} className={cn("transition-colors", !videoEnabled && "text-red-500")}>
+                                {videoEnabled ? <VideoIcon className="w-3.5 h-3.5 md:w-5 md:h-5" /> : <VideoOff className="w-3.5 h-3.5 md:w-5 md:h-5" />}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div className="pointer-events-auto">
+                {/* Right: Next Match */}
+                <div className="pointer-events-auto flex justify-end">
                     <Button
                         onClick={isSearching ? () => { socket.emit('leaveQueue'); disconnect(); } : handleSkip}
-                        className="rounded-full px-8 h-12 font-black uppercase tracking-widest text-xs bg-white text-black hover:scale-105 active:scale-95 shadow-2xl transition-all disabled:opacity-50"
+                        className="rounded-full px-3 md:px-10 h-9 md:h-14 font-black uppercase tracking-widest text-[8px] md:text-xs bg-white text-black hover:scale-105 active:scale-95 shadow-xl transition-all shrink-0"
                     >
-                        {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : "Next Match"}
+                        {isSearching ? <Loader2 className="w-3 h-3 md:w-5 md:h-5 animate-spin" /> : (
+                            <>
+                                <span className="hidden sm:inline">Next Match</span>
+                                <span className="sm:hidden">Next</span>
+                            </>
+                        )}
                     </Button>
                 </div>
-            </div>
+            </header>
 
-            <main className="flex-1 relative flex overflow-hidden">
-                {/* Main Video View */}
-                <div className="flex-1 relative bg-[#0a0a0a]">
+            <main className="flex-1 relative flex flex-col md:flex-row overflow-hidden">
+                {/* 2. MAIN CONTENT ZONE */}
+                <div className="flex-1 relative bg-[#0a0a0a] overflow-hidden">
                     <VideoPanel
                         isMatched={session.isMatched}
                         className={cn(
                             "w-full h-full border-none rounded-none aspect-auto shadow-none bg-transparent transition-all duration-1000",
-                            isBlurred && session.isMatched && "blur-[100px] scale-110 opacity-50"
+                            isBlurred && session.isMatched && "blur-[60px] md:blur-[120px] scale-110 opacity-60"
                         )}
                     />
 
-                    {/* Controls & State Overlays */}
-                    {!session.isMatched && !isSearching && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-                            <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mb-8 border border-primary/30 shadow-[0_0_50px_rgba(var(--primary),0.2)]">
-                                <Sparkles className="w-10 h-10 text-primary animate-pulse" />
-                            </div>
-                            <h2 className="text-4xl font-black mb-4 tracking-tighter uppercase italic">Vibe Check?</h2>
-                            <p className="text-white/40 mb-8 max-w-xs text-center font-medium">Connect with a random stranger instantly. Safe, simple, and pure vibes.</p>
-                            <Button size="lg" onClick={handleStart} className="rounded-full px-12 h-16 font-black text-lg shadow-2xl shadow-primary/40 hover:scale-105 active:scale-95 transition-all bg-primary">
-                                START VIBING
+                    {/* OVERLAYS (Centered Cards) */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 px-4">
+                        <div className="pointer-events-auto w-full max-w-[90%] sm:max-w-md">
+                            {!session.isMatched && !isSearching && (
+                                <div className="flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-700">
+                                    <div className="w-16 h-16 md:w-28 md:h-28 bg-primary/20 rounded-full flex items-center justify-center mb-6 md:mb-10 border border-primary/30 shadow-[0_0_80px_rgba(var(--primary),0.3)] group cursor-pointer" onClick={handleStart}>
+                                        <Sparkles className="w-8 h-8 md:w-14 md:h-14 text-primary animate-pulse group-hover:scale-110 transition-transform" />
+                                    </div>
+                                    <h2 className="text-3xl md:text-6xl font-black mb-4 tracking-[-0.05em] uppercase italic leading-none">Vibe Check?</h2>
+                                    <p className="text-white/40 mb-8 md:mb-12 max-w-[240px] md:max-w-sm text-[10px] md:text-base font-medium leading-relaxed">
+                                        Connect with a random stranger instantly. Safe, simple, and pure vibes.
+                                    </p>
+                                    <Button size="lg" onClick={handleStart} className="rounded-full px-10 md:px-16 h-14 md:h-20 font-black text-sm md:text-xl shadow-[0_0_50px_rgba(var(--primary),0.4)] hover:scale-105 active:scale-95 transition-all bg-primary">
+                                        START VIBING
+                                    </Button>
+                                </div>
+                            )}
+
+                            {session.isMatched && isBlurred && (
+                                <div className="glass-card p-8 md:p-14 rounded-[40px] md:rounded-[60px] text-center w-full border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.8)] backdrop-blur-3xl flex flex-col items-center animate-in slide-in-from-bottom-10 duration-700">
+                                    <div className="w-14 h-14 md:w-20 md:h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6 md:mb-8">
+                                        <Sparkles className="w-6 h-6 md:w-10 md:h-10 text-green-500" />
+                                    </div>
+                                    <h3 className="text-2xl md:text-4xl font-black mb-2 md:mb-3 uppercase tracking-tighter italic">LOCKED IN</h3>
+                                    <p className="text-[10px] md:text-sm text-white/40 font-medium mb-8 md:mb-10 tracking-wide uppercase">Ready to reveal the vibe?</p>
+                                    <Button onClick={initiateCall} size="lg" className="w-full rounded-3xl shadow-[0_0_30px_rgba(var(--primary),0.3)] h-14 md:h-20 gap-3 md:gap-4 font-black text-sm md:text-2xl bg-primary hover:scale-[1.02] active:scale-95 transition-all">
+                                        <Eye className="w-4 h-4 md:w-7 md:h-7" /> REVEAL CHAT
+                                    </Button>
+                                    <button onClick={handleSkip} className="mt-8 md:mt-10 text-[8px] md:text-[11px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white transition-colors">
+                                        Skip this vibe
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Report Button (Hidden when blurred) */}
+                    {session.isMatched && !isBlurred && (
+                        <div className="absolute bottom-6 md:bottom-12 right-6 md:right-12 z-40">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleReport}
+                                className="bg-black/40 hover:bg-red-500/20 text-white/40 hover:text-red-500 rounded-full h-10 w-10 md:h-16 md:w-16 transition-all border border-white/5 backdrop-blur-xl shadow-2xl"
+                                title="Report User"
+                            >
+                                <Flag className="w-4 h-4 md:w-7 md:h-7" />
                             </Button>
                         </div>
                     )}
+                </div>
 
-                    {session.isMatched && isBlurred && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/40 backdrop-blur-sm">
-                            <div className="glass-card p-12 rounded-[50px] text-center max-w-md border-white/5 shadow-[0_0_150px_rgba(0,0,0,0.8)] flex flex-col items-center">
-                                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
-                                    <Sparkles className="w-8 h-8 text-green-500" />
-                                </div>
-                                <h3 className="text-2xl font-black mb-2 uppercase tracking-tight">Connected</h3>
-                                <p className="text-white/50 font-medium mb-8">Ready to reveal the vibe with a stranger?</p>
-                                <Button onClick={initiateCall} size="lg" className="rounded-full shadow-2xl px-12 h-16 gap-3 font-black text-lg bg-primary hover:scale-105 active:scale-95 transition-all">
-                                    <Eye className="w-6 h-6" /> REVEAL CHAT
-                                </Button>
-                                <button onClick={handleSkip} className="mt-8 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">
-                                    Skip this vibe
-                                </button>
+                {/* 3. PIP & CHAT (Mobile Overlay Layout) */}
+                <div className="pointer-events-none absolute inset-0 z-40 flex flex-col justify-end p-4 md:p-10">
+                    <div className="flex flex-col-reverse md:flex-row items-end justify-between gap-4">
+                        {/* Local Preview (PiP) */}
+                        <div className="pointer-events-auto w-24 sm:w-32 md:w-80 aspect-[4/3] relative group">
+                            <VideoPanel
+                                isLocal
+                                className={cn(
+                                    "w-full h-full border-2 border-white/10 shadow-2xl rounded-2xl md:rounded-[40px] overflow-hidden bg-black transition-all group-hover:scale-105",
+                                    !videoEnabled && "grayscale opacity-50"
+                                )}
+                            />
+                            <div className="absolute top-2 right-2 md:top-5 md:right-5 bg-black/60 backdrop-blur-md text-[6px] md:text-[10px] font-black uppercase tracking-widest px-2 md:px-4 py-1 md:py-2 rounded-full border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                Preview
                             </div>
                         </div>
-                    )}
 
-                    {session.isMatched && !isBlurred && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleReport}
-                            className="absolute bottom-10 right-10 z-30 bg-white/5 hover:bg-red-50/20 text-white/50 hover:text-red-500 rounded-full h-12 w-12 transition-all border border-white/5 backdrop-blur-md"
-                            title="Report User"
-                        >
-                            <Flag className="w-5 h-5" />
-                        </Button>
-                    )}
-                </div>
-
-                {/* Local Preview - PiP style */}
-                <div className="absolute bottom-10 left-10 w-72 h-52 z-30 group">
-                    <VideoPanel
-                        isLocal
-                        className={cn(
-                            "w-full h-full border-white/10 shadow-2xl rounded-[40px] overflow-hidden bg-black ring-1 ring-white/10 transition-all group-hover:scale-105",
-                            !videoEnabled && "opacity-40"
-                        )}
-                    />
-                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                        Preview
-                    </div>
-                </div>
-
-                {/* Floating Chat Box */}
-                <div className="absolute bottom-10 right-10 w-[400px] h-[500px] z-20 pointer-events-none">
-                    <div className="h-full pointer-events-auto">
-                        <ChatBox />
+                        {/* Floating Chat Box */}
+                        <div className="pointer-events-auto w-full md:w-[450px] h-[350px] md:h-[600px] transition-all">
+                            <ChatBox />
+                        </div>
                     </div>
                 </div>
             </main>

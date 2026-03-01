@@ -62,13 +62,13 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
             )}
 
             {/* Overlay badges */}
-            <div className="absolute bottom-4 left-4 flex gap-2">
-                <div className="bg-black/50 backdrop-blur-md text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm">
+            <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 flex gap-1 md:gap-2">
+                <div className="bg-black/50 backdrop-blur-md text-white text-[8px] md:text-xs px-2 md:px-3 py-0.5 md:py-1 rounded-full font-medium shadow-sm whitespace-nowrap">
                     {isLocal ? 'You' : 'Stranger'}
                 </div>
                 {isLocal && (
-                    <div className="bg-red-500/80 backdrop-blur-md text-white p-1.5 rounded-full shadow-sm">
-                        <MicOff className="w-3.5 h-3.5" />
+                    <div className="bg-red-500/80 backdrop-blur-md text-white p-1 md:p-1.5 rounded-full shadow-sm">
+                        <MicOff className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
                     </div>
                 )}
             </div>
