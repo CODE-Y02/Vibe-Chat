@@ -378,12 +378,12 @@ export default function ChatPage() {
                         <motion.div
                             initial={{ x: -20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
-                            className="pointer-events-auto w-24 sm:w-32 md:w-80 aspect-[4/3] relative group"
+                            className="pointer-events-auto w-36 sm:w-44 md:w-80 aspect-[4/3] relative group"
                         >
                             <VideoPanel
                                 isLocal
                                 className={cn(
-                                    "w-full h-full border border-white/10 shadow-glow rounded-3xl overflow-hidden bg-black transition-all group-hover:scale-105",
+                                    "w-full h-full border border-white/20 shadow-glow rounded-[2rem] overflow-hidden bg-black transition-all group-hover:scale-105",
                                     !videoEnabled && "grayscale opacity-50"
                                 )}
                             />
@@ -396,7 +396,10 @@ export default function ChatPage() {
                         <motion.div
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
-                            className="pointer-events-auto w-full md:w-[460px] h-[350px] md:h-[650px] transition-all"
+                            className={cn(
+                                "pointer-events-auto w-full md:w-[460px] h-[350px] md:h-[650px] transition-all",
+                                !session.isMatched && "hidden md:flex"
+                            )}
                         >
                             <ChatBox />
                         </motion.div>

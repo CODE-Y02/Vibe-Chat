@@ -1,11 +1,15 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { Video, Sparkles, ArrowRight, Shield, Zap, Globe } from 'lucide-react';
+import { Video, Sparkles, ArrowRight, Shield, Zap, Globe, User, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useSession } from 'next-auth/react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function Landing() {
+  const { data: session } = useSession();
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.2, delayChildren: 0.3 } }
@@ -34,14 +38,28 @@ export default function Landing() {
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#about" className="hover:text-white transition-colors">About</a>
             <div className="h-4 w-px bg-white/10" />
-            <Link href="/login">
-              <Button variant="ghost" className="hover:bg-white/5 text-white px-6">Login</Button>
-            </Link>
-            <Link href="/login">
-              <Button className="rounded-2xl px-8 bg-white text-black hover:bg-white/90 font-black shadow-xl transition-all hover:scale-105 active:scale-95">
-                JOIN NOW
-              </Button>
-            </Link>
+            {session ? (
+              <Link href="/dms" className="flex items-center gap-3 group">
+                <Avatar className="h-10 w-10 border border-white/10 group-hover:border-primary/50 transition-colors">
+                  <AvatarImage src={session.user?.image || ""} />
+                  <AvatarFallback className="bg-primary/20 text-primary uppercase text-[10px] font-black">
+                    {(session.user?.name || "U").slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="group-hover:text-white transition-colors">{session.user?.name}</span>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" className="hover:bg-white/5 text-white px-6">Login</Button>
+                </Link>
+                <Link href="/login">
+                  <Button className="rounded-2xl px-8 bg-white text-black hover:bg-white/90 font-black shadow-xl transition-all hover:scale-105 active:scale-95">
+                    JOIN NOW
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -112,14 +130,22 @@ export default function Landing() {
             variants={itemVariants}
             className="flex flex-col sm:flex-row items-center justify-center gap-8"
           >
-            <Link href="/login">
+            <Link href={session ? "/dms" : "/login"}>
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Button size="lg" className="rounded-[2rem] px-16 h-24 font-black text-2xl bg-primary hover:bg-primary shadow-glow-lg transition-all group overflow-hidden relative border-none shimmer">
                   <span className="relative z-10 flex items-center gap-4">
-                    START VIBING <ArrowRight className="w-8 h-8 group-hover:translate-x-3 transition-transform duration-500" />
+                    {session ? (
+                      <>
+                        GO TO APP <ArrowRight className="w-8 h-8 group-hover:translate-x-3 transition-transform duration-500" />
+                      </>
+                    ) : (
+                      <>
+                        START VIBING <ArrowRight className="w-8 h-8 group-hover:translate-x-3 transition-transform duration-500" />
+                      </>
+                    )}
                   </span>
                 </Button>
               </motion.div>
