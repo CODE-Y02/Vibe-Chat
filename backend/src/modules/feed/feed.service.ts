@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma.js';
+import { Prisma } from '@prisma/client';
 
 const safeAuthorSelect = {
     id: true,
@@ -7,8 +8,11 @@ const safeAuthorSelect = {
 } as const;
 
 export class FeedService {
-    /** Helper to generate optimized include object */
-    private getPostInclude(currentUserId: string) {
+    /** 
+     * Helper to generate optimized include object.
+     * We use Prisma.PostInclude type to stay type-safe.
+     */
+    private getPostInclude(currentUserId: string): Prisma.PostInclude {
         return {
             author: { select: safeAuthorSelect },
             // Only include current user's reaction to keep payload small
@@ -20,19 +24,22 @@ export class FeedService {
             replies: {
                 where: { parentId: { not: null } },
                 take: 3,
-                orderBy: { createdAt: 'asc' as const },
+                orderBy: { createdAt: 'asc' },
                 include: {
                     author: { select: safeAuthorSelect },
                     _count: { select: { reactions: true, replies: true } },
                     // Check if user liked the reply too
                     reactions: {
                         where: { userId: currentUserId },
-                        select: { type: true },
+                        select: { type: true, userId: true },
                     },
                 },
             },
             repostOf: {
-                include: { author: { select: safeAuthorSelect } },
+                include: {
+                    author: { select: safeAuthorSelect },
+                    _count: { select: { reactions: true, replies: true, reposts: true } }
+                },
             },
             _count: { select: { replies: true, reposts: true, reactions: true } },
         };
@@ -69,7 +76,6 @@ export class FeedService {
         return { success: true };
     }
 
-    /** Optimized Feed with Cursor Pagination */
     async getFeed(userId: string, cursor?: string, limit = 20) {
         const friends = await prisma.friend.findMany({
             where: {
@@ -87,14 +93,13 @@ export class FeedService {
                 parentId: null,
             },
             orderBy: { createdAt: 'desc' },
-            take: limit + 1, // Fetch one extra to determine if there's a next page
+            take: limit + 1,
             cursor: cursor ? { id: cursor } : undefined,
-            skip: cursor ? 1 : 0, // Skip the cursor itself
+            skip: cursor ? 1 : 0,
             include: this.getPostInclude(userId),
         });
     }
 
-    /** Optimized Replies with Cursor Pagination */
     async getReplies(parentId: string, userId: string, cursor?: string, limit = 20) {
         return prisma.post.findMany({
             where: { parentId },
