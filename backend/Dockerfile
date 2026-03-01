@@ -1,22 +1,47 @@
-FROM node:20-alpine
+# ─────────────────────────────────────────────
+# Stage 1: Install dependencies
+# ─────────────────────────────────────────────
+FROM oven/bun:1-alpine AS deps
 
 WORKDIR /app
 
-# Install dependencies first for cache layer utilization
-COPY package.json package-lock.json* ./
-RUN npm install
+# Copy only the files needed for dependency installation
+# so this layer is cached unless package.json / bun.lock changes
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
 
-# Copy source and prisma config
-COPY . .
+# ─────────────────────────────────────────────
+# Stage 2: Generate Prisma client
+# ─────────────────────────────────────────────
+FROM oven/bun:1-alpine AS prisma
 
-# Generate Prisma Client
-RUN npx prisma generate
+WORKDIR /app
 
-# Build TypeScript Code
-RUN npm run build
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json bun.lock ./
+COPY prisma ./prisma
+
+RUN bunx prisma generate
+
+# ─────────────────────────────────────────────
+# Stage 3: Production runner (lean final image)
+# ─────────────────────────────────────────────
+FROM oven/bun:1-alpine AS runner
+
+WORKDIR /app
+
+# Drop to non-root user for security (built into the official bun image)
+USER bun
+
+# Copy only what the app needs at runtime
+COPY --from=deps    /app/node_modules    ./node_modules
+COPY --from=prisma  /app/node_modules/.prisma ./node_modules/.prisma
+COPY package.json ./
+COPY src ./src
+COPY prisma ./prisma
 
 # Expose server port
 EXPOSE 3000
 
-# Run in production mode
-CMD ["npm", "run", "start"]
+# Bun runs TypeScript natively — no build step required
+CMD ["bun", "run", "src/index.ts"]

@@ -1,0 +1,44 @@
+# Dependencies (will be installed fresh inside the image)
+node_modules/
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Environment files (inject at runtime via --env-file or docker compose)
+.env
+.env.*
+!.env.example
+
+# Logs and debug
+*.log
+logs/
+npm-debug.log*
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Test & coverage
+coverage/
+.nyc_output/
+.eslintcache
+
+# Prisma SQLite dev databases
+*.db
+*.db-journal
+
+# OS / editor noise
+.DS_Store
+.vscode/
+.idea/
+
+# Docker files themselves
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Docs / AI planning files
+README.md
+plan.md
+task.md
