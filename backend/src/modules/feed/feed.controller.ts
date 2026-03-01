@@ -8,6 +8,17 @@ export const createPost = async (c: Context<Env>) => {
     return c.json(await feedService.createPost(userId, content), 201);
 };
 
+export const deletePost = async (c: Context<Env>) => {
+    const { userId } = c.get('user');
+    const { postId } = c.req.param();
+    try {
+        await feedService.deletePost(userId, postId);
+        return c.json({ success: true });
+    } catch (err: any) {
+        return c.json({ error: err.message }, 400);
+    }
+};
+
 export const getFeed = async (c: Context<Env>) => {
     const { userId } = c.get('user');
     const cursor = c.req.query('cursor');
@@ -15,7 +26,6 @@ export const getFeed = async (c: Context<Env>) => {
 
     const posts = await feedService.getFeed(userId, cursor, limit);
 
-    // Determine next cursor logic for X-style pagination
     let nextCursor: string | undefined = undefined;
     if (posts.length > limit) {
         const nextItem = posts.pop();

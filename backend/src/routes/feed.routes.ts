@@ -1,9 +1,13 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { createPost, getFeed, reactToPost, createReply, getReplies, repost, undoRepost } from '../modules/feed/feed.controller.js';
+import { createPost, deletePost, getFeed, reactToPost, createReply, getReplies, repost, undoRepost } from '../modules/feed/feed.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import { profanityFilter } from '../middleware/profanity.middleware.js';
 import { Env } from '../types.js';
 
+/**
+ * Unified Post Model Routes
+ * Follows X architecture for scalability.
+ */
 const feedRoutes = new OpenAPIHono<Env>();
 feedRoutes.use('*', authMiddleware);
 feedRoutes.use('*', profanityFilter);
@@ -14,8 +18,24 @@ const contentBody = { content: { 'application/json': { schema: z.object({ conten
 
 // POST /feed — create top-level post
 feedRoutes.openapi(
-    createRoute({ method: 'post', path: '/', request: { body: contentBody }, responses: { 201: { description: 'Post created' } } }),
+    createRoute({
+        method: 'post',
+        path: '/',
+        request: { body: contentBody },
+        responses: { 201: { description: 'Post created' } }
+    }),
     createPost,
+);
+
+// DELETE /feed/:postId — delete a post
+feedRoutes.openapi(
+    createRoute({
+        method: 'delete',
+        path: '/:postId',
+        request: { params: postIdParam },
+        responses: { 200: { description: 'Post deleted' }, 400: { description: 'Error' } }
+    }),
+    deletePost,
 );
 
 // GET /feed — get feed

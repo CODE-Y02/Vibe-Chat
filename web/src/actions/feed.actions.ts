@@ -37,6 +37,19 @@ export async function createPost(content: string) {
     }
 }
 
+/** Delete a post/reply/repost */
+export async function deletePost(postId: string) {
+    try {
+        const res = await authenticatedFetch(`/feed/${postId}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) return { error: data.error ?? "Failed to delete" };
+        revalidatePath("/feed");
+        return { success: true };
+    } catch {
+        return { error: "Failed to delete" };
+    }
+}
+
 export async function reactToPost(postId: string, type: string) {
     try {
         const res = await authenticatedFetch("/feed/react", {
@@ -95,7 +108,7 @@ export async function repostPost(postId: string, content?: string) {
         const data = await res.json();
         if (!res.ok) return { error: data.error ?? "Failed to repost" };
         revalidatePath("/feed");
-        return { success: true };
+        return { success: true, toggled: data.toggled };
     } catch {
         return { error: "Failed to repost" };
     }

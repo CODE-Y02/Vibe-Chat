@@ -8,9 +8,6 @@ const safeAuthorSelect = {
 } as const;
 
 export class FeedService {
-    /** 
-     * Helper to generate optimized include object.
-     */
     private getPostInclude(currentUserId: string): Prisma.PostInclude {
         return {
             author: { select: safeAuthorSelect },
@@ -59,26 +56,50 @@ export class FeedService {
     }
 
     async repost(authorId: string, repostOfId: string, content?: string) {
-        return prisma.post.create({
-            data: { authorId, content: content ?? null, repostOfId },
+        // If content is provided, it's a Quote Post - allowed multiple times like X
+        if (content) {
+            return prisma.post.create({
+                data: { authorId, content, repostOfId },
+                include: this.getPostInclude(authorId),
+            });
+        }
+
+        // If no content, it's a Pure Repost - toggle logic like X
+        const existing = await prisma.post.findFirst({
+            where: { authorId, repostOfId, content: null, parentId: null }
+        });
+
+        if (existing) {
+            await prisma.post.delete({ where: { id: existing.id } });
+            return { toggled: false };
+        }
+
+        const repost = await prisma.post.create({
+            data: { authorId, repostOfId },
             include: this.getPostInclude(authorId),
         });
+        return { toggled: true, post: repost };
     }
 
     async undoRepost(authorId: string, repostOfId: string) {
         await prisma.post.deleteMany({
-            where: { authorId, repostOfId, parentId: null },
+            where: { authorId, repostOfId, content: null, parentId: null },
         });
         return { success: true };
     }
 
-    /** 
-     * Scalable Feed Retrieval
-     * Instead of loading all friend IDs into Node.js memory, we use a subquery 
-     * to fetch posts from self or anyone you are friends with.
-     */
+    async deletePost(authorId: string, postId: string) {
+        const post = await prisma.post.findUnique({ where: { id: postId } });
+        if (!post) throw new Error('Post not found');
+        if (post.authorId !== authorId) throw new Error('Unauthorized');
+
+        // Note: Prisma schema should handle cascading if defined, 
+        // but typically you want to keep reposts showing "Post Deleted" 
+        // rather than deleting thousands of reposts instantly.
+        return prisma.post.delete({ where: { id: postId } });
+    }
+
     async getFeed(userId: string, cursor?: string, limit = 20) {
-        // We look for posts where author is me OR author is a friend (ACCEPTED)
         return prisma.post.findMany({
             where: {
                 OR: [
@@ -92,7 +113,7 @@ export class FeedService {
                         }
                     }
                 ],
-                parentId: null, // Only top-level posts on main feed
+                parentId: null,
             },
             orderBy: { createdAt: 'desc' },
             take: limit + 1,
