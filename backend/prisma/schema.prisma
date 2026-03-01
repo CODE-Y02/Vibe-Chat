@@ -64,8 +64,15 @@ model Post {
   authorId    String
   content     String?   // nullable: pure reposts have no content
   parentId    String?   // reply-to post
-  repostOfId  String?   // repost/quote of post
-  createdAt   DateTime  @default(now())
+  repostOfId   String?   // repost/quote of post
+  deletedAt    DateTime? // soft delete
+  
+  // Denormalized counters for high-scale performance
+  likesCount   Int       @default(0)
+  repliesCount Int       @default(0)
+  repostsCount Int       @default(0)
+  
+  createdAt    DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   author      User      @relation("UserPosts", fields: [authorId], references: [id])

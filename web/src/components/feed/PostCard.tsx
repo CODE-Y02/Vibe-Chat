@@ -24,13 +24,16 @@ export interface Post {
     content: string | null;
     parentId: string | null;
     repostOfId: string | null;
+    deletedAt?: string | null;
+    likesCount: number;
+    repliesCount: number;
+    repostsCount: number;
     createdAt: string;
     authorId: string;
     author: PostAuthor;
     reactions: Array<{ type: string; userId: string }>;
     replies: Post[];
     repostOf?: Post | null;
-    _count?: { replies: number; reposts: number; reactions: number };
 }
 
 // --- Helpers ---
@@ -45,10 +48,11 @@ function safeTimeAgo(dateStr: string) {
 }
 
 // ─── Quoted / embedded post preview ──────────────────────────────────────────
-function QuotePost({ post }: { post?: Post | null }) {
-    if (!post) {
+function QuotePost({ post, isDeleted = false }: { post?: Post | null; isDeleted?: boolean }) {
+    if (isDeleted || !post) {
         return (
-            <div className="mt-3 border border-white/5 rounded-xl p-4 bg-white/[0.02] text-white/20 text-xs font-bold italic">
+            <div className="mt-3 border border-white/5 rounded-xl p-4 bg-white/[0.02] text-white/20 text-xs font-bold italic flex items-center gap-2">
+                <Trash2 className="w-3 h-3" />
                 This vibe was deleted or is no longer available.
             </div>
         );
@@ -80,11 +84,11 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const isQuotePost = !!post.repostOfId && !!post.content;
     const displayPost = isPureRepost && post.repostOf ? post.repostOf : post;
     const authorName = displayPost.author?.username ?? 'Unknown';
-    const isOwner = displayPost.authorId === myUserId || post.authorId === myUserId;
+    const canDelete = post.authorId === myUserId;
 
     const [liked, setLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(displayPost._count?.reactions ?? 0);
-    const [repostCount, setRepostCount] = useState(displayPost._count?.reposts ?? 0);
+    const [likeCount, setLikeCount] = useState(displayPost.likesCount ?? 0);
+    const [repostCount, setRepostCount] = useState(displayPost.repostsCount ?? 0);
     const [reposted, setReposted] = useState(false);
 
     const [showReplies, setShowReplies] = useState(false);
@@ -97,14 +101,12 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const [allReplies, setAllReplies] = useState<Post[]>(post.replies ?? []);
     const [loadingMore, setLoadingMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
-    const totalReplies = displayPost._count?.replies ?? 0;
+    const totalReplies = displayPost.repliesCount ?? 0;
 
     useEffect(() => {
         setLiked(displayPost.reactions?.some(r => r.userId === myUserId) ?? false);
-        setLikeCount(displayPost._count?.reactions ?? 0);
-        setRepostCount(displayPost._count?.reposts ?? 0);
-        // On X, the repost icon is green if you've reposted it. 
-        // We'll simulate this check (ideally API returns myRepostId)
+        setLikeCount(displayPost.likesCount ?? 0);
+        setRepostCount(displayPost.repostsCount ?? 0);
         setReposted(isPureRepost && post.authorId === myUserId);
     }, [displayPost, post, myUserId, isPureRepost]);
 
@@ -124,8 +126,6 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const handleRepostToggle = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const wasReposted = reposted;
-
-        // Optimistic update
         setReposted(!wasReposted);
         setRepostCount(c => wasReposted ? c - 1 : c + 1);
 
@@ -134,11 +134,6 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
             setReposted(wasReposted);
             setRepostCount(c => wasReposted ? c + 1 : c - 1);
             toast({ title: res.error, variant: 'destructive' });
-        } else if (res.toggled === false) {
-            // Server confirmed it was an undo
-            setReposted(false);
-        } else {
-            setReposted(true);
         }
         queryClient.invalidateQueries({ queryKey: ['feed'] });
     };
@@ -146,23 +141,23 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const handleDelete = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!confirm("Delete this vibe?")) return;
-        const res = await deletePost(post.id); // Delete the actual post object (could be a repost or original)
-        if (res.error) toast({ title: res.error, variant: 'destructive' });
-        else queryClient.invalidateQueries({ queryKey: ['feed'] });
+        const res = await deletePost(post.id);
+        if (res.error) {
+            toast({ title: res.error, variant: 'destructive' });
+        } else {
+            toast({ title: "Vibe deleted" });
+            queryClient.invalidateQueries({ queryKey: ['feed'] });
+            if (post.parentId) queryClient.invalidateQueries({ queryKey: ['replies', post.parentId] });
+        }
     };
 
     const handleShare = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const url = `${window.location.origin}/post/${displayPost.id}`;
         if (navigator.share) {
-            try {
-                await navigator.share({ title: `Vibe from ${authorName}`, text: displayPost.content || 'Check out this vibe!', url });
-            } catch (err) { }
+            try { await navigator.share({ title: `Vibe from ${authorName}`, text: displayPost.content || 'Check out this vibe!', url }); } catch (err) { }
         } else {
-            try {
-                await navigator.clipboard.writeText(url);
-                toast({ title: "Link copied!" });
-            } catch (err) { toast({ title: "Failed to copy", variant: "destructive" }); }
+            try { await navigator.clipboard.writeText(url); toast({ title: "Link copied!" }); } catch (err) { toast({ title: "Failed to copy", variant: "destructive" }); }
         }
     };
 
@@ -196,10 +191,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
         if (type === 'reply') {
             const res = await createReply(displayPost.id, content.trim());
             setSubmitting(false);
-            if (res.error) {
-                toast({ title: res.error, variant: 'destructive' });
-                return;
-            }
+            if (res.error) { toast({ title: res.error, variant: 'destructive' }); return; }
             if (res.post) setAllReplies(prev => [res.post as Post, ...prev]);
             setReplyContent('');
             setReplying(false);
@@ -207,21 +199,18 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
         } else {
             const res = await repostPost(displayPost.id, content.trim());
             setSubmitting(false);
-            if (res.error) {
-                toast({ title: res.error, variant: 'destructive' });
-                return;
-            }
+            if (res.error) { toast({ title: res.error, variant: 'destructive' }); return; }
             setQuoteContent('');
             setQuoting(false);
         }
-
         queryClient.invalidateQueries({ queryKey: ['feed'] });
     };
+
+    if (post.deletedAt) return null;
 
     return (
         <article className={`border-b border-white/5 transition-colors duration-150 ${depth > 0 ? '' : 'hover:bg-white/[0.01]'}`}>
             <div className={`px-4 py-3 ${depth > 0 ? 'pl-2' : ''}`}>
-                {/* Repost banner */}
                 {isPureRepost && (
                     <div className="flex items-center gap-2 text-[13px] text-white/40 font-bold mb-1 ml-9">
                         <Repeat2 className="w-4 h-4" />
@@ -249,7 +238,6 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                                 <span className="text-white/30 truncate shrink-0">@{authorName.toLowerCase().replace(/\s/g, '')}</span>
                                 <span className="text-white/30 shrink-0">· {safeTimeAgo(displayPost.createdAt)}</span>
                             </div>
-
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-sky-400 hover:bg-sky-400/10 rounded-full -mr-2 transition-colors">
@@ -257,102 +245,52 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-[#15181c] border-white/10 text-white">
-                                    {isOwner && (
-                                        <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer">
-                                            <Trash2 className="w-4 h-4" /> Delete
-                                        </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5">
-                                        <Bookmark className="w-4 h-4" /> Bookmark
-                                    </DropdownMenuItem>
+                                    {canDelete && <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>}
+                                    <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5"><Bookmark className="w-4 h-4" /> Bookmark</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </header>
 
-                        {displayPost.content && (
-                            <p className={`${depth > 0 ? 'text-[14px]' : 'text-[15px]'} text-white/90 leading-normal mb-2 break-words`}>
-                                {displayPost.content}
-                            </p>
+                        {isPureRepost && !post.repostOf ? <QuotePost isDeleted /> : (
+                            <>
+                                {displayPost.content && <p className={`${depth > 0 ? 'text-[14px]' : 'text-[15px]'} text-white/90 leading-normal mb-2 break-words`}>{displayPost.content}</p>}
+                                {isQuotePost && <QuotePost post={post.repostOf} />}
+                            </>
                         )}
 
-                        {(isQuotePost || (isPureRepost && !post.repostOf)) && <QuotePost post={displayPost === post ? post.repostOf : displayPost} />}
-
                         <footer className="flex items-center justify-between max-w-sm pt-1 text-white/40">
-                            <Button
-                                variant="ghost" size="sm"
-                                onClick={(e) => { e.stopPropagation(); setReplying(v => !v); setQuoting(false); setShowReplies(true); }}
-                                className="h-8 px-2 gap-2 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors group"
-                            >
+                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(v => !v); setQuoting(false); setShowReplies(true); }} className="h-8 px-2 gap-2 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors group">
                                 <MessageCircle className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
                                 {totalReplies > 0 && <span className="text-xs">{totalReplies}</span>}
                             </Button>
-
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="ghost" size="sm"
-                                        className={`h-8 px-2 gap-2 rounded-full transition-colors group ${reposted ? 'text-emerald-500' : 'hover:text-emerald-500 hover:bg-emerald-500/10'}`}
-                                    >
+                                    <Button variant="ghost" size="sm" className={`h-8 px-2 gap-2 rounded-full transition-colors group ${reposted ? 'text-emerald-500' : 'hover:text-emerald-500 hover:bg-emerald-500/10'}`}>
                                         <Repeat2 className={`w-4.5 h-4.5 group-hover:scale-110 transition-transform ${reposted ? 'scale-110' : ''}`} />
                                         {repostCount > 0 && <span className="text-xs">{repostCount}</span>}
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="bg-[#15181c] border-white/10 text-white p-1">
-                                    <DropdownMenuItem onClick={handleRepostToggle} className="gap-3 cursor-pointer p-3 focus:bg-white/5 rounded-lg">
-                                        <Repeat2 className="w-5 h-5" />
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-sm">{reposted ? 'Undo Repost' : 'Repost'}</span>
-                                        </div>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => { setQuoting(true); setReplying(false); }} className="gap-3 cursor-pointer p-3 focus:bg-white/5 rounded-lg">
-                                        <Edit3 className="w-5 h-5" />
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-sm">Quote</span>
-                                        </div>
-                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={handleRepostToggle} className="gap-3 cursor-pointer p-3 focus:bg-white/5 rounded-lg"><Repeat2 className="w-5 h-5" /><div className="flex flex-col"><span className="font-bold text-sm">{reposted ? 'Undo Repost' : 'Repost'}</span></div></DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setQuoting(true); setReplying(false); }} className="gap-3 cursor-pointer p-3 focus:bg-white/5 rounded-lg"><Edit3 className="w-5 h-5" /><div className="flex flex-col"><span className="font-bold text-sm">Quote</span></div></DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-
-                            <Button
-                                variant="ghost" size="sm"
-                                onClick={handleLike}
-                                className={`h-8 px-2 gap-2 rounded-full transition-colors group ${liked ? 'text-pink-600' : 'hover:text-pink-600 hover:bg-pink-600/10'}`}
-                            >
+                            <Button variant="ghost" size="sm" onClick={handleLike} className={`h-8 px-2 gap-2 rounded-full transition-colors group ${liked ? 'text-pink-600' : 'hover:text-pink-600 hover:bg-pink-600/10'}`}>
                                 <Heart className={`w-4.5 h-4.5 group-hover:scale-110 transition-transform ${liked ? 'fill-current scale-110' : ''}`} />
                                 {likeCount > 0 && <span className="text-xs">{likeCount}</span>}
                             </Button>
-
-                            <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors">
-                                <Share2 className="w-4.5 h-4.5" />
-                            </Button>
+                            <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors"><Share2 className="w-4.5 h-4.5" /></Button>
                         </footer>
 
-                        {/* Composer for Reply or Quote */}
                         {(replying || quoting) && (
                             <div className="mt-3 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <Avatar className="w-8 h-8 shrink-0">
-                                    <AvatarImage src={session?.user?.image ?? undefined} />
-                                    <AvatarFallback className="bg-primary text-white text-[10px] font-bold uppercase">
-                                        {(session?.user?.name ?? 'U').slice(0, 2)}
-                                    </AvatarFallback>
-                                </Avatar>
+                                <Avatar className="w-8 h-8 shrink-0"><AvatarImage src={session?.user?.image ?? undefined} /><AvatarFallback className="bg-primary text-white text-[10px] font-bold uppercase">{(session?.user?.name ?? 'U').slice(0, 2)}</AvatarFallback></Avatar>
                                 <div className="flex-1 min-w-0">
-                                    <Textarea
-                                        autoFocus
-                                        placeholder={quoting ? "Add a comment..." : `Reply to ${authorName}...`}
-                                        className="resize-none bg-transparent border-none focus-visible:ring-0 p-0 text-md placeholder:text-white/20 min-h-[80px]"
-                                        value={quoting ? quoteContent : replyContent}
-                                        onChange={e => quoting ? setQuoteContent(e.target.value) : setReplyContent(e.target.value)}
-                                    />
+                                    <Textarea autoFocus placeholder={quoting ? "Add a comment..." : `Reply to ${authorName}...`} className="resize-none bg-transparent border-none focus-visible:ring-0 p-0 text-md placeholder:text-white/20 min-h-[80px]" value={quoting ? quoteContent : replyContent} onChange={e => quoting ? setQuoteContent(e.target.value) : setReplyContent(e.target.value)} />
                                     {quoting && <QuotePost post={displayPost} />}
                                     <div className="flex justify-end gap-2 border-t border-white/5 pt-3 mt-2">
                                         <Button variant="ghost" size="sm" onClick={() => { setReplying(false); setQuoting(false); }} className="rounded-full h-8 px-4 text-xs font-bold">Cancel</Button>
-                                        <Button
-                                            disabled={!(quoting ? quoteContent : replyContent).trim() || submitting}
-                                            onClick={() => handleSubmitReplyOrQuote(quoting ? 'quote' : 'reply')}
-                                            size="sm"
-                                            className="bg-primary hover:bg-primary/90 rounded-full h-8 px-6 font-bold text-xs uppercase shadow-lg shadow-primary/20"
-                                        >
+                                        <Button disabled={!(quoting ? quoteContent : replyContent).trim() || submitting} onClick={() => handleSubmitReplyOrQuote(quoting ? 'quote' : 'reply')} size="sm" className="bg-primary hover:bg-primary/90 rounded-full h-8 px-6 font-bold text-xs uppercase">
                                             {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : quoting ? 'Repost' : 'Reply'}
                                         </Button>
                                     </div>
@@ -360,11 +298,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                             </div>
                         )}
 
-                        {totalReplies > 0 && !showReplies && (
-                            <button onClick={handleToggleReplies} className="text-[14px] text-primary/80 hover:text-primary mt-3 font-semibold transition-colors block">
-                                {loadingMore ? 'Loading threads...' : `Show all ${totalReplies} replies`}
-                            </button>
-                        )}
+                        {totalReplies > 0 && !showReplies && <button onClick={handleToggleReplies} className="text-[14px] text-primary/80 hover:text-primary mt-3 font-semibold transition-colors block">{loadingMore ? 'Loading threads...' : `Show all ${totalReplies} replies`}</button>}
                     </div>
                 </div>
             </div>
@@ -375,18 +309,8 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                         {allReplies.map(reply => <PostCard key={reply.id} post={reply} isReply={true} depth={depth + 1} />)}
                     </div>
                     <div className="flex items-center gap-4 px-4 py-3">
-                        {loadingMore ? (
-                            <span className="text-[10px] text-white/20 flex items-center gap-2 font-black tracking-widest uppercase">
-                                <Loader2 className="w-4 h-4 animate-spin text-primary" /> Loading...
-                            </span>
-                        ) : nextCursor ? (
-                            <button onClick={handleLoadMoreReplies} className="text-[11px] text-primary hover:text-primary/70 font-black tracking-widest uppercase transition-colors">
-                                Show more vibes
-                            </button>
-                        ) : null}
-                        <button onClick={() => setShowReplies(false)} className="text-[11px] text-white/20 hover:text-white/50 font-black tracking-widest uppercase ml-auto transition-colors">
-                            Hide thread
-                        </button>
+                        {loadingMore ? <span className="text-[10px] text-white/20 flex items-center gap-2 font-black tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin text-primary" /> Loading...</span> : nextCursor ? <button onClick={handleLoadMoreReplies} className="text-[11px] text-primary hover:text-primary/70 font-black tracking-widest uppercase transition-colors">Show more vibes</button> : null}
+                        <button onClick={() => setShowReplies(false)} className="text-[11px] text-white/20 hover:text-white/50 font-black tracking-widest uppercase ml-auto transition-colors">Hide thread</button>
                     </div>
                 </div>
             )}

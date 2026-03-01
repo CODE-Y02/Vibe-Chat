@@ -8,20 +8,23 @@ const safeAuthorSelect = {
 } as const;
 
 export class FeedService {
+    /** 
+     * Scalable Include: No _count joins needed.
+     * We use pre-calculated integers for instant performance.
+     */
     private getPostInclude(currentUserId: string): Prisma.PostInclude {
         return {
             author: { select: safeAuthorSelect },
             reactions: {
-                where: { userId: currentUserId },
+                where: { userId: currentUserId, post: { deletedAt: null } },
                 select: { type: true, userId: true },
             },
             replies: {
-                where: { parentId: { not: null } },
+                where: { parentId: { not: null }, deletedAt: null },
                 take: 3,
                 orderBy: { createdAt: 'asc' },
                 include: {
                     author: { select: safeAuthorSelect },
-                    _count: { select: { reactions: true, replies: true } },
                     reactions: {
                         where: { userId: currentUserId },
                         select: { type: true, userId: true },
@@ -29,12 +32,11 @@ export class FeedService {
                 },
             },
             repostOf: {
+                where: { deletedAt: null },
                 include: {
                     author: { select: safeAuthorSelect },
-                    _count: { select: { reactions: true, replies: true, reposts: true } }
                 },
             },
-            _count: { select: { replies: true, reposts: true, reactions: true } },
         };
     }
 
@@ -46,62 +48,127 @@ export class FeedService {
     }
 
     async createReply(authorId: string, parentId: string, content: string) {
-        const parent = await prisma.post.findUnique({ where: { id: parentId } });
-        if (!parent) throw new Error('Post not found');
+        return await prisma.$transaction(async (tx) => {
+            const parent = await tx.post.findUnique({ where: { id: parentId, deletedAt: null } });
+            if (!parent) throw new Error('Post not found or deleted');
 
-        return prisma.post.create({
-            data: { authorId, content, parentId },
-            include: this.getPostInclude(authorId),
+            // 1. Create the reply
+            const reply = await tx.post.create({
+                data: { authorId, content, parentId },
+                include: this.getPostInclude(authorId),
+            });
+
+            // 2. Increment parent's reply count
+            await tx.post.update({
+                where: { id: parentId },
+                data: { repliesCount: { increment: 1 } }
+            });
+
+            return reply;
         });
     }
 
     async repost(authorId: string, repostOfId: string, content?: string) {
-        // If content is provided, it's a Quote Post - allowed multiple times like X
-        if (content) {
-            return prisma.post.create({
-                data: { authorId, content, repostOfId },
+        return await prisma.$transaction(async (tx) => {
+            const source = await tx.post.findUnique({ where: { id: repostOfId, deletedAt: null } });
+            if (!source) throw new Error('Source post not found or deleted');
+
+            const isQuote = !!content;
+
+            if (isQuote) {
+                const quote = await tx.post.create({
+                    data: { authorId, content, repostOfId },
+                    include: this.getPostInclude(authorId),
+                });
+                await tx.post.update({
+                    where: { id: repostOfId },
+                    data: { repostsCount: { increment: 1 } }
+                });
+                return { toggled: true, post: quote };
+            }
+
+            // Pure Repost Toggle logic
+            const existing = await tx.post.findFirst({
+                where: { authorId, repostOfId, content: null, parentId: null, deletedAt: null }
+            });
+
+            if (existing) {
+                await tx.post.update({ where: { id: existing.id }, data: { deletedAt: new Date() } });
+                await tx.post.update({ where: { id: repostOfId }, data: { repostsCount: { decrement: 1 } } });
+                return { toggled: false };
+            }
+
+            const repost = await tx.post.create({
+                data: { authorId, repostOfId },
                 include: this.getPostInclude(authorId),
             });
-        }
-
-        // If no content, it's a Pure Repost - toggle logic like X
-        const existing = await prisma.post.findFirst({
-            where: { authorId, repostOfId, content: null, parentId: null }
+            await tx.post.update({ where: { id: repostOfId }, data: { repostsCount: { increment: 1 } } });
+            return { toggled: true, post: repost };
         });
-
-        if (existing) {
-            await prisma.post.delete({ where: { id: existing.id } });
-            return { toggled: false };
-        }
-
-        const repost = await prisma.post.create({
-            data: { authorId, repostOfId },
-            include: this.getPostInclude(authorId),
-        });
-        return { toggled: true, post: repost };
     }
 
     async undoRepost(authorId: string, repostOfId: string) {
-        await prisma.post.deleteMany({
-            where: { authorId, repostOfId, content: null, parentId: null },
+        return await prisma.$transaction(async (tx) => {
+            const reposts = await tx.post.findMany({
+                where: { authorId, repostOfId, content: null, parentId: null, deletedAt: null }
+            });
+
+            if (reposts.length > 0) {
+                await tx.post.updateMany({
+                    where: { id: { in: reposts.map(r => r.id) } },
+                    data: { deletedAt: new Date() }
+                });
+                await tx.post.update({
+                    where: { id: repostOfId },
+                    data: { repostsCount: { decrement: reposts.length } }
+                });
+            }
+            return { success: true };
         });
-        return { success: true };
     }
 
     async deletePost(authorId: string, postId: string) {
-        const post = await prisma.post.findUnique({ where: { id: postId } });
-        if (!post) throw new Error('Post not found');
-        if (post.authorId !== authorId) throw new Error('Unauthorized');
+        return await prisma.$transaction(async (tx) => {
+            const post = await tx.post.findUnique({ where: { id: postId, deletedAt: null } });
+            if (!post) throw new Error('Post not found');
+            if (post.authorId !== authorId) throw new Error('Unauthorized');
 
-        // Note: Prisma schema should handle cascading if defined, 
-        // but typically you want to keep reposts showing "Post Deleted" 
-        // rather than deleting thousands of reposts instantly.
-        return prisma.post.delete({ where: { id: postId } });
+            const now = new Date();
+
+            // 1. Soft delete the post
+            await tx.post.update({ where: { id: postId }, data: { deletedAt: now } });
+
+            // 2. Decrement parent counters if applicable
+            if (post.parentId) {
+                await tx.post.update({
+                    where: { id: post.parentId },
+                    data: { repliesCount: { decrement: 1 } }
+                });
+            }
+            if (post.repostOfId) {
+                await tx.post.update({
+                    where: { id: post.repostOfId },
+                    data: { repostsCount: { decrement: 1 } }
+                });
+            }
+
+            // 3. Cascade soft-delete linked items
+            await tx.post.updateMany({
+                where: {
+                    OR: [{ parentId: postId }, { repostOfId: postId }],
+                    deletedAt: null
+                },
+                data: { deletedAt: now }
+            });
+
+            return { success: true };
+        });
     }
 
     async getFeed(userId: string, cursor?: string, limit = 20) {
         return prisma.post.findMany({
             where: {
+                deletedAt: null,
                 OR: [
                     { authorId: userId },
                     {
@@ -125,7 +192,7 @@ export class FeedService {
 
     async getReplies(parentId: string, userId: string, cursor?: string, limit = 20) {
         return prisma.post.findMany({
-            where: { parentId },
+            where: { parentId, deletedAt: null },
             orderBy: { createdAt: 'asc' },
             take: limit + 1,
             cursor: cursor ? { id: cursor } : undefined,
@@ -135,19 +202,24 @@ export class FeedService {
     }
 
     async reactToPost(userId: string, postId: string, type: string) {
-        const existing = await prisma.reaction.findUnique({
-            where: { postId_userId_type: { postId, userId, type } },
-        });
+        return await prisma.$transaction(async (tx) => {
+            const post = await tx.post.findUnique({ where: { id: postId, deletedAt: null } });
+            if (!post) throw new Error('Post not found');
 
-        if (existing) {
-            await prisma.reaction.delete({ where: { id: existing.id } });
-            return { toggled: false };
-        }
+            const existing = await tx.reaction.findUnique({
+                where: { postId_userId_type: { postId, userId, type } },
+            });
 
-        const reaction = await prisma.reaction.create({
-            data: { userId, postId, type },
+            if (existing) {
+                await tx.reaction.delete({ where: { id: existing.id } });
+                await tx.post.update({ where: { id: postId }, data: { likesCount: { decrement: 1 } } });
+                return { toggled: false };
+            }
+
+            const reaction = await tx.reaction.create({ data: { userId, postId, type } });
+            await tx.post.update({ where: { id: postId }, data: { likesCount: { increment: 1 } } });
+            return { toggled: true, reaction };
         });
-        return { toggled: true, reaction };
     }
 }
 

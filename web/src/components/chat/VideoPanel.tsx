@@ -33,6 +33,12 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                 }
             }
         }
+
+        return () => {
+            if (videoRef.current) {
+                videoRef.current.srcObject = null;
+            }
+        };
     }, [isLocal, isMatched]);
 
     return (

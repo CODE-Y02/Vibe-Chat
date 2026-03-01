@@ -10,6 +10,7 @@ class WebRTCClient {
     private remoteStream: MediaStream | null = null;
     private onRemoteStreamCallback: StreamCallback | null = null;
     private targetPeerId: string | null = null;
+    private setupPromise: Promise<MediaStream> | null = null;
 
     private config: RTCConfiguration = {
         iceServers: [
@@ -19,14 +20,42 @@ class WebRTCClient {
     };
 
     async setupLocalStream(videoElement: HTMLVideoElement) {
+        // Reuse existing stream if it's still active
+        if (this.localStream && this.localStream.getTracks().some(t => t.readyState === 'live')) {
+            if (videoElement && videoElement.srcObject !== this.localStream) {
+                videoElement.srcObject = this.localStream;
+            }
+            return;
+        }
+
+        // If a request is already in flight, wait for it
+        if (this.setupPromise) {
+            try {
+                const stream = await this.setupPromise;
+                if (videoElement) {
+                    videoElement.srcObject = stream;
+                }
+            } catch (e) {
+                // ignore, or retry?
+            }
+            return;
+        }
+
+        // Request a new stream
+        this.setupPromise = navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+        });
+
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            this.localStream = await this.setupPromise;
             if (videoElement) {
                 videoElement.srcObject = this.localStream;
             }
         } catch (error) {
             console.error('Error accessing media devices:', error);
-            // Fallback: If camera fails, we still want to be able to see others
+        } finally {
+            this.setupPromise = null;
         }
     }
 
@@ -110,16 +139,30 @@ class WebRTCClient {
         this.localStream?.getVideoTracks().forEach(t => t.enabled = enabled);
     }
 
-    cleanup() {
+    async cleanup() {
+        // If a setup is in progress, we must wait and stop it
+        if (this.setupPromise) {
+            try {
+                const stream = await this.setupPromise;
+                stream.getTracks().forEach(t => t.stop());
+            } catch (e) { }
+            this.setupPromise = null;
+        }
+
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
             this.localStream = null;
+        }
+        if (this.remoteStream) {
+            this.remoteStream.getTracks().forEach(track => track.stop());
+            this.remoteStream = null;
         }
         if (this.peerConnection) {
             this.peerConnection.close();
             this.peerConnection = null;
         }
         this.targetPeerId = null;
+        this.onRemoteStreamCallback = null;
     }
 }
 

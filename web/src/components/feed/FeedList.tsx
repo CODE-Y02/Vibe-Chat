@@ -23,7 +23,19 @@ export function FeedList() {
         queryFn: ({ pageParam }) => getFeed(pageParam),
         initialPageParam: undefined as string | undefined,
         getNextPageParam: (lastPage) => lastPage?.nextCursor,
-        refetchInterval: 60_000, // Reduced polling frequency given real-time focus
+
+        /**
+         * SCALE RECOMMENDATION: "Stale-While-Revalidate" (SWR) Configuration
+         * 
+         * 1. staleTime: 30s - Data is considered fresh for 30s. No refetch during this window.
+         * 2. gcTime: 5m - Keep unused data in memory for 5 mins before garbage collecting.
+         * 3. refetchOnWindowFocus: true - Revalidate when user returns to tab (X behavior).
+         * 4. refetchInterval: 60s - Background revalidation every minute.
+         */
+        staleTime: 30_000,
+        gcTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: true,
+        refetchInterval: 60_000,
     });
 
     useEffect(() => {
