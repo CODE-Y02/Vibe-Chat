@@ -10,8 +10,19 @@ export const createPost = async (c: Context<Env>) => {
 
 export const getFeed = async (c: Context<Env>) => {
     const { userId } = c.get('user');
-    const page = Number(c.req.query('page')) || 1;
-    return c.json(await feedService.getFeed(userId, page));
+    const cursor = c.req.query('cursor');
+    const limit = Number(c.req.query('limit')) || 20;
+
+    const posts = await feedService.getFeed(userId, cursor, limit);
+
+    // Determine next cursor logic for X-style pagination
+    let nextCursor: string | undefined = undefined;
+    if (posts.length > limit) {
+        const nextItem = posts.pop();
+        nextCursor = nextItem?.id;
+    }
+
+    return c.json({ data: posts, nextCursor });
 };
 
 export const reactToPost = async (c: Context<Env>) => {
@@ -28,9 +39,20 @@ export const createReply = async (c: Context<Env>) => {
 };
 
 export const getReplies = async (c: Context<Env>) => {
+    const { userId } = c.get('user');
     const { parentId } = c.req.param();
-    const page = Number(c.req.query('page')) || 1;
-    return c.json(await feedService.getReplies(parentId, page));
+    const cursor = c.req.query('cursor');
+    const limit = Number(c.req.query('limit')) || 20;
+
+    const replies = await feedService.getReplies(parentId, userId, cursor, limit);
+
+    let nextCursor: string | undefined = undefined;
+    if (replies.length > limit) {
+        const nextItem = replies.pop();
+        nextCursor = nextItem?.id;
+    }
+
+    return c.json({ data: replies, nextCursor });
 };
 
 export const repost = async (c: Context<Env>) => {

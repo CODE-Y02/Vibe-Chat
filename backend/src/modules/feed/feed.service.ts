@@ -6,61 +6,62 @@ const safeAuthorSelect = {
     avatar: true,
 } as const;
 
-// Reusable include for a post with author, reactions, reply preview, repost preview
-const postInclude = {
-    author: { select: safeAuthorSelect },
-    reactions: true,
-    // Preview first 3 direct replies
-    replies: {
-        where: { parentId: { not: null } },  // only direct replies, not nested
-        take: 3,
-        orderBy: { createdAt: 'asc' as const },
-        include: {
-            author: { select: safeAuthorSelect },
-            reactions: true,
-            _count: { select: { replies: true } },
-        },
-    },
-    // Embed the original post for reposts / quote posts
-    repostOf: {
-        include: { author: { select: safeAuthorSelect } },
-    },
-    _count: { select: { replies: true, reposts: true } },
-};
-
 export class FeedService {
-    /** Create a top-level post */
+    /** Helper to generate optimized include object */
+    private getPostInclude(currentUserId: string) {
+        return {
+            author: { select: safeAuthorSelect },
+            // Only include current user's reaction to keep payload small
+            reactions: {
+                where: { userId: currentUserId },
+                select: { type: true, userId: true },
+            },
+            // Preview first 3 direct replies
+            replies: {
+                where: { parentId: { not: null } },
+                take: 3,
+                orderBy: { createdAt: 'asc' as const },
+                include: {
+                    author: { select: safeAuthorSelect },
+                    _count: { select: { reactions: true, replies: true } },
+                    // Check if user liked the reply too
+                    reactions: {
+                        where: { userId: currentUserId },
+                        select: { type: true },
+                    },
+                },
+            },
+            repostOf: {
+                include: { author: { select: safeAuthorSelect } },
+            },
+            _count: { select: { replies: true, reposts: true, reactions: true } },
+        };
+    }
+
     async createPost(authorId: string, content: string) {
         return prisma.post.create({
             data: { authorId, content },
-            include: postInclude,
+            include: this.getPostInclude(authorId),
         });
     }
 
-    /** Reply to a post (creates a Post with parentId) */
     async createReply(authorId: string, parentId: string, content: string) {
-        // Verify parent exists
         const parent = await prisma.post.findUnique({ where: { id: parentId } });
         if (!parent) throw new Error('Post not found');
 
         return prisma.post.create({
             data: { authorId, content, parentId },
-            include: postInclude,
+            include: this.getPostInclude(authorId),
         });
     }
 
-    /** Repost (no content) or Quote post (with content) */
     async repost(authorId: string, repostOfId: string, content?: string) {
-        const original = await prisma.post.findUnique({ where: { id: repostOfId } });
-        if (!original) throw new Error('Post not found');
-
         return prisma.post.create({
             data: { authorId, content: content ?? null, repostOfId },
-            include: postInclude,
+            include: this.getPostInclude(authorId),
         });
     }
 
-    /** Undo repost */
     async undoRepost(authorId: string, repostOfId: string) {
         await prisma.post.deleteMany({
             where: { authorId, repostOfId, parentId: null },
@@ -68,8 +69,8 @@ export class FeedService {
         return { success: true };
     }
 
-    /** Feed: top-level posts from self + friends, newest first */
-    async getFeed(userId: string, page = 1, limit = 20) {
+    /** Optimized Feed with Cursor Pagination */
+    async getFeed(userId: string, cursor?: string, limit = 20) {
         const friends = await prisma.friend.findMany({
             where: {
                 OR: [
@@ -83,35 +84,34 @@ export class FeedService {
         return prisma.post.findMany({
             where: {
                 authorId: { in: [userId, ...friendIds] },
-                parentId: null, // only top-level posts in main feed
+                parentId: null,
             },
             orderBy: { createdAt: 'desc' },
-            skip: (page - 1) * limit,
-            take: limit,
-            include: postInclude,
+            take: limit + 1, // Fetch one extra to determine if there's a next page
+            cursor: cursor ? { id: cursor } : undefined,
+            skip: cursor ? 1 : 0, // Skip the cursor itself
+            include: this.getPostInclude(userId),
         });
     }
 
-    /** All replies for a post (paginated) */
-    async getReplies(parentId: string, page = 1, limit = 20) {
+    /** Optimized Replies with Cursor Pagination */
+    async getReplies(parentId: string, userId: string, cursor?: string, limit = 20) {
         return prisma.post.findMany({
             where: { parentId },
             orderBy: { createdAt: 'asc' },
-            skip: (page - 1) * limit,
-            take: limit,
-            include: postInclude,
+            take: limit + 1,
+            cursor: cursor ? { id: cursor } : undefined,
+            skip: cursor ? 1 : 0,
+            include: this.getPostInclude(userId),
         });
     }
 
-    /** Like / unlike (toggle via upsert) */
     async reactToPost(userId: string, postId: string, type: string) {
-        // Check if reaction already exists
         const existing = await prisma.reaction.findUnique({
             where: { postId_userId_type: { postId, userId, type } },
         });
 
         if (existing) {
-            // Toggle off
             await prisma.reaction.delete({ where: { id: existing.id } });
             return { toggled: false };
         }

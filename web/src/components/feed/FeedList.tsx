@@ -1,14 +1,36 @@
-import { useQuery } from '@tanstack/react-query';
+"use client";
+
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { getFeed } from '@/actions/feed.actions';
 import { PostCard, Post } from './PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useInView } from 'react-intersection-observer';
+import { useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export function FeedList() {
-    const { data: posts, isLoading } = useQuery<Post[]>({
+    const { ref, inView } = useInView();
+
+    const {
+        data,
+        isLoading,
+        isError,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage
+    } = useInfiniteQuery({
         queryKey: ['feed'],
-        queryFn: () => getFeed(),
-        refetchInterval: 30_000, // poll every 30s for new posts
+        queryFn: ({ pageParam }) => getFeed(pageParam),
+        initialPageParam: undefined as string | undefined,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        refetchInterval: 60_000, // Reduced polling frequency given real-time focus
     });
+
+    useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     if (isLoading) {
         return (
@@ -20,11 +42,6 @@ export function FeedList() {
                             <Skeleton className="h-3 w-32 bg-white/5" />
                             <Skeleton className="h-4 w-full bg-white/5" />
                             <Skeleton className="h-4 w-3/4 bg-white/5" />
-                            <div className="flex gap-6 pt-1">
-                                <Skeleton className="h-3 w-8 bg-white/5" />
-                                <Skeleton className="h-3 w-8 bg-white/5" />
-                                <Skeleton className="h-3 w-8 bg-white/5" />
-                            </div>
                         </div>
                     </div>
                 ))}
@@ -32,7 +49,17 @@ export function FeedList() {
         );
     }
 
-    if (!posts?.length) {
+    if (isError) {
+        return (
+            <div className="py-10 text-center text-white/40">
+                Failed to load feed. Please try again.
+            </div>
+        );
+    }
+
+    const posts = data?.pages.flatMap(page => page.data) || [];
+
+    if (!posts.length) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <p className="text-2xl mb-2">✨</p>
@@ -42,10 +69,26 @@ export function FeedList() {
     }
 
     return (
-        <div className="divide-y divide-white/5 border border-white/5 rounded-2xl overflow-hidden">
-            {posts.map((post: Post) => (
-                <PostCard key={post.id} post={post} />
-            ))}
+        <div className="border border-white/5 rounded-2xl overflow-hidden bg-black/20">
+            <div className="divide-y divide-white/5">
+                {posts.map((post: Post) => (
+                    <PostCard key={post.id} post={post} />
+                ))}
+            </div>
+
+            {/* Pagination trigger / loading indicator */}
+            <div ref={ref} className="py-8 flex justify-center border-t border-white/5 bg-white/[0.01]">
+                {isFetchingNextPage ? (
+                    <div className="flex items-center gap-2 text-white/40 text-xs font-medium">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Loading more vibes...
+                    </div>
+                ) : hasNextPage ? (
+                    <span className="text-white/10 text-[10px] uppercase font-bold tracking-widest">Scroll to load more</span>
+                ) : (
+                    <span className="text-white/20 text-[10px] uppercase font-bold tracking-widest">You've reached the end of the vibe</span>
+                )}
+            </div>
         </div>
     );
 }

@@ -1,10 +1,28 @@
 import prisma from '../../lib/prisma.js';
 import { generateTokens, hashPassword, comparePassword, verifyRefreshToken } from '../../lib/auth.js';
 import { AppError } from '../../lib/utils.js';
-import { User } from '@prisma/client';
+
+// Exclude passwordHash from all responses
+const safeUserSelect = {
+    id: true,
+    username: true,
+    email: true,
+    avatar: true,
+    isAnonymous: true,
+    createdAt: true,
+    updatedAt: true,
+} as const;
 
 export interface AuthResponse {
-    user: User;
+    user: {
+        id: string;
+        username: string | null;
+        email: string | null;
+        avatar: string | null;
+        isAnonymous: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    };
     accessToken: string;
     refreshToken: string;
 }
@@ -25,11 +43,12 @@ export class AuthService {
 
         const user = await prisma.user.create({
             data: {
-                username: data.username,
-                email: data.email,
+                username: data.username || null,
+                email: data.email || null,
                 passwordHash,
                 isAnonymous: !data.password,
             },
+            select: safeUserSelect,
         });
 
         const tokens = generateTokens({
@@ -60,7 +79,8 @@ export class AuthService {
             isAnonymous: user.isAnonymous,
         });
 
-        return { user, ...tokens };
+        const { passwordHash, ...safeUser } = user;
+        return { user: safeUser, ...tokens };
     }
 
     async createAnonymousSession(): Promise<AuthResponse> {
@@ -68,6 +88,7 @@ export class AuthService {
             data: {
                 isAnonymous: true,
             },
+            select: safeUserSelect,
         });
 
         const tokens = generateTokens({

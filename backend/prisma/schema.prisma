@@ -75,8 +75,8 @@ model Post {
   reposts     Post[]    @relation("PostReposts")
   reactions   Reaction[]
 
-  @@index([authorId])
-  @@index([parentId])
+  @@index([authorId, createdAt(sort: Desc)])
+  @@index([parentId, createdAt(sort: Asc)])
   @@index([repostOfId])
 }
 

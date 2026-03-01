@@ -6,13 +6,15 @@ import { z } from "zod";
 
 const PostSchema = z.object({ content: z.string().min(1).max(500) });
 
-export async function getFeed(page = 1) {
+/** Get paginated feed (cursor-based) */
+export async function getFeed(cursor?: string, limit = 20) {
     try {
-        const res = await authenticatedFetch(`/feed?page=${page}`);
-        if (!res.ok) return [];
+        const url = `/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ""}`;
+        const res = await authenticatedFetch(url);
+        if (!res.ok) return { data: [], nextCursor: undefined };
         return await res.json();
     } catch {
-        return [];
+        return { data: [], nextCursor: undefined };
     }
 }
 
@@ -51,7 +53,18 @@ export async function reactToPost(postId: string, type: string) {
     }
 }
 
-/** Creates a reply (same Post model, parentId set) */
+/** Get paginated replies (cursor-based) */
+export async function getReplies(parentId: string, cursor?: string, limit = 20) {
+    try {
+        const url = `/feed/${parentId}/replies?limit=${limit}${cursor ? `&cursor=${cursor}` : ""}`;
+        const res = await authenticatedFetch(url);
+        if (!res.ok) return { data: [], nextCursor: undefined };
+        return await res.json();
+    } catch {
+        return { data: [], nextCursor: undefined };
+    }
+}
+
 export async function createReply(parentId: string, content: string) {
     const validated = PostSchema.safeParse({ content });
     if (!validated.success) return { error: "Invalid content" };
@@ -68,17 +81,6 @@ export async function createReply(parentId: string, content: string) {
         return { success: true, post: data };
     } catch {
         return { error: "Failed to reply" };
-    }
-}
-
-/** Get paginated replies for a post */
-export async function getReplies(parentId: string, page = 1) {
-    try {
-        const res = await authenticatedFetch(`/feed/${parentId}/replies?page=${page}`);
-        if (!res.ok) return [];
-        return await res.json();
-    } catch {
-        return [];
     }
 }
 
