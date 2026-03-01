@@ -28,7 +28,7 @@ const navItems = [
     { href: "/friends", label: "Friends", icon: Users },
 ];
 
-export function Navbar() {
+export function Navbar({ className }: { className?: string }) {
     const pathname = usePathname();
     const { data: session } = useSession();
     const [open, setOpen] = useState(false);
@@ -46,7 +46,7 @@ export function Navbar() {
 
     if (!mounted) {
         return (
-            <header className="sticky top-0 z-50 w-full px-6 py-4 mb-4">
+            <header className={cn("sticky top-0 z-50 w-full px-6 py-4 mb-4", className)}>
                 <div className="container mx-auto">
                     <div className="flex h-20 items-center justify-between px-8 glass border border-white/5 rounded-[32px]">
                         {/* Loading skeleton or empty spacer */}
@@ -59,7 +59,7 @@ export function Navbar() {
     const isCurrentlyDark = theme === "dark";
 
     return (
-        <header className="sticky top-0 z-50 w-full px-6 py-4 mb-4">
+        <header className={cn("sticky top-0 z-50 w-full px-6 py-4 mb-0 md:mb-4", className)}>
             <div className="container mx-auto">
                 <motion.div
                     initial={{ y: -20, opacity: 0 }}

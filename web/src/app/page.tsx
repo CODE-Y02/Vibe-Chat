@@ -117,13 +117,10 @@ export default function Landing() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <Button size="lg" className="rounded-[2rem] px-16 h-24 font-black text-2xl bg-primary hover:bg-primary shadow-glow-lg transition-all group overflow-hidden relative border-none">
+                <Button size="lg" className="rounded-[2rem] px-16 h-24 font-black text-2xl bg-primary hover:bg-primary shadow-glow-lg transition-all group overflow-hidden relative border-none shimmer">
                   <span className="relative z-10 flex items-center gap-4">
                     START VIBING <ArrowRight className="w-8 h-8 group-hover:translate-x-3 transition-transform duration-500" />
                   </span>
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:animate-[shimmer_2s_infinite]"
-                  />
                 </Button>
               </motion.div>
             </Link>

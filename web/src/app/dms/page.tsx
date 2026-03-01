@@ -16,6 +16,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
 
 export default function DMsPage() {
     const { data: session, status } = useSession();
@@ -84,13 +86,18 @@ export default function DMsPage() {
         sendMutation.mutate({ to: activePeer.peer.id, content: input.trim() });
     };
 
+    const isChatOpen = !!activePeer;
+
     return (
         <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden transition-colors duration-300">
-            <Navbar />
+            <Navbar className={cn(isChatOpen && "hidden md:flex")} />
 
-            <main className="flex-1 overflow-hidden flex flex-col md:flex-row container mx-auto py-4 px-4 gap-4 max-w-7xl">
+            <main className="flex-1 overflow-hidden flex flex-col md:flex-row container mx-auto py-0 md:py-4 px-0 md:px-4 gap-4 max-w-7xl">
                 {/* Conversations Sidebar */}
-                <div className="w-full md:w-80 h-full flex flex-col gap-4 shrink-0">
+                <div className={cn(
+                    "w-full md:w-80 h-full flex flex-col gap-4 shrink-0 px-4 md:px-0 py-4 md:py-0 transition-all",
+                    isChatOpen ? "hidden md:flex" : "flex"
+                )}>
                     <Link href="/chat">
                         <Button size="lg" className="w-full h-14 rounded-2xl shadow-xl shadow-primary/10 font-black text-sm uppercase tracking-widest gap-3 bg-gradient-to-r from-primary to-indigo-600 hover:scale-[1.02] active:scale-[0.98] transition-all border-none">
                             <Video className="w-5 h-5" />
@@ -116,7 +123,10 @@ export default function DMsPage() {
                 </div>
 
                 {/* Chat Area */}
-                <div className="flex-1 h-full rounded-3xl overflow-hidden glass-card border border-border flex flex-col relative bg-card/10">
+                <div className={cn(
+                    "flex-1 h-full md:rounded-3xl overflow-hidden glass-card border-x-0 md:border border-border flex flex-col relative bg-card/10 transition-all",
+                    isChatOpen ? "flex" : "hidden md:flex"
+                )}>
                     {!activePeer ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
                             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
@@ -128,14 +138,22 @@ export default function DMsPage() {
                     ) : (
                         <>
                             {/* Chat Header */}
-                            <div className="p-4 border-b border-border bg-muted/30 backdrop-blur-3xl flex items-center justify-between shadow-sm z-10">
+                            <div className="p-4 border-b border-border bg-muted/30 backdrop-blur-3xl flex items-center justify-between shadow-sm z-10 transition-all">
                                 <div className="flex items-center gap-3">
-                                    <Avatar className="w-10 h-10 border border-primary/20 shadow-lg">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setActivePeer(null)}
+                                        className="md:hidden -ml-2 rounded-xl text-muted-foreground"
+                                    >
+                                        <ArrowLeft className="w-5 h-5" />
+                                    </Button>
+                                    <Avatar className="w-10 h-10 border border-primary/20 shadow-lg shrink-0">
                                         <AvatarImage src={activePeer.peer.avatar} />
                                         <AvatarFallback className="bg-muted text-primary">{activePeer.peer.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                                     </Avatar>
-                                    <div>
-                                        <h3 className="font-bold text-sm tracking-tight">{activePeer.peer.username}</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="font-bold text-sm tracking-tight truncate uppercase tracking-widest text-[10px]">{activePeer.peer.username}</h3>
                                         <div className="flex items-center gap-1.5 mt-0.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
                                             <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Online</span>
@@ -147,7 +165,7 @@ export default function DMsPage() {
                                         onClick={handleCall}
                                         variant="ghost"
                                         size="icon"
-                                        className="rounded-2xl w-12 h-12 bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-primary/10"
+                                        className="rounded-2xl w-10 h-10 md:w-12 md:h-12 bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-primary/10"
                                     >
                                         <Video className="w-5 h-5" />
                                     </Button>
@@ -155,29 +173,36 @@ export default function DMsPage() {
                             </div>
 
                             {/* Messages Area */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar bg-gradient-to-b from-transparent to-primary/[0.02]">
-                                {isLoadingMessages ? (
-                                    <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-                                ) : (
-                                    messages?.map((msg: any) => {
-                                        const isMe = msg.senderId === session?.user?.id;
-                                        return (
-                                            <div key={msg.id} className={cn("flex flex-col max-w-[80%]", isMe ? "ml-auto items-end" : "mr-auto items-start")}>
-                                                <div className={cn(
-                                                    "px-4 py-2.5 rounded-2xl text-sm shadow-xl transition-all",
-                                                    isMe
-                                                        ? "bg-primary text-white rounded-tr-sm font-medium"
-                                                        : "bg-muted text-foreground border border-border rounded-tl-sm backdrop-blur-md"
-                                                )}>
-                                                    {msg.content}
-                                                </div>
-                                                <span className="text-[9px] text-muted-foreground/50 mt-1 font-black uppercase tracking-widest px-1">
-                                                    {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
-                                                </span>
-                                            </div>
-                                        );
-                                    })
-                                )}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-gradient-to-b from-transparent to-primary/[0.02]">
+                                <AnimatePresence initial={false}>
+                                    {isLoadingMessages ? (
+                                        <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                                    ) : (
+                                        messages?.map((msg: any) => {
+                                            const isMe = msg.senderId === session?.user?.id;
+                                            return (
+                                                <motion.div
+                                                    key={msg.id}
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    className={cn("flex flex-col max-w-[85%] md:max-w-[75%]", isMe ? "ml-auto items-end" : "mr-auto items-start")}
+                                                >
+                                                    <div className={cn(
+                                                        "px-5 py-3 rounded-2xl text-sm shadow-xl transition-all relative overflow-hidden",
+                                                        isMe
+                                                            ? "bg-primary text-white rounded-tr-sm font-medium glow-sm bg-vibe-gradient"
+                                                            : "bg-muted text-foreground border border-border rounded-tl-sm backdrop-blur-md"
+                                                    )}>
+                                                        {msg.content}
+                                                    </div>
+                                                    <span className="text-[9px] text-muted-foreground/50 mt-1 font-black uppercase tracking-widest px-1">
+                                                        {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                                                    </span>
+                                                </motion.div>
+                                            );
+                                        })
+                                    )}
+                                </AnimatePresence>
                                 <div ref={messagesEndRef} />
                             </div>
 

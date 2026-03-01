@@ -39,44 +39,47 @@ export function Sidebar({ conversations, activePeerId, onSelectConversation, cla
                             key={conv.peer.id}
                             onClick={() => onSelectConversation(conv)}
                             className={cn(
-                                "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 text-left group relative outline-none",
+                                "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-500 text-left group relative outline-none",
                                 activePeerId === conv.peer.id
                                     ? "bg-primary/10 border border-primary/20 shadow-xl shadow-primary/5"
                                     : "hover:bg-muted/50 border border-transparent"
                             )}
                         >
                             <div className="relative shrink-0">
-                                <Avatar className="h-14 w-14 border border-border shadow-2xl">
+                                <Avatar className={cn(
+                                    "h-14 w-14 border border-border shadow-2xl transition-transform duration-500",
+                                    activePeerId === conv.peer.id ? "scale-105 border-primary/50" : "group-hover:scale-105"
+                                )}>
                                     <AvatarImage src={conv.peer.avatar} alt={conv.peer.username} />
                                     <AvatarFallback className="bg-muted text-primary font-black uppercase text-sm">
                                         {conv.peer.username.slice(0, 2)}
                                     </AvatarFallback>
                                 </Avatar>
                                 {conv.isUnread && (
-                                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 border-2 border-background rounded-full shadow-lg"></span>
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary border-2 border-background rounded-full shadow-lg shadow-primary/20"></span>
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-center mb-1">
                                     <p className={cn(
-                                        "text-sm font-black truncate transition-colors uppercase tracking-tight",
-                                        conv.isUnread ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
+                                        "text-xs font-black truncate transition-colors uppercase tracking-[0.1em]",
+                                        conv.isUnread ? "text-primary" : "text-foreground group-hover:text-foreground"
                                     )}>
                                         {conv.peer.username}
                                     </p>
-                                    <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter">
+                                    <span className="text-[10px] text-muted-foreground/50 font-black uppercase tracking-tighter">
                                         {formatDistanceToNow(new Date(conv.createdAt), { addSuffix: false })}
                                     </span>
                                 </div>
                                 <p className={cn(
-                                    "text-xs truncate transition-colors font-medium",
-                                    conv.isUnread ? "text-primary font-bold" : "text-muted-foreground group-hover:text-foreground/60"
+                                    "text-[11px] truncate transition-colors font-medium tracking-tight",
+                                    conv.isUnread ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground/60"
                                 )}>
                                     {conv.lastMessage}
                                 </p>
                             </div>
-                            {conv.isUnread && (
-                                <div className="absolute left-1 w-1 h-8 bg-primary rounded-full" />
+                            {activePeerId === conv.peer.id && (
+                                <div className="absolute left-1 w-1 h-8 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
                             )}
                         </button>
                     ))

@@ -396,7 +396,7 @@ export default function ChatPage() {
                         <motion.div
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
-                            className="pointer-events-auto w-full md:w-[460px] h-[400px] md:h-[650px]"
+                            className="pointer-events-auto w-full md:w-[460px] h-[350px] md:h-[650px] transition-all"
                         >
                             <ChatBox />
                         </motion.div>

@@ -26,13 +26,11 @@ function MessageBubble({ message, isOwn }: MessageBubbleProps) {
             <div className={cn(
                 "max-w-[85%] px-5 py-3 rounded-[24px] shadow-xl text-sm transition-all relative overflow-hidden",
                 isOwn
-                    ? "bg-primary text-white rounded-tr-sm glow-sm"
+                    ? "bg-vibe-gradient text-white rounded-tr-sm"
                     : "bg-white/[0.05] text-white/90 rounded-tl-sm border border-white/10 backdrop-blur-md"
             )}>
                 {message.text}
-                {isOwn && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 -translate-x-full animate-[shimmer_3s_infinite]" />
-                )}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
             </div>
         </motion.div>
     );
@@ -181,11 +179,10 @@ export function ChatBox() {
                                     <Button
                                         type="submit"
                                         size="icon"
-                                        className="rounded-2xl w-14 h-14 shrink-0 shadow-glow bg-primary transition-all overflow-hidden relative"
+                                        className="rounded-2xl w-14 h-14 shrink-0 shadow-glow bg-vibe-gradient transition-all overflow-hidden relative shimmer border-none"
                                         disabled={!text.trim() || !session.isMatched}
                                     >
                                         <Send className="w-6 h-6 relative z-10" />
-                                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full animate-[shimmer_2s_infinite]" />
                                     </Button>
                                 </motion.div>
                             </form>
