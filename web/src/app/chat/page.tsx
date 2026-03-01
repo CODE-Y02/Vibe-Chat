@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useChatStore } from '@/store/useChatStore';
-import { socket } from '@/lib/socket';
+import { useSocket } from '@/hooks/use-socket';
 import { VideoPanel } from '@/components/chat/VideoPanel';
 import { ChatBox } from '@/components/chat/ChatBox';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { useSession } from 'next-auth/react';
 export default function ChatPage() {
     const { session, isSearching, incomingCall, setSearching, disconnect, setMatched, addMessage } = useChatStore();
     const { data: sessionData, status } = useSession();
+    const { socket, isConnected } = useSocket();
     const { toast } = useToast();
     const router = useRouter();
 
@@ -65,9 +66,9 @@ export default function ChatPage() {
     // 3. CONNECTION LIFECYCLE (Stable)
     // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
-        if (status !== 'authenticated' || !sessionData?.accessToken) return;
+        if (status !== 'authenticated' || !sessionData?.accessToken || !socket) return;
 
-        console.log("[ChatPage] Lifecycle Start: Connecting socket...");
+        console.log("[ChatPage] Lifecycle: Initializing match state...");
         socket.auth = { token: sessionData.accessToken };
 
         // Reconnect if needed
@@ -76,12 +77,11 @@ export default function ChatPage() {
         }
 
         return () => {
-            console.log("[ChatPage] Lifecycle Cleanup: Disconnecting...");
-            socket.disconnect();
-            disconnect();
-            webrtc.cleanup();
+            console.log("[ChatPage] Lifecycle Cleanup: Clearing chat state...");
+            disconnect(); // Clear local chat store
+            webrtc.cleanup(); // Clean up media
         };
-    }, [sessionData?.accessToken, status, disconnect]);
+    }, [status, socket, disconnect, sessionData?.accessToken]);
 
     // ──────────────────────────────────────────────────────────────────────────
     // 4. EVENT LISTENERS (Separate to avoid connection churn)

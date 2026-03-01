@@ -1,44 +1,53 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useEffect, useState } from 'react';
+import { socket } from '@/lib/socket';
 import { useSession } from 'next-auth/react';
 
+/**
+ * High-Scale Socket Hook (Singleton Wrapper)
+ * Ensures that 'one user = one connection' across the entire app.
+ */
 export function useSocket() {
     const { data: session } = useSession();
-    const socketRef = useRef<Socket | null>(null);
-    const [isConnected, setIsConnected] = useState(false);
+    const [isConnected, setIsConnected] = useState(socket.connected);
 
     useEffect(() => {
         if (!session?.accessToken) return;
 
-        const socketUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        // 🟢 Sync the shared singleton auth token
+        socket.auth = { token: session.accessToken };
 
-        const socket = io(socketUrl, {
-            auth: {
-                token: session.accessToken
-            }
-        });
-
-        socketRef.current = socket;
-
-        socket.on('connect', () => {
+        const onConnect = () => {
+            console.log('[useSocket] Shared socket connected');
             setIsConnected(true);
-            console.log('Socket connected');
-        });
-
-        socket.on('disconnect', () => {
+        };
+        const onDisconnect = () => {
+            console.log('[useSocket] Shared socket disconnected');
             setIsConnected(false);
-            console.log('Socket disconnected');
-        });
+        };
+
+        socket.on('connect', onConnect);
+        socket.on('disconnect', onDisconnect);
+
+        // 🟢 Robust Connection Logic
+        if (!socket.connected) {
+            console.log('[useSocket] Connecting singleton socket...');
+            socket.connect();
+        } else {
+            setIsConnected(true);
+        }
 
         return () => {
-            socket.disconnect();
+            socket.off('connect', onConnect);
+            socket.off('disconnect', onDisconnect);
+            // ⚠️ DO NOT call socket.disconnect() here. 
+            // It's a singleton; other components might still be using it!
         };
     }, [session?.accessToken]);
 
     return {
-        socket: socketRef.current,
+        socket,
         isConnected
     };
 }
