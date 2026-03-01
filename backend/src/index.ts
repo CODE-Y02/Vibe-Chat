@@ -13,9 +13,12 @@ import { Env } from './types.js';
 dotenv.config();
 
 import { rateLimiter } from './middleware/rate-limit.middleware.js';
-
 import { swaggerUI } from '@hono/swagger-ui';
 import { apiReference } from '@scalar/hono-api-reference';
+import { Server } from 'socket.io';
+import { setupSockets } from './sockets/index.js';
+
+// ── App ──────────────────────────────────────────────────────────────────────
 
 const app = new OpenAPIHono<Env>();
 
@@ -52,20 +55,21 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOStri
 // Error handling
 app.onError(errorHandler);
 
-import { createServer } from 'node:http';
-import { Server } from 'socket.io';
-import { setupSockets } from './sockets/index.js';
+// ── Server ───────────────────────────────────────────────────────────────────
+// We use @hono/node-server's `serve()` which returns a plain node:http.Server.
+// Socket.IO attaches to that same server instance.
+// IMPORTANT: No `export default app` — Bun auto-calls Bun.serve() on any
+// default export that has a `fetch` handler, which would cause EADDRINUSE.
 
 const port = Number(process.env.PORT) || 3000;
 
-const server = serve({
-    fetch: app.fetch,
-    port,
-}, (info) => {
-    console.log(`Server is running on port ${info.port}`);
-});
+const httpServer = serve(
+    { fetch: app.fetch, port },
+    (info) => console.log(`🚀 Server running on http://localhost:${info.port}`),
+);
 
-const io = new Server(server as import('node:http').Server, {
+// Attach Socket.IO to the same underlying http.Server
+const io = new Server(httpServer as unknown as import('node:http').Server, {
     cors: {
         origin: '*',
         methods: ['GET', 'POST'],
@@ -73,5 +77,3 @@ const io = new Server(server as import('node:http').Server, {
 });
 
 setupSockets(io);
-
-export default app;
