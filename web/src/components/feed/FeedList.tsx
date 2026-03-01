@@ -4,37 +4,47 @@ import { PostCard, Post } from './PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function FeedList() {
-    const { data: posts, isLoading } = useQuery({
+    const { data: posts, isLoading } = useQuery<Post[]>({
         queryKey: ['feed'],
-        queryFn: () => getFeed()
+        queryFn: () => getFeed(),
+        refetchInterval: 30_000, // poll every 30s for new posts
     });
 
     if (isLoading) {
         return (
-            <div className="space-y-6">
+            <div className="divide-y divide-white/5">
                 {[1, 2, 3].map(i => (
-                    <div key={i} className="p-5 rounded-2xl bg-card/30 border border-border/50 backdrop-blur-sm shadow-sm space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Skeleton className="w-10 h-10 rounded-full bg-primary/10" />
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-32 bg-primary/10" />
-                                <Skeleton className="h-3 w-20 bg-primary/5" />
+                    <div key={i} className="flex gap-3 px-4 py-4">
+                        <Skeleton className="w-10 h-10 rounded-full shrink-0 bg-white/5" />
+                        <div className="flex-1 space-y-3">
+                            <Skeleton className="h-3 w-32 bg-white/5" />
+                            <Skeleton className="h-4 w-full bg-white/5" />
+                            <Skeleton className="h-4 w-3/4 bg-white/5" />
+                            <div className="flex gap-6 pt-1">
+                                <Skeleton className="h-3 w-8 bg-white/5" />
+                                <Skeleton className="h-3 w-8 bg-white/5" />
+                                <Skeleton className="h-3 w-8 bg-white/5" />
                             </div>
                         </div>
-                        <Skeleton className="h-20 w-full bg-primary/5" />
                     </div>
                 ))}
             </div>
         );
     }
 
+    if (!posts?.length) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+                <p className="text-2xl mb-2">✨</p>
+                <p className="text-white/40 text-sm font-medium">Nothing here yet — be the first to vibe!</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="space-y-6">
-            {posts?.map((post: Post) => (
-                <PostCard
-                    key={post.id}
-                    post={post}
-                />
+        <div className="divide-y divide-white/5 border border-white/5 rounded-2xl overflow-hidden">
+            {posts.map((post: Post) => (
+                <PostCard key={post.id} post={post} />
             ))}
         </div>
     );

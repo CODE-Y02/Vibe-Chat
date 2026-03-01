@@ -17,7 +17,7 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  posts         Post[]
+  posts         Post[]     @relation("UserPosts")
   reactions     Reaction[]
   sentMessages     Message[]  @relation("SentMessages")
   receivedMessages Message[]  @relation("ReceivedMessages")
@@ -55,17 +55,29 @@ enum FriendStatus {
   REJECTED
 }
 
+// Unified Post model — same schema for posts, replies, and reposts (Twitter/X architecture)
+// parentId set   → this is a reply to another post
+// repostOfId set → this is a repost (no content) or quote post (has content)
+// both null      → top-level post
 model Post {
-  id        String     @id @default(cuid())
-  authorId  String
-  content   String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id          String    @id @default(cuid())
+  authorId    String
+  content     String?   // nullable: pure reposts have no content
+  parentId    String?   // reply-to post
+  repostOfId  String?   // repost/quote of post
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  author    User       @relation(fields: [authorId], references: [id])
-  reactions Reaction[]
+  author      User      @relation("UserPosts", fields: [authorId], references: [id])
+  parent      Post?     @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Post[]    @relation("PostReplies")
+  repostOf    Post?     @relation("PostReposts", fields: [repostOfId], references: [id])
+  reposts     Post[]    @relation("PostReposts")
+  reactions   Reaction[]
 
   @@index([authorId])
+  @@index([parentId])
+  @@index([repostOfId])
 }
 
 model Reaction {
