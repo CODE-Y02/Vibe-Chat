@@ -4,46 +4,61 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Video, ShieldCheck, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { Video, ShieldCheck, Mail, Lock, User, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
-    const [formData, setFormData] = useState({
-        username: '',
-        email: '',
-        password: ''
-    });
-    const login = useAuthStore(state => state.login);
+    const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+    const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-    const router = useRouter();
+    const login = useAuthStore(state => state.login);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
         setLoading(true);
-        try {
-            await login({
-                username: formData.username,
-                email: formData.email,
-                password: formData.password,
-            });
-        } catch (error) {
-            console.error("Login Error", error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    const handleAnonymous = async () => {
-        setLoading(true);
-        try {
-            await login({ isAnonymous: true });
-        } catch (error) {
-            console.error("Anonymous Error", error);
-        } finally {
-            setLoading(false);
+        if (isLogin) {
+            // Login: username OR email + password
+            try {
+                await login({
+                    username: formData.username || undefined,
+                    email: formData.email || undefined,
+                    password: formData.password,
+                });
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            // Signup: call backend directly then auto-login
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signup`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        username: formData.username || undefined,
+                        email: formData.email || undefined,
+                        password: formData.password,
+                    }),
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Signup failed");
+
+                // Auto-login after successful signup
+                await login({
+                    username: formData.username || undefined,
+                    email: formData.email || undefined,
+                    password: formData.password,
+                });
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
+                setLoading(false);
+            }
         }
     };
 
@@ -80,25 +95,21 @@ export default function AuthPage() {
                                 <Input
                                     placeholder="Username"
                                     className="pl-12 h-14 rounded-2xl bg-white/5 border-white/5 focus:border-primary/50 transition-all text-white placeholder:text-white/20"
-                                    required={isLogin}
                                     value={formData.username}
                                     onChange={e => setFormData({ ...formData, username: e.target.value })}
                                 />
                             </div>
 
-                            {!isLogin && (
-                                <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                                    <Input
-                                        type="email"
-                                        placeholder="Email address"
-                                        className="pl-12 h-14 rounded-2xl bg-white/5 border-white/5 focus:border-primary/50 transition-all text-white placeholder:text-white/20"
-                                        required
-                                        value={formData.email}
-                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    />
-                                </div>
-                            )}
+                            <div className="relative">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                                <Input
+                                    type="email"
+                                    placeholder="Email address"
+                                    className="pl-12 h-14 rounded-2xl bg-white/5 border-white/5 focus:border-primary/50 transition-all text-white placeholder:text-white/20"
+                                    value={formData.email}
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </div>
 
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -113,6 +124,14 @@ export default function AuthPage() {
                             </div>
                         </div>
 
+                        {/* Error message */}
+                        {error && (
+                            <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-red-400 text-sm">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                {error}
+                            </div>
+                        )}
+
                         <Button
                             type="submit"
                             disabled={loading}
@@ -121,23 +140,11 @@ export default function AuthPage() {
                         >
                             {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
                         </Button>
-
-                        {isLogin && (
-                            <Button
-                                type="button"
-                                onClick={handleAnonymous}
-                                disabled={loading}
-                                variant="outline"
-                                className="w-full h-14 rounded-2xl font-bold bg-white/5 border-white/10 hover:bg-white/10 text-white"
-                            >
-                                Continue as Guest
-                            </Button>
-                        )}
                     </form>
 
                     <div className="mt-8 pt-8 border-t border-white/5 text-center">
                         <button
-                            onClick={() => setIsLogin(!isLogin)}
+                            onClick={() => { setIsLogin(!isLogin); setError(null); }}
                             className="text-sm font-medium text-white/50 hover:text-white transition-colors"
                         >
                             {isLogin ? "Don't have an account? Join now" : "Already have an account? Sign in"}

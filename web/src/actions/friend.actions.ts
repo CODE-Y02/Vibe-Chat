@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 export async function getFriends() {
     try {
-        const res = await authenticatedFetch("/api/friends");
+        const res = await authenticatedFetch("/friends");
         if (!res.ok) throw new Error("Failed to fetch friends");
         return await res.json();
     } catch (error) {
@@ -15,7 +15,7 @@ export async function getFriends() {
 
 export async function getFriendRequests() {
     try {
-        const res = await authenticatedFetch("/api/friends/requests");
+        const res = await authenticatedFetch("/friends/requests");
         if (!res.ok) throw new Error("Failed to fetch requests");
         return await res.json();
     } catch (error) {
@@ -25,7 +25,7 @@ export async function getFriendRequests() {
 
 export async function sendFriendRequest(friendId: string) {
     try {
-        const res = await authenticatedFetch("/api/friends/request", {
+        const res = await authenticatedFetch("/friends/request", {
             method: "POST",
             body: JSON.stringify({ friendId }),
             headers: { "Content-Type": "application/json" },
@@ -40,7 +40,7 @@ export async function sendFriendRequest(friendId: string) {
 
 export async function acceptFriendRequest(userId: string) {
     try {
-        const res = await authenticatedFetch("/api/friends/accept", {
+        const res = await authenticatedFetch("/friends/accept", {
             method: "POST",
             body: JSON.stringify({ userId }),
             headers: { "Content-Type": "application/json" },
@@ -56,7 +56,7 @@ export async function acceptFriendRequest(userId: string) {
 
 export async function rejectFriendRequest(userId: string) {
     try {
-        const res = await authenticatedFetch("/api/friends/reject", {
+        const res = await authenticatedFetch("/friends/reject", {
             method: "POST",
             body: JSON.stringify({ userId }),
             headers: { "Content-Type": "application/json" },
@@ -71,7 +71,7 @@ export async function rejectFriendRequest(userId: string) {
 
 export async function removeFriend(friendId: string) {
     try {
-        const res = await authenticatedFetch("/api/friends/remove", {
+        const res = await authenticatedFetch("/friends/remove", {
             method: "POST",
             body: JSON.stringify({ friendId }),
             headers: { "Content-Type": "application/json" },

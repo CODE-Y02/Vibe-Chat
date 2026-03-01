@@ -9,7 +9,7 @@ export async function getProfile() {
     if (!session?.user?.id) return null;
 
     try {
-        const res = await authenticatedFetch(`/api/users/${session.user.id}`);
+        const res = await authenticatedFetch(`/users/me`);
         if (!res.ok) return null;
         return await res.json();
     } catch (error) {
@@ -19,7 +19,7 @@ export async function getProfile() {
 
 export async function updateProfile(data: { username?: string; avatar?: string; bio?: string }) {
     try {
-        const res = await authenticatedFetch("/api/users/profile", {
+        const res = await authenticatedFetch("/users/profile", {
             method: "PUT",
             body: JSON.stringify(data),
             headers: { "Content-Type": "application/json" },

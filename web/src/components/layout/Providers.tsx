@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { SessionProvider } from "next-auth/react";
 import { SocketManager } from "./SocketManager";
 import { IncomingCallModal } from "../chat/IncomingCallModal";
+import { SessionWatcher } from "./SessionWatcher";
 
 export function Providers({ children, ...props }: ThemeProviderProps) {
     const [queryClient] = useState(() => new QueryClient({
@@ -29,6 +30,7 @@ export function Providers({ children, ...props }: ThemeProviderProps) {
         >
             <QueryClientProvider client={queryClient}>
                 <SessionProvider>
+                    <SessionWatcher />
                     <SocketManager>
                         {children}
                         <IncomingCallModal />

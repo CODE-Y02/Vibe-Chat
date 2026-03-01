@@ -10,7 +10,7 @@ const PostSchema = z.object({
 
 export async function getFeed() {
     try {
-        const res = await authenticatedFetch("/api/feed");
+        const res = await authenticatedFetch("/feed");
         if (!res.ok) throw new Error("Failed to fetch feed");
         return await res.json();
     } catch (error) {
@@ -27,30 +27,33 @@ export async function createPost(content: string) {
     }
 
     try {
-        const res = await authenticatedFetch("/api/feed", {
+        const res = await authenticatedFetch("/feed", {
             method: "POST",
             body: JSON.stringify(validated.data),
             headers: { "Content-Type": "application/json" },
         });
 
-        if (!res.ok) throw new Error("Failed to create post");
+        const data = await res.json();
+        if (!res.ok) return { error: data.error ?? "Failed to create post" };
 
         revalidatePath("/feed");
         return { success: true };
     } catch (error) {
+        console.error("createPost error:", error);
         return { error: "Failed to create post" };
     }
 }
 
 export async function reactToPost(postId: string, type: string) {
     try {
-        const res = await authenticatedFetch("/api/feed/react", {
+        const res = await authenticatedFetch("/feed/react", {
             method: "POST",
             body: JSON.stringify({ postId, type }),
             headers: { "Content-Type": "application/json" },
         });
 
-        if (!res.ok) throw new Error("Failed to react");
+        const data = await res.json();
+        if (!res.ok) return { error: data.error ?? "Failed to react" };
 
         revalidatePath("/feed");
         return { success: true };
