@@ -12,9 +12,18 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { createPost } from '@/actions/feed.actions';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function FeedPage() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/login');
+        }
+    }, [status, router]);
     const [content, setContent] = useState('');
     const queryClient = useQueryClient();
 

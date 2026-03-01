@@ -15,7 +15,7 @@ import { useSession } from 'next-auth/react';
 
 export default function ChatPage() {
     const { session, isSearching, incomingCall, setSearching, disconnect, setMatched, addMessage } = useChatStore();
-    const { data: sessionData } = useSession();
+    const { data: sessionData, status } = useSession();
     const { toast } = useToast();
     const router = useRouter();
 
@@ -24,7 +24,8 @@ export default function ChatPage() {
     const [isBlurred, setIsBlurred] = useState(true);
 
     const handleMatch = useCallback((data: { peerId: string, peerName?: string, peerAvatar?: string }) => {
-        setMatched("anonymous-room", data.peerId, data.peerName, data.peerAvatar);
+        // For anonymous rooms, we don't store or show the peer's actual identity
+        setMatched("anonymous-room", data.peerId, "Stranger", "");
         setIsBlurred(true);
         toast({ title: 'Matched!', description: 'Say hello to your new vibe buddy.' });
     }, [setMatched, toast]);
@@ -34,6 +35,12 @@ export default function ChatPage() {
         disconnect();
         webrtc.cleanup();
     }, [disconnect, toast]);
+
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/login');
+        }
+    }, [status, router]);
 
     useEffect(() => {
         socket.connect();
@@ -78,16 +85,13 @@ export default function ChatPage() {
                 if (incomingCall) {
                     // We are the receiver, handle the offer already stored
                     await webrtc.handleOffer(incomingCall.from, incomingCall.offer);
-                    // Emit answer is handled inside handleOffer -> socket.emit('answer')
-                    // Wait, our backend expects 'make-answer' for direct calls or just 'answer'?
-                    // Let's check backend handlers again.
                 } else {
                     // We are the caller, send invitation
                     socket.emit('call-user', {
                         to: session.strangerId,
                         fromName: sessionData?.user?.name || "Someone",
                         fromAvatar: sessionData?.user?.image || "",
-                        signalData: null // WebRTC offer will be sent after webrtc.initiateOffer
+                        signalData: null
                     });
                 }
             };
@@ -107,7 +111,7 @@ export default function ChatPage() {
             disconnect();
             webrtc.cleanup();
         };
-    }, [handleMatch, handlePeerDisconnect, addMessage, disconnect, session.isMatched, session.roomId, session.strangerId, incomingCall, sessionData, router, toast]);
+    }, [handleMatch, handlePeerDisconnect, addMessage, disconnect, session.isMatched, session.roomId, session.strangerId, incomingCall, sessionData, router, toast, status]);
 
     useEffect(() => {
         webrtc.toggleAudio(audioEnabled);

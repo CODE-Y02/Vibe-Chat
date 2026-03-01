@@ -10,17 +10,14 @@ const safeAuthorSelect = {
 export class FeedService {
     /** 
      * Helper to generate optimized include object.
-     * We use Prisma.PostInclude type to stay type-safe.
      */
     private getPostInclude(currentUserId: string): Prisma.PostInclude {
         return {
             author: { select: safeAuthorSelect },
-            // Only include current user's reaction to keep payload small
             reactions: {
                 where: { userId: currentUserId },
                 select: { type: true, userId: true },
             },
-            // Preview first 3 direct replies
             replies: {
                 where: { parentId: { not: null } },
                 take: 3,
@@ -28,7 +25,6 @@ export class FeedService {
                 include: {
                     author: { select: safeAuthorSelect },
                     _count: { select: { reactions: true, replies: true } },
-                    // Check if user liked the reply too
                     reactions: {
                         where: { userId: currentUserId },
                         select: { type: true, userId: true },
@@ -76,21 +72,27 @@ export class FeedService {
         return { success: true };
     }
 
+    /** 
+     * Scalable Feed Retrieval
+     * Instead of loading all friend IDs into Node.js memory, we use a subquery 
+     * to fetch posts from self or anyone you are friends with.
+     */
     async getFeed(userId: string, cursor?: string, limit = 20) {
-        const friends = await prisma.friend.findMany({
-            where: {
-                OR: [
-                    { userId, status: 'ACCEPTED' },
-                    { friendId: userId, status: 'ACCEPTED' },
-                ],
-            },
-        });
-        const friendIds = friends.map(f => (f.userId === userId ? f.friendId : f.userId));
-
+        // We look for posts where author is me OR author is a friend (ACCEPTED)
         return prisma.post.findMany({
             where: {
-                authorId: { in: [userId, ...friendIds] },
-                parentId: null,
+                OR: [
+                    { authorId: userId },
+                    {
+                        author: {
+                            OR: [
+                                { friendOf: { some: { userId: userId, status: 'ACCEPTED' } } },
+                                { friends: { some: { friendId: userId, status: 'ACCEPTED' } } }
+                            ]
+                        }
+                    }
+                ],
+                parentId: null, // Only top-level posts on main feed
             },
             orderBy: { createdAt: 'desc' },
             take: limit + 1,

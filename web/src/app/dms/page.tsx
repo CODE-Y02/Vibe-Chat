@@ -18,9 +18,15 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export default function DMsPage() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const queryClient = useQueryClient();
     const router = useRouter();
+
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/login');
+        }
+    }, [status, router]);
     const { socket } = useSocket();
     const [activePeer, setActivePeer] = useState<Conversation | null>(null);
     const [input, setInput] = useState("");

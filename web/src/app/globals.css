@@ -89,10 +89,22 @@
   @apply bg-background/60 backdrop-blur-xl border-b border-border/50 shadow-sm;
 }
 
-@utility glass-card {
-  @apply bg-card/60 backdrop-blur-md border border-border/50 shadow-lg;
+@layer utilities {
+  .glass-card {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
 }
 
+/* Next.js 16 View Transitions */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.post-enter {
+  view-transition-name: post-appear;
+}
 @utility no-scrollbar {
   &::-webkit-scrollbar {
     display: none;

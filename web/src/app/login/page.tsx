@@ -28,8 +28,9 @@ export default function AuthPage() {
                     email: formData.email || undefined,
                     password: formData.password,
                 });
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+            } catch (err: any) {
+                const message = err?.response?.data?.error || err?.message || "Login failed. Please try again.";
+                setError(typeof message === 'string' ? message : JSON.stringify(message));
             } finally {
                 setLoading(false);
             }
@@ -47,7 +48,10 @@ export default function AuthPage() {
                 });
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Signup failed");
+                if (!res.ok) {
+                    const errMsg = typeof data.error === 'string' ? data.error : (data.error?.message || "Signup failed");
+                    throw new Error(errMsg);
+                }
 
                 // Auto-login after successful signup
                 await login({
@@ -55,8 +59,9 @@ export default function AuthPage() {
                     email: formData.email || undefined,
                     password: formData.password,
                 });
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
+            } catch (err: any) {
+                const message = err?.response?.data?.error || err?.message || "Signup failed. Please try again.";
+                setError(typeof message === 'string' ? message : JSON.stringify(message));
                 setLoading(false);
             }
         }
