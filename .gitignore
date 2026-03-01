@@ -7,3 +7,5 @@ node_modules
 frontend-demo-ref
 backend-demo-ref
 web/node_modules
+
+.secret
