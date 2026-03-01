@@ -51,25 +51,25 @@ function safeTimeAgo(dateStr: string) {
 function QuotePost({ post, isDeleted = false }: { post?: Post | null; isDeleted?: boolean }) {
     if (isDeleted || !post) {
         return (
-            <div className="mt-3 border border-white/5 rounded-xl p-4 bg-white/[0.02] text-white/20 text-xs font-bold italic flex items-center gap-2">
+            <div className="mt-3 border border-border rounded-xl p-4 bg-muted/30 text-muted-foreground text-xs font-bold italic flex items-center gap-2">
                 <Trash2 className="w-3 h-3" />
                 This vibe was deleted or is no longer available.
             </div>
         );
     }
     return (
-        <div className="mt-3 border border-white/10 rounded-xl p-3 bg-white/[0.02] cursor-pointer hover:bg-white/[0.04] transition-colors overflow-hidden">
+        <div className="mt-3 border border-border rounded-xl p-3 bg-muted/20 cursor-pointer hover:bg-muted/40 transition-colors overflow-hidden">
             <div className="flex items-center gap-2 mb-1">
                 <Avatar className="w-5 h-5">
                     <AvatarImage src={post.author?.avatar ?? undefined} />
-                    <AvatarFallback className="text-[8px] bg-white/10">
+                    <AvatarFallback className="text-[8px] bg-muted">
                         {(post.author?.username ?? 'U').slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
-                <span className="text-xs font-semibold text-white/80">{post.author?.username ?? 'Unknown'}</span>
-                <span className="text-xs text-white/30">· {safeTimeAgo(post.createdAt)}</span>
+                <span className="text-xs font-semibold text-foreground/80">{post.author?.username ?? 'Unknown'}</span>
+                <span className="text-xs text-muted-foreground/50">· {safeTimeAgo(post.createdAt)}</span>
             </div>
-            {post.content && <p className="text-sm text-white/70 leading-relaxed line-clamp-3 break-words">{post.content}</p>}
+            {post.content && <p className="text-sm text-foreground/70 leading-relaxed line-clamp-3 break-words">{post.content}</p>}
         </div>
     );
 }
@@ -209,10 +209,10 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     if (post.deletedAt) return null;
 
     return (
-        <article className={`border-b border-white/5 transition-colors duration-150 ${depth > 0 ? '' : 'hover:bg-white/[0.01]'}`}>
+        <article className={`border-b border-border transition-colors duration-150 ${depth > 0 ? '' : 'hover:bg-muted/5'}`}>
             <div className={`px-4 py-3 ${depth > 0 ? 'pl-2' : ''}`}>
                 {isPureRepost && (
-                    <div className="flex items-center gap-2 text-[13px] text-white/40 font-bold mb-1 ml-9">
+                    <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-bold mb-1 ml-9">
                         <Repeat2 className="w-4 h-4" />
                         <span>{post.author?.id === myUserId ? 'You' : post.author?.username} reposted</span>
                     </div>
@@ -220,64 +220,64 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
 
                 <div className="flex gap-3">
                     <div className="flex flex-col items-center shrink-0">
-                        <Avatar className={`${depth > 0 ? 'w-8 h-8' : 'w-10 h-10'} border border-white/10 shrink-0`}>
+                        <Avatar className={`${depth > 0 ? 'w-8 h-8' : 'w-10 h-10'} border border-border shrink-0`}>
                             <AvatarImage src={displayPost.author?.avatar ?? undefined} />
                             <AvatarFallback className="bg-primary/20 text-primary font-bold text-xs uppercase text-[10px]">
                                 {authorName.slice(0, 2)}
                             </AvatarFallback>
                         </Avatar>
                         {((showReplies && allReplies.length > 0) || isReply) && (
-                            <div className="w-[2px] flex-1 bg-white/5 mt-2 mb-1 rounded-full" />
+                            <div className="w-[2px] flex-1 bg-border mt-2 mb-1 rounded-full" />
                         )}
                     </div>
 
                     <div className="flex-1 min-w-0">
                         <header className="flex items-center justify-between mb-0.5">
                             <div className="flex items-center gap-1 truncate text-[15px]">
-                                <span className="font-bold text-white truncate hover:underline cursor-pointer">{authorName}</span>
-                                <span className="text-white/30 truncate shrink-0">@{authorName.toLowerCase().replace(/\s/g, '')}</span>
-                                <span className="text-white/30 shrink-0">· {safeTimeAgo(displayPost.createdAt)}</span>
+                                <span className="font-bold text-foreground truncate hover:underline cursor-pointer">{authorName}</span>
+                                <span className="text-muted-foreground/50 truncate shrink-0">@{authorName.toLowerCase().replace(/\s/g, '')}</span>
+                                <span className="text-muted-foreground/50 shrink-0">· {safeTimeAgo(displayPost.createdAt)}</span>
                             </div>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-sky-400 hover:bg-sky-400/10 rounded-full -mr-2 transition-colors">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/30 hover:text-sky-400 hover:bg-sky-400/10 rounded-full -mr-2 transition-colors">
                                         <MoreHorizontal className="w-4 h-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-[#15181c] border-white/10 text-white">
-                                    {canDelete && <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>}
-                                    <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-white/5"><Bookmark className="w-4 h-4" /> Bookmark</DropdownMenuItem>
+                                <DropdownMenuContent align="end" className="glass-card border-border shadow-2xl">
+                                    {canDelete && <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>}
+                                    <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-primary/10 focus:text-primary font-bold"><Bookmark className="w-4 h-4" /> Bookmark</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </header>
 
                         {isPureRepost && !post.repostOf ? <QuotePost isDeleted /> : (
                             <>
-                                {displayPost.content && <p className={`${depth > 0 ? 'text-[14px]' : 'text-[15px]'} text-white/90 leading-normal mb-2 break-words`}>{displayPost.content}</p>}
+                                {displayPost.content && <p className={`${depth > 0 ? 'text-[14px]' : 'text-[15px]'} text-foreground/90 leading-normal mb-2 break-words`}>{displayPost.content}</p>}
                                 {isQuotePost && <QuotePost post={post.repostOf} />}
                             </>
                         )}
 
-                        <footer className="flex items-center justify-between max-w-sm pt-1 text-white/40">
+                        <footer className="flex items-center justify-between max-w-sm pt-1 text-muted-foreground">
                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(v => !v); setQuoting(false); setShowReplies(true); }} className="h-8 px-2 gap-2 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors group">
                                 <MessageCircle className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
-                                {totalReplies > 0 && <span className="text-xs">{totalReplies}</span>}
+                                {totalReplies > 0 && <span className="text-xs font-bold">{totalReplies}</span>}
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="sm" className={`h-8 px-2 gap-2 rounded-full transition-colors group ${reposted ? 'text-emerald-500' : 'hover:text-emerald-500 hover:bg-emerald-500/10'}`}>
                                         <Repeat2 className={`w-4.5 h-4.5 group-hover:scale-110 transition-transform ${reposted ? 'scale-110' : ''}`} />
-                                        {repostCount > 0 && <span className="text-xs">{repostCount}</span>}
+                                        {repostCount > 0 && <span className="text-xs font-bold">{repostCount}</span>}
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="bg-[#15181c] border-white/10 text-white p-1">
-                                    <DropdownMenuItem onClick={handleRepostToggle} className="gap-3 cursor-pointer p-3 focus:bg-white/5 rounded-lg"><Repeat2 className="w-5 h-5" /><div className="flex flex-col"><span className="font-bold text-sm">{reposted ? 'Undo Repost' : 'Repost'}</span></div></DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => { setQuoting(true); setReplying(false); }} className="gap-3 cursor-pointer p-3 focus:bg-white/5 rounded-lg"><Edit3 className="w-5 h-5" /><div className="flex flex-col"><span className="font-bold text-sm">Quote</span></div></DropdownMenuItem>
+                                <DropdownMenuContent align="start" className="glass-card border-border p-1 shadow-2xl">
+                                    <DropdownMenuItem onClick={handleRepostToggle} className="gap-3 cursor-pointer p-3 focus:bg-primary/10 focus:text-primary rounded-lg transition-all"><Repeat2 className="w-5 h-5" /><div className="flex flex-col"><span className="font-bold text-sm tracking-tight">{reposted ? 'Undo Repost' : 'Repost'}</span></div></DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setQuoting(true); setReplying(false); }} className="gap-3 cursor-pointer p-3 focus:bg-primary/10 focus:text-primary rounded-lg transition-all"><Edit3 className="w-5 h-5" /><div className="flex flex-col"><span className="font-bold text-sm tracking-tight">Quote</span></div></DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                             <Button variant="ghost" size="sm" onClick={handleLike} className={`h-8 px-2 gap-2 rounded-full transition-colors group ${liked ? 'text-pink-600' : 'hover:text-pink-600 hover:bg-pink-600/10'}`}>
                                 <Heart className={`w-4.5 h-4.5 group-hover:scale-110 transition-transform ${liked ? 'fill-current scale-110' : ''}`} />
-                                {likeCount > 0 && <span className="text-xs">{likeCount}</span>}
+                                {likeCount > 0 && <span className="text-xs font-bold">{likeCount}</span>}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors"><Share2 className="w-4.5 h-4.5" /></Button>
                         </footer>
@@ -286,9 +286,9 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                             <div className="mt-3 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <Avatar className="w-8 h-8 shrink-0"><AvatarImage src={session?.user?.image ?? undefined} /><AvatarFallback className="bg-primary text-white text-[10px] font-bold uppercase">{(session?.user?.name ?? 'U').slice(0, 2)}</AvatarFallback></Avatar>
                                 <div className="flex-1 min-w-0">
-                                    <Textarea autoFocus placeholder={quoting ? "Add a comment..." : `Reply to ${authorName}...`} className="resize-none bg-transparent border-none focus-visible:ring-0 p-0 text-md placeholder:text-white/20 min-h-[80px]" value={quoting ? quoteContent : replyContent} onChange={e => quoting ? setQuoteContent(e.target.value) : setReplyContent(e.target.value)} />
+                                    <Textarea autoFocus placeholder={quoting ? "Add a comment..." : `Reply to ${authorName}...`} className="resize-none bg-transparent border-none focus-visible:ring-0 p-0 text-md placeholder:text-muted-foreground/30 min-h-[80px] text-foreground" value={quoting ? quoteContent : replyContent} onChange={e => quoting ? setQuoteContent(e.target.value) : setReplyContent(e.target.value)} />
                                     {quoting && <QuotePost post={displayPost} />}
-                                    <div className="flex justify-end gap-2 border-t border-white/5 pt-3 mt-2">
+                                    <div className="flex justify-end gap-2 border-t border-border pt-3 mt-2">
                                         <Button variant="ghost" size="sm" onClick={() => { setReplying(false); setQuoting(false); }} className="rounded-full h-8 px-4 text-xs font-bold">Cancel</Button>
                                         <Button disabled={!(quoting ? quoteContent : replyContent).trim() || submitting} onClick={() => handleSubmitReplyOrQuote(quoting ? 'quote' : 'reply')} size="sm" className="bg-primary hover:bg-primary/90 rounded-full h-8 px-6 font-bold text-xs uppercase">
                                             {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : quoting ? 'Repost' : 'Reply'}
@@ -304,13 +304,13 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
             </div>
 
             {showReplies && allReplies.length > 0 && (
-                <div className="ml-9 border-l border-white/5">
-                    <div className="divide-y divide-white/5">
+                <div className="ml-9 border-l border-border">
+                    <div className="divide-y divide-border">
                         {allReplies.map(reply => <PostCard key={reply.id} post={reply} isReply={true} depth={depth + 1} />)}
                     </div>
                     <div className="flex items-center gap-4 px-4 py-3">
-                        {loadingMore ? <span className="text-[10px] text-white/20 flex items-center gap-2 font-black tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin text-primary" /> Loading...</span> : nextCursor ? <button onClick={handleLoadMoreReplies} className="text-[11px] text-primary hover:text-primary/70 font-black tracking-widest uppercase transition-colors">Show more vibes</button> : null}
-                        <button onClick={() => setShowReplies(false)} className="text-[11px] text-white/20 hover:text-white/50 font-black tracking-widest uppercase ml-auto transition-colors">Hide thread</button>
+                        {loadingMore ? <span className="text-[10px] text-muted-foreground flex items-center gap-2 font-black tracking-widest uppercase"><Loader2 className="w-4 h-4 animate-spin text-primary" /> Loading...</span> : nextCursor ? <button onClick={handleLoadMoreReplies} className="text-[11px] text-primary hover:text-primary/70 font-black tracking-widest uppercase transition-colors">Show more vibes</button> : null}
+                        <button onClick={() => setShowReplies(false)} className="text-[11px] text-muted-foreground hover:text-foreground font-black tracking-widest uppercase ml-auto transition-colors">Hide thread</button>
                     </div>
                 </div>
             )}

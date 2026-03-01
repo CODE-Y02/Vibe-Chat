@@ -30,6 +30,13 @@ export function useSocket() {
         socket.on('connect', onConnect);
         socket.on('disconnect', onDisconnect);
 
+        // 🟢 Heartbeat logic: Keep connection alive in Redis (Global)
+        const heartbeatInterval = setInterval(() => {
+            if (socket.connected) {
+                socket.emit('heartbeat');
+            }
+        }, 15000);
+
         // 🟢 Robust Connection Logic
         if (!socket.connected) {
             console.log('[useSocket] Connecting singleton socket...');
@@ -41,8 +48,7 @@ export function useSocket() {
         return () => {
             socket.off('connect', onConnect);
             socket.off('disconnect', onDisconnect);
-            // ⚠️ DO NOT call socket.disconnect() here. 
-            // It's a singleton; other components might still be using it!
+            clearInterval(heartbeatInterval);
         };
     }, [session?.accessToken]);
 

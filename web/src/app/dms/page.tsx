@@ -85,7 +85,7 @@ export default function DMsPage() {
     };
 
     return (
-        <div className="h-screen flex flex-col bg-[#050505] text-white overflow-hidden">
+        <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden transition-colors duration-300">
             <Navbar />
 
             <main className="flex-1 overflow-hidden flex flex-col md:flex-row container mx-auto py-4 px-4 gap-4 max-w-7xl">
@@ -99,7 +99,7 @@ export default function DMsPage() {
                         </Button>
                     </Link>
 
-                    <div className="flex-1 rounded-3xl overflow-hidden glass-card border border-white/5 relative">
+                    <div className="flex-1 rounded-3xl overflow-hidden glass-card border border-border relative">
                         {isLoadingConvs ? (
                             <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
                         ) : (
@@ -116,29 +116,29 @@ export default function DMsPage() {
                 </div>
 
                 {/* Chat Area */}
-                <div className="flex-1 h-full rounded-3xl overflow-hidden glass-card border border-white/5 flex flex-col relative bg-white/[0.02]">
+                <div className="flex-1 h-full rounded-3xl overflow-hidden glass-card border border-border flex flex-col relative bg-card/10">
                     {!activePeer ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
                             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
                                 <MessageSquare className="w-10 h-10 text-primary" />
                             </div>
                             <h2 className="text-2xl font-black mb-2">Your Inbox</h2>
-                            <p className="text-white/40 max-w-xs">Select a vibe to start chatting or hit the anonymous button to meet someone new.</p>
+                            <p className="text-muted-foreground max-w-xs font-medium">Select a vibe to start chatting or hit the anonymous button to meet someone new.</p>
                         </div>
                     ) : (
                         <>
                             {/* Chat Header */}
-                            <div className="p-4 border-b border-white/5 bg-white/[0.03] backdrop-blur-3xl flex items-center justify-between shadow-sm z-10">
+                            <div className="p-4 border-b border-border bg-muted/30 backdrop-blur-3xl flex items-center justify-between shadow-sm z-10">
                                 <div className="flex items-center gap-3">
-                                    <Avatar className="w-10 h-10 border border-white/10 shadow-lg">
+                                    <Avatar className="w-10 h-10 border border-primary/20 shadow-lg">
                                         <AvatarImage src={activePeer.peer.avatar} />
-                                        <AvatarFallback>{activePeer.peer.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback className="bg-muted text-primary">{activePeer.peer.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <h3 className="font-bold text-sm tracking-tight">{activePeer.peer.username}</h3>
                                         <div className="flex items-center gap-1.5 mt-0.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                            <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Online</span>
+                                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Online</span>
                                         </div>
                                     </div>
                                 </div>
@@ -166,12 +166,12 @@ export default function DMsPage() {
                                                 <div className={cn(
                                                     "px-4 py-2.5 rounded-2xl text-sm shadow-xl transition-all",
                                                     isMe
-                                                        ? "bg-primary text-white rounded-tr-sm"
-                                                        : "bg-white/5 text-white/90 border border-white/5 rounded-tl-sm backdrop-blur-md"
+                                                        ? "bg-primary text-white rounded-tr-sm font-medium"
+                                                        : "bg-muted text-foreground border border-border rounded-tl-sm backdrop-blur-md"
                                                 )}>
                                                     {msg.content}
                                                 </div>
-                                                <span className="text-[9px] text-white/20 mt-1 font-bold uppercase tracking-tighter px-1">
+                                                <span className="text-[9px] text-muted-foreground/50 mt-1 font-black uppercase tracking-widest px-1">
                                                     {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
                                                 </span>
                                             </div>
@@ -182,12 +182,12 @@ export default function DMsPage() {
                             </div>
 
                             {/* Input Area */}
-                            <form className="p-4 border-t border-white/5 bg-white/[0.03] flex gap-3 items-center z-10" onSubmit={handleSendMessage}>
+                            <form className="p-4 border-t border-border bg-muted/30 flex gap-3 items-center z-10" onSubmit={handleSendMessage}>
                                 <Input
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder="Type your message..."
-                                    className="h-12 flex-1 rounded-2xl bg-white/5 border-white/10 focus-visible:ring-primary/20 placeholder:text-white/20"
+                                    className="h-12 flex-1 rounded-2xl bg-muted border-border focus-visible:ring-primary/20 placeholder:text-muted-foreground/30 text-foreground"
                                 />
                                 <Button
                                     type="submit"
@@ -195,7 +195,7 @@ export default function DMsPage() {
                                     size="icon"
                                     className="rounded-2xl w-12 h-12 shrink-0 shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-transform bg-primary"
                                 >
-                                    <Send className="w-5 h-5" />
+                                    <Send className="w-5 h-5 text-white" />
                                 </Button>
                             </form>
                         </>

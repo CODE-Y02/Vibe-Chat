@@ -51,36 +51,36 @@ export default function FeedPage() {
     const user = session?.user;
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white">
+        <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
             <Navbar />
 
             <main className="container mx-auto px-4 py-8 max-w-2xl">
                 <div className="mb-8 p-4">
-                    <h1 className="text-4xl font-black tracking-tighter mb-2 bg-gradient-to-r from-white to-white/40 bg-clip-text text-transparent">Vibe Feed</h1>
-                    <p className="text-white/40 font-medium tracking-wide border-l-2 border-primary pl-4">Catch the latest energy from the community</p>
+                    <h1 className="text-5xl font-black tracking-tighter mb-2 bg-gradient-to-br from-foreground to-foreground/40 bg-clip-text text-transparent">Vibe Feed</h1>
+                    <p className="text-muted-foreground font-semibold tracking-wide border-l-4 border-primary pl-4">Catch the latest energy from the community</p>
                 </div>
 
-                <Card className="p-6 mb-12 glass-card border border-white/5 shadow-2xl rounded-3xl bg-white/[0.02]">
-                    <div className="flex gap-4">
-                        <Avatar className="w-12 h-12 border border-white/10 shadow-xl">
+                <Card className="p-8 mb-12 glass-card border border-border shadow-2xl rounded-[2.5rem] bg-card/50 backdrop-blur-xl">
+                    <div className="flex gap-5">
+                        <Avatar className="w-14 h-14 border-2 border-primary/20 shadow-2xl">
                             <AvatarImage src={user?.image || ""} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-bold">{user?.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarFallback className="bg-primary/10 text-primary font-black text-lg">{user?.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 space-y-4">
+                        <div className="flex-1 space-y-6">
                             <Textarea
                                 placeholder="What's the vibe today?"
-                                className="resize-none min-h-[100px] border-none bg-transparent focus-visible:ring-0 px-0 text-lg placeholder:text-white/20"
+                                className="resize-none min-h-[120px] border-none bg-transparent focus-visible:ring-0 px-0 text-xl font-medium placeholder:text-muted-foreground/30 text-foreground"
                                 value={content}
                                 onChange={e => setContent(e.target.value)}
                             />
-                            <div className="flex justify-between items-center border-t border-white/5 pt-4">
-                                <Button variant="ghost" size="icon" className="text-white/30 hover:text-primary hover:bg-primary/10 rounded-2xl h-10 w-10 transition-colors">
-                                    <ImageIcon className="w-5 h-5" />
+                            <div className="flex justify-between items-center border-t border-border pt-6">
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-[1.25rem] h-12 w-12 transition-all">
+                                    <ImageIcon className="w-6 h-6" />
                                 </Button>
                                 <Button
                                     onClick={handlePost}
                                     disabled={!content.trim() || postMutation.isPending}
-                                    className="rounded-2xl shadow-lg shadow-primary/20 font-black px-8 py-6 gap-2 hover:-translate-y-1 transition-all bg-primary"
+                                    className="rounded-[1.25rem] shadow-xl shadow-primary/25 font-black px-10 py-7 gap-3 hover:-translate-y-1 active:scale-95 transition-all bg-primary text-white"
                                 >
                                     {postMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "VIBE IT"} <Send className="w-4 h-4 ml-1" />
                                 </Button>

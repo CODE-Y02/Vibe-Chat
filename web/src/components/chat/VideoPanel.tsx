@@ -4,7 +4,8 @@ import { useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { webrtc } from '@/lib/webrtc';
-import { VideoOff, MicOff } from 'lucide-react';
+import { VideoOff, MicOff, Shield, Radio } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface VideoPanelProps {
     isLocal?: boolean;
@@ -42,36 +43,89 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
     }, [isLocal, isMatched]);
 
     return (
-        <Card className={cn("relative overflow-hidden bg-black/90 aspect-[4/3] rounded-2xl border border-white/10 shadow-xl", className)}>
+        <Card className={cn(
+            "relative overflow-hidden bg-[#050505] aspect-[4/3] rounded-[32px] border border-white/5 shadow-2xl transition-all",
+            className
+        )}>
             {!isLocal && !isMatched ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 bg-gradient-to-br from-indigo-900/20 to-purple-900/20">
-                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                        <VideoOff className="w-8 h-8 opacity-50" />
-                    </div>
-                    <p className="font-medium tracking-wide">Waiting for stranger...</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#020202] mesh-gradient">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex flex-col items-center"
+                    >
+                        <div className="w-20 h-20 rounded-[24px] bg-white/[0.03] border border-white/5 flex items-center justify-center mb-6 shadow-inner relative group">
+                            <Radio className="w-8 h-8 text-white/10 group-hover:text-primary transition-colors" />
+                            <div className="absolute inset-0 bg-primary/20 rounded-[24px] animate-ping opacity-20" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Waiting for Vibe</p>
+                    </motion.div>
                 </div>
             ) : (
-                <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted={isLocal}
-                    className="w-full h-full object-cover mirror"
-                    style={{ transform: isLocal ? 'scaleX(-1)' : 'none' }}
-                />
+                <div className="w-full h-full relative">
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted={isLocal}
+                        className="w-full h-full object-cover"
+                        style={{ transform: isLocal ? 'scaleX(-1)' : 'none' }}
+                    />
+
+                    {/* Scanner Line Overlay */}
+                    {!isLocal && (
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                            <motion.div
+                                initial={{ top: "-10%" }}
+                                animate={{ top: "110%" }}
+                                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                                className="absolute left-0 right-0 h-px bg-primary/20 shadow-[0_0_15px_rgba(255,51,102,0.5)] z-10"
+                            />
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
+                        </div>
+                    )}
+                </div>
             )}
 
-            {/* Overlay badges */}
-            <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 flex gap-1 md:gap-2">
-                <div className="bg-black/50 backdrop-blur-md text-white text-[8px] md:text-xs px-2 md:px-3 py-0.5 md:py-1 rounded-full font-medium shadow-sm whitespace-nowrap">
-                    {isLocal ? 'You' : 'Stranger'}
+            {/* Premium Badges */}
+            <div className="absolute top-6 left-6 flex items-center gap-3">
+                <div className="glass px-4 py-2 rounded-xl flex items-center gap-2.5 border border-white/10 shadow-glow-sm">
+                    <div className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        isLocal ? "bg-primary animate-pulse" : (isMatched ? "bg-emerald-500" : "bg-white/20")
+                    )} />
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/90">
+                        {isLocal ? 'Local Stream' : 'Remote Vibe'}
+                    </span>
                 </div>
-                {isLocal && (
-                    <div className="bg-red-500/80 backdrop-blur-md text-white p-1 md:p-1.5 rounded-full shadow-sm">
-                        <MicOff className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
-                    </div>
+
+                {isMatched && (
+                    <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10 shadow-glow-sm bg-emerald-500/10"
+                    >
+                        <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Encrypted</span>
+                    </motion.div>
                 )}
+            </div>
+
+            {/* Bottom Controls Indicator */}
+            <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-3">
+                    {/* Signal bars mockup */}
+                    <div className="flex items-end gap-0.5 h-3 opacity-30">
+                        <div className="w-1 h-1 bg-white rounded-full" />
+                        <div className="w-1 h-2 bg-white rounded-full" />
+                        <div className="w-1 h-3 bg-white rounded-full" />
+                    </div>
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-white/20 italic">
+                        Node: {isLocal ? "Edge-01" : "Peer-Direct"}
+                    </span>
+                </div>
             </div>
         </Card>
     );
 }
+

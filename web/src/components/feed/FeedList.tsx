@@ -46,14 +46,14 @@ export function FeedList() {
 
     if (isLoading) {
         return (
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-border">
                 {[1, 2, 3].map(i => (
                     <div key={i} className="flex gap-3 px-4 py-4">
-                        <Skeleton className="w-10 h-10 rounded-full shrink-0 bg-white/5" />
+                        <Skeleton className="w-10 h-10 rounded-full shrink-0 bg-muted" />
                         <div className="flex-1 space-y-3">
-                            <Skeleton className="h-3 w-32 bg-white/5" />
-                            <Skeleton className="h-4 w-full bg-white/5" />
-                            <Skeleton className="h-4 w-3/4 bg-white/5" />
+                            <Skeleton className="h-3 w-32 bg-muted" />
+                            <Skeleton className="h-4 w-full bg-muted" />
+                            <Skeleton className="h-4 w-3/4 bg-muted" />
                         </div>
                     </div>
                 ))}
@@ -63,7 +63,7 @@ export function FeedList() {
 
     if (isError) {
         return (
-            <div className="py-10 text-center text-white/40">
+            <div className="py-10 text-center text-muted-foreground">
                 Failed to load feed. Please try again.
             </div>
         );
@@ -75,30 +75,30 @@ export function FeedList() {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <p className="text-2xl mb-2">✨</p>
-                <p className="text-white/40 text-sm font-medium">Nothing here yet — be the first to vibe!</p>
+                <p className="text-muted-foreground text-sm font-medium">Nothing here yet — be the first to vibe!</p>
             </div>
         );
     }
 
     return (
-        <div className="border border-white/5 rounded-2xl overflow-hidden bg-black/20">
-            <div className="divide-y divide-white/5">
+        <div className="border border-border rounded-[2.5rem] overflow-hidden bg-card/30 backdrop-blur-3xl shadow-2xl">
+            <div className="divide-y divide-border">
                 {posts.map((post: Post) => (
                     <PostCard key={post.id} post={post} />
                 ))}
             </div>
 
             {/* Pagination trigger / loading indicator */}
-            <div ref={ref} className="py-8 flex justify-center border-t border-white/5 bg-white/[0.01]">
+            <div ref={ref} className="py-10 flex justify-center border-t border-border bg-muted/30">
                 {isFetchingNextPage ? (
-                    <div className="flex items-center gap-2 text-white/40 text-xs font-medium">
-                        <Loader2 className="w-3 h-3 animate-spin" />
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs font-bold uppercase tracking-widest">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
                         Loading more vibes...
                     </div>
                 ) : hasNextPage ? (
-                    <span className="text-white/10 text-[10px] uppercase font-bold tracking-widest">Scroll to load more</span>
+                    <span className="text-muted-foreground/30 text-[11px] uppercase font-black tracking-[0.2em]">Scroll to load more</span>
                 ) : (
-                    <span className="text-white/20 text-[10px] uppercase font-bold tracking-widest">You've reached the end of the vibe</span>
+                    <span className="text-muted-foreground/50 text-[11px] uppercase font-black tracking-[0.2em] italic">You've reached the end of the vibe</span>
                 )}
             </div>
         </div>

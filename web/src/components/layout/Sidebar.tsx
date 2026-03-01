@@ -25,13 +25,13 @@ interface SidebarProps {
 export function Sidebar({ conversations, activePeerId, onSelectConversation, className }: SidebarProps) {
     return (
         <aside className={cn("w-full h-full flex flex-col bg-transparent", className)}>
-            <div className="p-4 border-b border-white/5">
-                <h2 className="text-lg font-bold tracking-tight text-white">Messages</h2>
+            <div className="p-4 border-b border-border">
+                <h2 className="text-lg font-black tracking-tight text-foreground uppercase tracking-widest text-xs">Messages</h2>
             </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 no-scrollbar">
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
                 {conversations.length === 0 ? (
-                    <div className="p-4 text-center text-white/30 text-xs mt-10">
-                        No conversations yet
+                    <div className="p-8 text-center text-muted-foreground/30 text-xs mt-10 font-bold uppercase tracking-widest">
+                        No vibes yet
                     </div>
                 ) : (
                     conversations.map((conv) => (
@@ -39,42 +39,45 @@ export function Sidebar({ conversations, activePeerId, onSelectConversation, cla
                             key={conv.peer.id}
                             onClick={() => onSelectConversation(conv)}
                             className={cn(
-                                "w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 text-left group",
+                                "w-full flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 text-left group relative outline-none",
                                 activePeerId === conv.peer.id
-                                    ? "bg-primary/20 border border-primary/20 shadow-lg shadow-primary/5"
-                                    : "hover:bg-white/5 border border-transparent"
+                                    ? "bg-primary/10 border border-primary/20 shadow-xl shadow-primary/5"
+                                    : "hover:bg-muted/50 border border-transparent"
                             )}
                         >
-                            <div className="relative">
-                                <Avatar className="h-12 w-12 border border-white/10 shadow-xl">
+                            <div className="relative shrink-0">
+                                <Avatar className="h-14 w-14 border border-border shadow-2xl">
                                     <AvatarImage src={conv.peer.avatar} alt={conv.peer.username} />
-                                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                        {conv.peer.username.slice(0, 2).toUpperCase()}
+                                    <AvatarFallback className="bg-muted text-primary font-black uppercase text-sm">
+                                        {conv.peer.username.slice(0, 2)}
                                     </AvatarFallback>
                                 </Avatar>
                                 {conv.isUnread && (
-                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 border-2 border-[#0a0a0a] rounded-full"></span>
+                                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 border-2 border-background rounded-full shadow-lg"></span>
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center mb-0.5">
+                                <div className="flex justify-between items-center mb-1">
                                     <p className={cn(
-                                        "text-sm font-bold truncate transition-colors",
-                                        conv.isUnread ? "text-white" : "text-white/80 group-hover:text-white"
+                                        "text-sm font-black truncate transition-colors uppercase tracking-tight",
+                                        conv.isUnread ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
                                     )}>
                                         {conv.peer.username}
                                     </p>
-                                    <span className="text-[10px] text-white/30 font-medium">
+                                    <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter">
                                         {formatDistanceToNow(new Date(conv.createdAt), { addSuffix: false })}
                                     </span>
                                 </div>
                                 <p className={cn(
-                                    "text-xs truncate transition-colors",
-                                    conv.isUnread ? "text-primary font-bold" : "text-white/40 group-hover:text-white/60"
+                                    "text-xs truncate transition-colors font-medium",
+                                    conv.isUnread ? "text-primary font-bold" : "text-muted-foreground group-hover:text-foreground/60"
                                 )}>
                                     {conv.lastMessage}
                                 </p>
                             </div>
+                            {conv.isUnread && (
+                                <div className="absolute left-1 w-1 h-8 bg-primary rounded-full" />
+                            )}
                         </button>
                     ))
                 )}

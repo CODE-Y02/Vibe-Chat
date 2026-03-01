@@ -1,4 +1,4 @@
-import redis, { MATCHMAKING_QUEUE, USER_SOCKET_PREFIX } from './redis.service.js';
+import redis, { MATCHMAKING_QUEUE, USER_HEARTBEAT_PREFIX, USER_SOCKET_PREFIX } from './redis.service.js';
 
 export interface MatchResult {
     u1: string;
@@ -17,25 +17,32 @@ export class MatchmakingService {
     private readonly matchScript = `
         local queue = KEYS[1]
         local myId = ARGV[1]
+        local heartbeatPrefix = ARGV[2]
         local skipsKey = "skipped:" .. myId
 
         -- Ensure I am not in the queue while I search
         redis.call('SREM', queue, myId)
 
         -- Try to find a peer (O(1) random)
-        -- We try up to 5 times to dodge skipped users without fetching the whole set
-        for i=1, 5 do
+        -- We try up to 10 times to dodge skipped or offline users
+        for i=1, 10 do
             local peerId = redis.call('SRANDMEMBER', queue)
             if not peerId then break end
             
-            -- Found someone that isn't me
             if peerId ~= myId then
-                local isSkipped = redis.call('SISMEMBER', skipsKey, peerId)
-                if isSkipped == 0 then
-                    -- Atomically claim this peer
-                    local removed = redis.call('SREM', queue, peerId)
-                    if removed == 1 then
-                        return peerId
+                -- Check heartbeat: If offline, remove from queue and continue
+                local isAlive = redis.call('EXISTS', heartbeatPrefix .. peerId)
+                if isAlive == 0 then
+                    redis.call('SREM', queue, peerId)
+                else
+                    -- Check skipped
+                    local isSkipped = redis.call('SISMEMBER', skipsKey, peerId)
+                    if isSkipped == 0 then
+                        -- Atomically claim this peer
+                        local removed = redis.call('SREM', queue, peerId)
+                        if removed == 1 then
+                            return peerId
+                        end
                     end
                 end
             end
@@ -54,7 +61,8 @@ export class MatchmakingService {
                 this.matchScript,
                 1,
                 MATCHMAKING_QUEUE,
-                userId
+                userId,
+                USER_HEARTBEAT_PREFIX
             );
 
             if (matchedPeerId) {
@@ -78,7 +86,10 @@ export class MatchmakingService {
     }
 
     async updateHeartbeat(userId: string): Promise<void> {
-        await redis.set(`user_heartbeat:${userId}`, 'active', 'EX', 30);
+        await redis.pipeline()
+            .set(`user_heartbeat:${userId}`, 'active', 'EX', 30)
+            .expire(`${USER_SOCKET_PREFIX}${userId}`, 3600) // Extend socket mapping life on every heartbeat
+            .exec();
     }
 
     async skipPeer(userId: string, peerId: string): Promise<void> {
@@ -90,7 +101,8 @@ export class MatchmakingService {
     }
 
     async setUserSocket(userId: string, socketId: string): Promise<void> {
-        await redis.set(`${USER_SOCKET_PREFIX}${userId}`, socketId);
+        // Reduced to 1 hour. Will be refreshed by heartbeats.
+        await redis.set(`${USER_SOCKET_PREFIX}${userId}`, socketId, 'EX', 3600);
     }
 
     async getUserSocket(userId: string): Promise<string | null> {

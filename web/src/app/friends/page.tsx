@@ -59,17 +59,17 @@ export default function FriendsPage() {
     });
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white">
+        <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
             <Navbar />
 
             <main className="container mx-auto px-4 py-8 max-w-4xl">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-black tracking-tight mb-2">Friends</h1>
-                    <p className="text-white/50">Manage your connections and pending vibes</p>
+                <div className="mb-8 pl-4 border-l-4 border-primary">
+                    <h1 className="text-4xl font-black tracking-tighter mb-2">Friends</h1>
+                    <p className="text-muted-foreground font-medium">Manage your connections and pending vibes</p>
                 </div>
 
                 <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2 p-1 bg-white/5 backdrop-blur-xl rounded-xl mb-8 border border-white/10">
+                    <TabsList className="grid w-full max-w-md grid-cols-2 p-1 bg-muted rounded-2xl mb-10 border border-border">
                         <TabsTrigger value="all" className="rounded-lg gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
                             <Users className="w-4 h-4" /> All Friends
                         </TabsTrigger>
@@ -90,7 +90,7 @@ export default function FriendsPage() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {friends?.length === 0 ? (
-                                    <p className="text-white/30 text-center py-12 col-span-full">No friends yet. Start connecting!</p>
+                                    <p className="text-muted-foreground text-center py-20 col-span-full font-medium italic">No friends yet. Start connecting!</p>
                                 ) : (
                                     friends?.map((friend: any) => (
                                         <FriendCard
