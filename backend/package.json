@@ -8,6 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "build": "tsc",
+    "db:push": "npx prisma db push",
+    "db:gen": "npx prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1",
     "docker:build": "docker build -t backend:latest .",
     "docker:dev": "ENV_FILE=.env.docker docker compose up --build",
