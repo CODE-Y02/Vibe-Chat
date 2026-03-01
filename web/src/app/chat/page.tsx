@@ -27,6 +27,9 @@ export default function ChatPage() {
     const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
     const retryInterval = useRef<NodeJS.Timeout | null>(null);
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // 1. STABLE CALLBACKS
+    // ──────────────────────────────────────────────────────────────────────────
     const handleMatch = useCallback((data: { peerId: string, peerName?: string, peerAvatar?: string }) => {
         setMatched("anonymous-room", data.peerId, "Stranger", "");
         setIsBlurred(true);
@@ -40,46 +43,55 @@ export default function ChatPage() {
         setIsBlurred(true);
     }, [disconnect, toast]);
 
-    // Handle Auth redirect
+    const onMessage = useCallback(({ from, content }: { from: string, content: string }) => {
+        addMessage({
+            id: Date.now().toString(),
+            senderId: from,
+            text: content,
+            timestamp: Date.now()
+        });
+    }, [addMessage]);
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 2. AUTH / REDIRECT LOGIC
+    // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login');
         }
     }, [status, router]);
 
-    // Main Socket Management
+    // ──────────────────────────────────────────────────────────────────────────
+    // 3. CONNECTION LIFECYCLE (Stable)
+    // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (status !== 'authenticated' || !sessionData?.accessToken) return;
 
-        console.log("[Client Auth Ready] Setting socket token and connecting...");
-        // Ensure socket has the latest token from the session before connecting
+        console.log("[ChatPage] Lifecycle Start: Connecting socket...");
         socket.auth = { token: sessionData.accessToken };
 
-        // Disconnect first to ensure we aren't using an old session/handshake
-        if (socket.connected) {
-            socket.disconnect();
+        // Reconnect if needed
+        if (!socket.connected) {
+            socket.connect();
         }
 
-        socket.connect();
+        return () => {
+            console.log("[ChatPage] Lifecycle Cleanup: Disconnecting...");
+            socket.disconnect();
+            disconnect();
+            webrtc.cleanup();
+        };
+    }, [sessionData?.accessToken, status, disconnect]);
 
-        // 🟢 High-Scale Heartbeat (Point #4)
-        // Keeps the user "active" in Redis so the backend doesn't clean them up as a zombie.
-        heartbeatInterval.current = setInterval(() => {
-            if (socket.connected) {
-                socket.emit('heartbeat');
-            }
-        }, 15000); // Every 15 seconds
-
-        // 🟠 Auto-Matchmaking Retry (Point #2)
-        // If the server restarts or a race condition happens, this "pokes" the Lua script again.
-        retryInterval.current = setInterval(() => {
-            if (isSearching && !session.isMatched && socket.connected) {
-                socket.emit('joinQueue');
-            }
-        }, 5000); // Every 5 seconds
+    // ──────────────────────────────────────────────────────────────────────────
+    // 4. EVENT LISTENERS (Separate to avoid connection churn)
+    // ──────────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (status !== 'authenticated') return;
 
         socket.on('matched', handleMatch);
         socket.on('peerDisconnected', handlePeerDisconnect);
+        socket.on('message', onMessage);
 
         socket.on('call-rejected', () => {
             toast({ title: 'Call rejected', variant: 'destructive' });
@@ -103,34 +115,58 @@ export default function ChatPage() {
             await webrtc.handleIceCandidate(candidate);
         });
 
-        socket.on('message', ({ from, content }) => {
-            addMessage({
-                id: Date.now().toString(),
-                senderId: from,
-                text: content,
-                timestamp: Date.now()
-            });
-        });
-
         return () => {
-            if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
-            if (retryInterval.current) clearInterval(retryInterval.current);
-
             socket.off('matched');
             socket.off('peerDisconnected');
+            socket.off('message');
             socket.off('call-rejected');
             socket.off('answer-made');
             socket.off('offer');
             socket.off('answer');
             socket.off('iceCandidate');
-            socket.off('message');
-            socket.disconnect();
-            disconnect();
-            webrtc.cleanup();
         };
-    }, [handleMatch, handlePeerDisconnect, addMessage, disconnect, isSearching, session.isMatched, sessionData, router, toast, status]);
+    }, [status, handleMatch, handlePeerDisconnect, onMessage, router, toast, disconnect]);
 
-    // Audio/Video Toggles
+    // ──────────────────────────────────────────────────────────────────────────
+    // 5. INTERVALS (Heartbeat & Search Retry)
+    // ──────────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (status !== 'authenticated') return;
+
+        heartbeatInterval.current = setInterval(() => {
+            if (socket.connected) {
+                socket.emit('heartbeat');
+            }
+        }, 15000);
+
+        return () => {
+            if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
+        };
+    }, [status]);
+
+    useEffect(() => {
+        if (status !== 'authenticated') return;
+
+        // Only search retry if we are actually searching and NOT matched
+        if (isSearching && !session.isMatched) {
+            retryInterval.current = setInterval(() => {
+                if (socket.connected) {
+                    console.log("[Search] Retrying atomic match...");
+                    socket.emit('joinQueue');
+                }
+            }, 5000);
+        } else {
+            if (retryInterval.current) clearInterval(retryInterval.current);
+        }
+
+        return () => {
+            if (retryInterval.current) clearInterval(retryInterval.current);
+        };
+    }, [status, isSearching, session.isMatched]);
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 6. UI ACTIONS
+    // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         webrtc.toggleAudio(audioEnabled);
     }, [audioEnabled]);
@@ -146,6 +182,7 @@ export default function ChatPage() {
     };
 
     const handleSkip = () => {
+        console.log("[UI] Skipping match...");
         if (session.strangerId) {
             socket.emit('skip', { peerId: session.strangerId });
         }
@@ -169,7 +206,6 @@ export default function ChatPage() {
 
     const initiateCall = async () => {
         if (session.strangerId) {
-            // Signal the peer to reveal as well
             await webrtc.initiateOffer(session.strangerId);
             setIsBlurred(false);
         }
