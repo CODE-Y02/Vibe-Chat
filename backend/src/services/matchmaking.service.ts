@@ -1,4 +1,5 @@
 import redis, { MATCHMAKING_QUEUE, SHADOWBAN_QUEUE, USER_HEARTBEAT_PREFIX, USER_SOCKET_PREFIX, USER_SHADOWBANNED_PREFIX } from './redis.service.js';
+import { logger } from '../lib/logger.js';
 
 export interface MatchResult {
     u1: string;
@@ -58,7 +59,7 @@ export class MatchmakingService {
     }
 
     async joinQueue(userId: string): Promise<MatchResult | null> {
-        console.log(`[MatchmakingService] ${userId} joining queue...`);
+        logger.info(`${userId} joining queue...`);
         const isBanned = await this.isShadowbanned(userId);
         const activeQueue = isBanned ? SHADOWBAN_QUEUE : MATCHMAKING_QUEUE;
 
@@ -74,14 +75,14 @@ export class MatchmakingService {
 
             if (matchedPeerId) {
                 const peerIdString = matchedPeerId.toString();
-                console.log(`[MatchmakingService] SUCCESS: ${userId} <-> ${peerIdString}`);
+                logger.info(`SUCCESS: ${userId} <-> ${peerIdString}`);
                 return { u1: userId, u2: peerIdString };
             }
 
-            console.log(`[MatchmakingService] WAITING: ${userId} added to pool. (Banned: ${isBanned})`);
+            logger.info(`WAITING: ${userId} added to pool. (Banned: ${isBanned})`);
             return null;
         } catch (err) {
-            console.error(`[MatchmakingService] ERROR during Lua eval:`, err);
+            logger.error(`ERROR during Lua eval:`, err);
             // Fallback: just add to queue if Lua fails for some reason
             await redis.sadd(activeQueue, userId);
             return null;

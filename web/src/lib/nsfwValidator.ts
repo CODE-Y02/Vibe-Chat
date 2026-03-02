@@ -1,5 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 import * as nsfwjs from 'nsfwjs';
+import { logger } from './logger';
 
 // Need to lazy load this so it doesn't block the main chunk
 let model: nsfwjs.NSFWJS | null = null;
@@ -13,7 +14,7 @@ export const loadNSFWModel = async () => {
 
     try {
         await tf.ready();
-        console.log("Checking NSFWJS model cache...");
+        logger.info("Checking NSFWJS model cache...");
 
         try {
             // Attempt to load the model architecture and weights from local IndexedDB
@@ -21,9 +22,9 @@ export const loadNSFWModel = async () => {
             // Construct the nsfwjs wrapper using the cached model
             // @ts-ignore - constructors might vary in types but exist in runtime
             model = new nsfwjs.NSFWJS(loadedTFModel, { size: 224 });
-            console.log("NSFWJS: Successfully loaded from IndexedDB cache.");
+            logger.info("NSFWJS: Successfully loaded from IndexedDB cache.");
         } catch (e) {
-            console.log("NSFWJS: Cache miss, downloading default model...");
+            logger.info("NSFWJS: Cache miss, downloading default model...");
             // Specify default model source explicitly to avoid console usage warnings
             // 'https://nsfwjs.com/model/' is the default endpoint for MobileNetV2
             model = await (nsfwjs as any).load('https://nsfwjs.com/model/', { size: 224 });
@@ -31,11 +32,11 @@ export const loadNSFWModel = async () => {
             // Persist the underlying TF model to IndexedDB for future instant loads
             if (model && (model as any).model) {
                 await (model as any).model.save(CACHE_PATH);
-                console.log("NSFWJS: Model downloaded and persisted to IndexedDB.");
+                logger.info("NSFWJS: Model downloaded and persisted to IndexedDB.");
             }
         }
     } catch (err) {
-        console.error("Failed to manage NSFWJS model:", err);
+        logger.error("Failed to manage NSFWJS model:", err);
     } finally {
         isLoading = false;
     }
@@ -47,7 +48,7 @@ export const classifyImage = async (videoElement: HTMLVideoElement) => {
         const predictions = await model.classify(videoElement, 3);
         return predictions;
     } catch (err) {
-        console.error("Inference error:", err);
+        logger.error("Inference error:", err);
         return null;
     }
 };
