@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { blockUser, reportUser } from '../modules/moderation/moderation.controller.js';
+import { blockUser, reportUser, autoFlag } from '../modules/moderation/moderation.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import { Env } from '../types.js';
 
@@ -46,7 +46,16 @@ const reportRoute = createRoute({
     },
 });
 
+const autoFlagRoute = createRoute({
+    method: 'post',
+    path: '/flag',
+    responses: {
+        200: { description: 'User flagged by client-side AI' },
+    },
+});
+
 moderationRoutes.openapi(blockRoute, blockUser);
 moderationRoutes.openapi(reportRoute, reportUser);
+moderationRoutes.openapi(autoFlagRoute, autoFlag);
 
 export default moderationRoutes;

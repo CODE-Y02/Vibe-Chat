@@ -5,7 +5,7 @@ import { useChatStore, Message } from '@/store/useChatStore';
 import { socket } from '@/lib/socket';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Smile, Maximize2, Minimize2, Shield, UserPlus, Check, Loader2 } from 'lucide-react';
+import { Send, Smile, Maximize2, Minimize2, Shield, UserPlus, Check, Loader2, Flag } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
@@ -39,7 +39,11 @@ function MessageBubble({ message, isOwn }: MessageBubbleProps) {
     );
 }
 
-export function ChatBox() {
+interface ChatBoxProps {
+    onReport?: () => void;
+}
+
+export function ChatBox({ onReport }: ChatBoxProps = {}) {
     const { data: sessionData } = useSession();
     const [text, setText] = useState('');
     const [isMinimized, setIsMinimized] = useState(false);
@@ -165,6 +169,17 @@ export function ChatBox() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                        <Button
+                                            onClick={onReport}
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-12 w-12 rounded-2xl transition-all border bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                                            title="Report User"
+                                        >
+                                            <Flag className="w-5 h-5" />
+                                        </Button>
+                                    </motion.div>
                                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                         <Button
                                             onClick={handleAddFriend}

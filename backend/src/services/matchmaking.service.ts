@@ -1,4 +1,4 @@
-import redis, { MATCHMAKING_QUEUE, USER_HEARTBEAT_PREFIX, USER_SOCKET_PREFIX } from './redis.service.js';
+import redis, { MATCHMAKING_QUEUE, SHADOWBAN_QUEUE, USER_HEARTBEAT_PREFIX, USER_SOCKET_PREFIX, USER_SHADOWBANNED_PREFIX } from './redis.service.js';
 
 export interface MatchResult {
     u1: string;
@@ -53,14 +53,21 @@ export class MatchmakingService {
         return nil
     `;
 
+    async isShadowbanned(userId: string): Promise<boolean> {
+        return (await redis.exists(`${USER_SHADOWBANNED_PREFIX}${userId}`)) === 1;
+    }
+
     async joinQueue(userId: string): Promise<MatchResult | null> {
         console.log(`[MatchmakingService] ${userId} joining queue...`);
+        const isBanned = await this.isShadowbanned(userId);
+        const activeQueue = isBanned ? SHADOWBAN_QUEUE : MATCHMAKING_QUEUE;
+
         try {
             // ioredis returns Buffer for some results, we ensure string
             const matchedPeerId = await (redis as any).eval(
                 this.matchScript,
                 1,
-                MATCHMAKING_QUEUE,
+                activeQueue,
                 userId,
                 USER_HEARTBEAT_PREFIX
             );
@@ -71,18 +78,20 @@ export class MatchmakingService {
                 return { u1: userId, u2: peerIdString };
             }
 
-            console.log(`[MatchmakingService] WAITING: ${userId} added to pool.`);
+            console.log(`[MatchmakingService] WAITING: ${userId} added to pool. (Banned: ${isBanned})`);
             return null;
         } catch (err) {
             console.error(`[MatchmakingService] ERROR during Lua eval:`, err);
             // Fallback: just add to queue if Lua fails for some reason
-            await redis.sadd(MATCHMAKING_QUEUE, userId);
+            await redis.sadd(activeQueue, userId);
             return null;
         }
     }
 
     async leaveQueue(userId: string): Promise<void> {
-        await redis.srem(MATCHMAKING_QUEUE, userId);
+        const isBanned = await this.isShadowbanned(userId);
+        const activeQueue = isBanned ? SHADOWBAN_QUEUE : MATCHMAKING_QUEUE;
+        await redis.srem(activeQueue, userId);
     }
 
     async updateHeartbeat(userId: string): Promise<void> {

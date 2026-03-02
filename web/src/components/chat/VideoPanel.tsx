@@ -6,6 +6,9 @@ import { cn } from '@/lib/utils';
 import { webrtc } from '@/lib/webrtc';
 import { VideoOff, MicOff, Shield, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { classifyImage, isNSFW } from '@/lib/nsfwValidator';
+import { sendAutoFlag } from '@/actions/moderation.actions';
+import { useSession } from 'next-auth/react';
 
 interface VideoPanelProps {
     isLocal?: boolean;
@@ -14,13 +17,32 @@ interface VideoPanelProps {
 }
 
 export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanelProps) {
+    const { data: sessionData } = useSession();
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
+        let interval: NodeJS.Timeout;
+
         if (isLocal) {
             if (videoRef.current) {
                 webrtc.setupLocalStream(videoRef.current);
             }
+
+            // Client-Side AI Moderation Loop (Silent)
+            interval = setInterval(async () => {
+                if (videoRef.current && videoRef.current.readyState === 4) {
+                    try {
+                        const predictions = await classifyImage(videoRef.current);
+                        if (isNSFW(predictions)) {
+                            console.warn("[Moderation] Content flagged locally. Sending telemetry...");
+                            // Silently send telemetry to backend to increment strikes / shadowban
+                            sendAutoFlag().catch(console.error);
+                        }
+                    } catch (e) {
+                        // ignore inference errors
+                    }
+                }
+            }, 4000); // Check every 4 seconds to save battery
         } else {
             if (isMatched) {
                 webrtc.onRemoteStream((stream) => {
@@ -36,6 +58,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
         }
 
         return () => {
+            if (interval) clearInterval(interval);
             if (videoRef.current) {
                 videoRef.current.srcObject = null;
             }

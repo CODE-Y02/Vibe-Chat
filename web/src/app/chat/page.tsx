@@ -13,6 +13,7 @@ import { webrtc } from '@/lib/webrtc';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { reportUser } from '@/actions/moderation.actions';
 
 export default function ChatPage() {
     const { session, isSearching, incomingCall, setSearching, disconnect, setMatched, addMessage } = useChatStore();
@@ -187,8 +188,12 @@ export default function ChatPage() {
         router.push('/dms');
     };
 
-    const handleReport = () => {
-        toast({ title: 'User Reported', description: 'Thank you for keeping VibeChat safe.', variant: 'destructive' });
+    const handleReport = async () => {
+        if (session.strangerId) {
+            toast({ title: 'Reporting...', description: 'Please wait.' });
+            await reportUser(session.strangerId, "Inappropriate Behavior").catch(console.error);
+            toast({ title: 'User Reported', description: 'Thank you for keeping VibeChat safe.', variant: 'destructive' });
+        }
         handleSkip();
     };
 
@@ -401,7 +406,7 @@ export default function ChatPage() {
                                 !session.isMatched && "hidden md:flex"
                             )}
                         >
-                            <ChatBox />
+                            <ChatBox onReport={handleReport} />
                         </motion.div>
                     </div>
                 </div>

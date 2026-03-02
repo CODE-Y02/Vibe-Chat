@@ -19,9 +19,11 @@ redis.on('connect', () => {
 });
 
 export const MATCHMAKING_QUEUE = 'matchmaking:queue';
+export const SHADOWBAN_QUEUE = 'matchmaking:shadowban';
 export const USER_SOCKET_PREFIX = 'user_socket:';
 export const USER_HEARTBEAT_PREFIX = 'user_heartbeat:';
 export const SESSION_PREFIX = 'session:';
 export const RATE_LIMIT_PREFIX = 'rate_limit:';
+export const USER_SHADOWBANNED_PREFIX = 'shadowbanned:';
 
 export default redis;

@@ -15,3 +15,9 @@ export const reportUser = async (c: Context<Env>) => {
     const result = await moderationService.reportUser(user.userId, reportedId, reason);
     return c.json(result, 201);
 };
+
+export const autoFlag = async (c: Context<Env>) => {
+    const user = c.get('user');
+    const result = await moderationService.autoFlag(user.userId);
+    return c.json(result, 201);
+};
