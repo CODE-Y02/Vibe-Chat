@@ -240,7 +240,7 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                                     value={text}
                                     onChange={(e) => setText(e.target.value)}
                                     placeholder="Drop a vibe..."
-                                    className="flex-1 h-14 rounded-2xl bg-white/[0.05] border-white/10 focus-visible:ring-primary/20 focus-visible:border-primary/50 text-sm placeholder:text-white/20 transition-all font-medium"
+                                    className="flex-1 h-14 px-6 rounded-2xl bg-white/[0.05] border-white/10 focus-visible:ring-primary/20 focus-visible:border-primary/50 text-sm placeholder:text-white/20 transition-all font-medium"
                                     disabled={!session.isMatched}
                                 />
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>

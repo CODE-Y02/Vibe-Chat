@@ -212,7 +212,7 @@ export default function DMsPage() {
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder="Type your message..."
-                                    className="h-12 flex-1 rounded-2xl bg-muted border-border focus-visible:ring-primary/20 placeholder:text-muted-foreground/30 text-foreground"
+                                    className="h-12 px-6 flex-1 rounded-2xl bg-muted border-border focus-visible:ring-primary/20 placeholder:text-muted-foreground/30 text-foreground"
                                 />
                                 <Button
                                     type="submit"

@@ -69,7 +69,7 @@ export default function FeedPage() {
                         <div className="flex-1 space-y-6">
                             <Textarea
                                 placeholder="What's the vibe today?"
-                                className="resize-none min-h-[120px] border-none bg-transparent focus-visible:ring-0 px-0 text-xl font-medium placeholder:text-muted-foreground/30 text-foreground"
+                                className="resize-none min-h-[120px] border-none bg-transparent focus-visible:ring-0 px-2 py-4 text-xl font-medium placeholder:text-muted-foreground/30 text-foreground"
                                 value={content}
                                 onChange={e => setContent(e.target.value)}
                             />
