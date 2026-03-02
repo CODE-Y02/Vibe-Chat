@@ -5,11 +5,14 @@ import { useChatStore, Message } from '@/store/useChatStore';
 import { socket } from '@/lib/socket';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Smile, Maximize2, Minimize2, Shield } from 'lucide-react';
+import { Send, Smile, Maximize2, Minimize2, Shield, UserPlus, Check, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMutation } from '@tanstack/react-query';
+import { sendFriendRequest } from '@/actions/friend.actions';
+import { toast } from '@/hooks/use-toast';
 
 interface MessageBubbleProps {
     message: Message;
@@ -42,6 +45,31 @@ export function ChatBox() {
     const [isMinimized, setIsMinimized] = useState(false);
     const { session, addMessage } = useChatStore();
     const bottomRef = useRef<HTMLDivElement>(null);
+
+    const friendMutation = useMutation({
+        mutationFn: (friendId: string) => sendFriendRequest(friendId),
+        onSuccess: (data) => {
+            if (data.success) {
+                toast({
+                    title: "Vibe Connected!",
+                    description: "Friend request sent successfully.",
+                    className: "bg-vibe-gradient text-white border-none shadow-glow"
+                });
+            } else {
+                toast({
+                    title: "Oops!",
+                    description: data.error || "Failed to send request.",
+                    variant: "destructive"
+                });
+            }
+        }
+    });
+
+    const handleAddFriend = () => {
+        if (session.strangerId) {
+            friendMutation.mutate(session.strangerId);
+        }
+    };
 
     useEffect(() => {
         if (!isMinimized) {
@@ -136,9 +164,34 @@ export function ChatBox() {
                                         </div>
                                     </div>
                                 </div>
-                                <Button variant="ghost" size="icon" onClick={() => setIsMinimized(true)} className="h-12 w-12 rounded-2xl hover:bg-white/5 text-white/20 hover:text-white transition-all">
-                                    <Minimize2 className="w-5 h-5" />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                        <Button
+                                            onClick={handleAddFriend}
+                                            disabled={friendMutation.isPending || friendMutation.isSuccess}
+                                            variant="ghost"
+                                            size="icon"
+                                            className={cn(
+                                                "h-12 w-12 rounded-2xl transition-all border",
+                                                friendMutation.isSuccess
+                                                    ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/20"
+                                                    : "bg-white/5 text-white/40 hover:text-white hover:bg-white/10 border-white/5"
+                                            )}
+                                            title="Add as Friend"
+                                        >
+                                            {friendMutation.isPending ? (
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            ) : friendMutation.isSuccess ? (
+                                                <Check className="w-5 h-5" />
+                                            ) : (
+                                                <UserPlus className="w-5 h-5" />
+                                            )}
+                                        </Button>
+                                    </motion.div>
+                                    <Button variant="ghost" size="icon" onClick={() => setIsMinimized(true)} className="h-12 w-12 rounded-2xl hover:bg-white/5 text-white/20 hover:text-white transition-all">
+                                        <Minimize2 className="w-5 h-5" />
+                                    </Button>
+                                </div>
                             </div>
 
                             {/* Messages Area */}
