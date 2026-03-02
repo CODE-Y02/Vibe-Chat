@@ -21,28 +21,38 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let timeoutId: NodeJS.Timeout;
 
         if (isLocal) {
             if (videoRef.current) {
                 webrtc.setupLocalStream(videoRef.current);
             }
 
-            // Client-Side AI Moderation Loop (Silent)
-            interval = setInterval(async () => {
+            // Optimized Moderation Loop (Non-blocking)
+            const checkModeration = async () => {
                 if (videoRef.current && videoRef.current.readyState === 4) {
-                    try {
-                        const predictions = await classifyImage(videoRef.current);
-                        if (isNSFW(predictions)) {
-                            console.warn("[Moderation] Content flagged locally. Sending telemetry...");
-                            // Silently send telemetry to backend to increment strikes / shadowban
-                            sendAutoFlag().catch(console.error);
-                        }
-                    } catch (e) {
-                        // ignore inference errors
+                    const runInference = async () => {
+                        try {
+                            const predictions = await classifyImage(videoRef.current!);
+                            if (isNSFW(predictions)) {
+                                console.warn("[Moderation] Content flagged locally.");
+                                sendAutoFlag().catch(console.error);
+                            }
+                        } catch (e) { }
+                        timeoutId = setTimeout(checkModeration, 4000);
+                    };
+
+                    // Yield to browser for smooth 60fps UI
+                    if ('requestIdleCallback' in window) {
+                        (window as any).requestIdleCallback(() => runInference(), { timeout: 2000 });
+                    } else {
+                        setTimeout(runInference, 0);
                     }
+                } else {
+                    timeoutId = setTimeout(checkModeration, 1000); // Retry sooner if video not ready
                 }
-            }, 4000); // Check every 4 seconds to save battery
+            };
+            checkModeration();
         } else {
             if (isMatched) {
                 webrtc.onRemoteStream((stream) => {
@@ -58,7 +68,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
         }
 
         return () => {
-            if (interval) clearInterval(interval);
+            if (timeoutId) clearTimeout(timeoutId);
             if (videoRef.current) {
                 videoRef.current.srcObject = null;
             }

@@ -144,7 +144,7 @@ export default function AuthPage() {
                                             id="username"
                                             placeholder="Username"
                                             autoComplete="username"
-                                            className="pl-12 h-14 rounded-2xl bg-white/[0.03] border-white/5 focus-visible:border-primary/50 focus-visible:ring-primary/20 transition-all text-white placeholder:text-white/20"
+                                            className="pl-12 pr-12 h-14 rounded-2xl bg-white/[0.03] border-white/5 focus-visible:border-primary/50 focus-visible:ring-primary/20 transition-all text-white placeholder:text-white/20"
                                             value={formData.username}
                                             onChange={e => setFormData(prev => ({ ...prev, username: e.target.value }))}
                                         />

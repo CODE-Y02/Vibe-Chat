@@ -5,16 +5,37 @@ import * as nsfwjs from 'nsfwjs';
 let model: nsfwjs.NSFWJS | null = null;
 let isLoading = false;
 
+const CACHE_PATH = 'indexeddb://vibe-nsfw-v1';
+
 export const loadNSFWModel = async () => {
     if (model || isLoading) return;
     isLoading = true;
+
     try {
-        console.log("Loading NSFWJS model...");
-        // tfjs uses indexedDB to cache under the hood by default when fetching
-        model = await nsfwjs.load(); // Uses default MobileNetV2 architecture
-        console.log("NSFWJS model loaded successfully!");
+        await tf.ready();
+        console.log("Checking NSFWJS model cache...");
+
+        try {
+            // Attempt to load the model architecture and weights from local IndexedDB
+            const loadedTFModel = await tf.loadLayersModel(CACHE_PATH);
+            // Construct the nsfwjs wrapper using the cached model
+            // @ts-ignore - constructors might vary in types but exist in runtime
+            model = new nsfwjs.NSFWJS(loadedTFModel, { size: 224 });
+            console.log("NSFWJS: Successfully loaded from IndexedDB cache.");
+        } catch (e) {
+            console.log("NSFWJS: Cache miss, downloading default model...");
+            // Specify default model source explicitly to avoid console usage warnings
+            // 'https://nsfwjs.com/model/' is the default endpoint for MobileNetV2
+            model = await (nsfwjs as any).load('https://nsfwjs.com/model/', { size: 224 });
+
+            // Persist the underlying TF model to IndexedDB for future instant loads
+            if (model && (model as any).model) {
+                await (model as any).model.save(CACHE_PATH);
+                console.log("NSFWJS: Model downloaded and persisted to IndexedDB.");
+            }
+        }
     } catch (err) {
-        console.error("Failed to load NSFWJS model:", err);
+        console.error("Failed to manage NSFWJS model:", err);
     } finally {
         isLoading = false;
     }

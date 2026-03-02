@@ -22,19 +22,43 @@ interface SidebarProps {
     className?: string;
 }
 
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+
 export function Sidebar({ conversations, activePeerId, onSelectConversation, className }: SidebarProps) {
+    const [searchTerm, setSearchTerm] = useState("");
+
+    const filteredConversations = conversations.filter(c =>
+        c.peer.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <aside className={cn("w-full h-full flex flex-col bg-transparent", className)}>
-            <div className="p-4 border-b border-border">
-                <h2 className="text-lg font-black tracking-tight text-foreground uppercase tracking-widest text-xs">Messages</h2>
+            <div className="p-6 border-b border-border space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-black tracking-tight text-foreground uppercase tracking-widest text-[10px]">Messages</h2>
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-tighter shadow-glow-sm">
+                        {conversations.length} Active
+                    </span>
+                </div>
+                <div className="relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+                    <Input
+                        placeholder="Search vibes..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-10 pl-10 pr-4 rounded-xl bg-muted/50 border-transparent focus-visible:border-primary/30 focus-visible:ring-0 text-xs font-medium placeholder:text-muted-foreground/30 transition-all"
+                    />
+                </div>
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-2 no-scrollbar">
-                {conversations.length === 0 ? (
+                {filteredConversations.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground/30 text-xs mt-10 font-bold uppercase tracking-widest">
                         No vibes yet
                     </div>
                 ) : (
-                    conversations.map((conv) => (
+                    filteredConversations.map((conv) => (
                         <button
                             key={conv.peer.id}
                             onClick={() => onSelectConversation(conv)}
