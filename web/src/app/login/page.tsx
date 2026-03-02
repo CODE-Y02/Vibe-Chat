@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
     const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const login = useAuthStore(state => state.login);
@@ -25,9 +26,15 @@ export default function AuthPage() {
             return;
         }
 
-        if (!isLogin && !formData.username) {
-            setError("Username is required for signup");
-            return;
+        if (!isLogin) {
+            if (!formData.username) {
+                setError("Username is required for signup");
+                return;
+            }
+            if (!acceptedTerms) {
+                setError("You must accept the Terms of Service and Privacy Policy to join.");
+                return;
+            }
         }
 
         setLoading(true);
@@ -171,6 +178,28 @@ export default function AuthPage() {
                                         onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
                                     />
                                 </div>
+
+                                {!isLogin && (
+                                    <div className="flex items-start gap-3 mt-4 px-2">
+                                        <div className="flex items-center h-5">
+                                            <input
+                                                id="terms"
+                                                type="checkbox"
+                                                checked={acceptedTerms}
+                                                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                                className="w-4 h-4 bg-white/[0.03] border-white/10 rounded focus:ring-primary/50 focus:ring-2 accent-primary"
+                                            />
+                                        </div>
+                                        <div className="text-xs text-white/40 leading-relaxed">
+                                            <label htmlFor="terms" className="font-medium">
+                                                By signing up, you confirm you have read and agree to our{' '}
+                                                <Link href="/terms" target="_blank" className="text-primary hover:underline font-bold">Terms of Service</Link>
+                                                {' '}and{' '}
+                                                <Link href="/privacy" target="_blank" className="text-primary hover:underline font-bold">Privacy Policy</Link>.
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
                             </motion.div>
                         </AnimatePresence>
 
