@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSocket } from '@/hooks/use-socket';
 import { useSession } from "@/components/layout/SessionProvider";
 import { useChatStore } from '@/store/useChatStore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,8 @@ export default function DMsPage() {
     const { data: session, status } = useSession();
     const queryClient = useQueryClient();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const userIdFromQuery = searchParams.get('userId');
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -45,6 +47,16 @@ export default function DMsPage() {
         queryKey: ['conversations'],
         queryFn: () => getConversations()
     });
+
+    // Auto-select peer if userId is in query params
+    useEffect(() => {
+        if (userIdFromQuery && convData?.conversations) {
+            const existing = convData.conversations.find((c: Conversation) => c.peer.id === userIdFromQuery);
+            if (existing) {
+                setActivePeer(existing);
+            }
+        }
+    }, [userIdFromQuery, convData]);
 
     const { data: messages, isLoading: isLoadingMessages } = useQuery({
         queryKey: ['messages', activePeer?.peer.id],

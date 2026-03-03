@@ -10,6 +10,7 @@ import { Users, UserPlus, Loader2 } from 'lucide-react';
 import { useSession } from "@/components/layout/SessionProvider";
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 export default function FriendsPage() {
     const { data: session, status } = useSession();
@@ -59,44 +60,72 @@ export default function FriendsPage() {
     });
 
     return (
-        <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+        <div className="min-h-screen bg-[#020202] text-white selection:bg-primary/30 overflow-x-hidden relative">
+            {/* Background Mesh */}
+            <div className="fixed inset-0 z-0 pointer-events-none opacity-20">
+                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px]" />
+            </div>
+
             <Navbar />
 
-            <main className="container mx-auto px-4 py-8 max-w-4xl">
-                <div className="mb-8 pl-4 border-l-4 border-primary">
-                    <h1 className="text-4xl font-black tracking-tighter mb-2">Friends</h1>
-                    <p className="text-muted-foreground font-medium">Manage your connections and pending vibes</p>
-                </div>
+            <main className="container mx-auto px-6 py-12 lg:py-24 max-w-5xl relative z-10">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-16"
+                >
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/10 mb-6 backdrop-blur-md">
+                        <Users className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 text-primary">Your Network</span>
+                    </div>
+                    <h1 className="text-5xl md:text-7xl font-black tracking-[-0.05em] uppercase italic mb-4">
+                        Connections<span className="text-primary">.</span>
+                    </h1>
+                    <p className="text-white/40 max-w-xl text-lg font-medium leading-relaxed uppercase tracking-tighter">
+                        Manage your network, accept invitations, and keep the vibe alive across the globe.
+                    </p>
+                </motion.div>
 
                 <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2 p-1 bg-muted rounded-2xl mb-10 border border-border">
-                        <TabsTrigger value="all" className="rounded-lg gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
+                    <TabsList className="inline-flex h-14 items-center justify-start rounded-2xl bg-white/[0.03] p-1 border border-white/5 mb-12 backdrop-blur-xl w-full md:w-auto">
+                        <TabsTrigger value="all" className="rounded-xl px-8 h-full gap-3 data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-black uppercase tracking-widest transition-all">
                             <Users className="w-4 h-4" /> All Friends
                         </TabsTrigger>
-                        <TabsTrigger value="requests" className="rounded-lg gap-2 data-[state=active]:bg-primary data-[state=active]:text-white relative">
+                        <TabsTrigger value="requests" className="rounded-xl px-8 h-full gap-3 data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-black uppercase tracking-widest relative transition-all">
                             <UserPlus className="w-4 h-4" />
-                            Pending Requests
+                            Requests
                             {requests && requests.length > 0 && (
-                                <span className="bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold absolute -top-1 -right-1">
+                                <span className="bg-primary text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black absolute -top-1.5 -right-1.5 shadow-glow-sm">
                                     {requests.length}
                                 </span>
                             )}
                         </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="all" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <TabsContent value="all" className="animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
                         {isLoadingFriends ? (
-                            <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+                            <div className="flex flex-col items-center justify-center py-32 gap-4">
+                                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                                <span className="text-[10px] font-black uppercase tracking-widest opacity-20">Synchronizing...</span>
+                            </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {friends?.length === 0 ? (
-                                    <p className="text-muted-foreground text-center py-20 col-span-full font-medium italic">No friends yet. Start connecting!</p>
+                                    <div className="col-span-full py-40 text-center glass-card rounded-[3rem] border border-white/5">
+                                        <div className="w-20 h-20 bg-white/[0.03] rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
+                                            <Users className="w-10 h-10 text-white/10" />
+                                        </div>
+                                        <h3 className="text-2xl font-black uppercase tracking-tight mb-2 opacity-40 italic">Ghost Town</h3>
+                                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Start matching to find your first vibe buddy.</p>
+                                    </div>
                                 ) : (
                                     friends?.map((friend: any) => (
                                         <FriendCard
                                             key={friend.id}
                                             friend={friend}
                                             type="friend"
+                                            onMessage={(f) => router.push(`/dms?userId=${f.id}`)}
                                         />
                                     ))
                                 )}
@@ -104,13 +133,22 @@ export default function FriendsPage() {
                         )}
                     </TabsContent>
 
-                    <TabsContent value="requests" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <TabsContent value="requests" className="animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
                         {isLoadingRequests ? (
-                            <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+                            <div className="flex flex-col items-center justify-center py-32 gap-4">
+                                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                                <span className="text-[10px] font-black uppercase tracking-widest opacity-20">Fetching Invites...</span>
+                            </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {requests?.length === 0 ? (
-                                    <p className="text-white/30 text-center py-12 col-span-full">No pending requests</p>
+                                    <div className="col-span-full py-40 text-center glass-card rounded-[3rem] border border-white/5">
+                                        <div className="w-20 h-20 bg-white/[0.03] rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
+                                            <UserPlus className="w-10 h-10 text-white/10" />
+                                        </div>
+                                        <h3 className="text-2xl font-black uppercase tracking-tight mb-2 opacity-40 italic">In-box empty</h3>
+                                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">No pending friend requests at the moment.</p>
+                                    </div>
                                 ) : (
                                     requests?.map((req: any) => (
                                         <FriendCard

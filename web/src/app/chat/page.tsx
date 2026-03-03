@@ -338,7 +338,7 @@ export default function ChatPage() {
                                 initial={{ opacity: 0, y: 30 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
-                                className="absolute inset-0 flex items-center justify-center z-30 px-6"
+                                className="absolute inset-0 flex items-center justify-center z-[60] px-6 pointer-events-auto"
                             >
                                 <div className="glass-card p-10 md:p-16 rounded-[48px] text-center w-full max-w-md shadow-glow-lg flex flex-col items-center">
                                     <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-500/20 rounded-[24px] flex items-center justify-center mb-10 rotate-12">
