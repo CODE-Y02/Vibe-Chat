@@ -5,7 +5,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar, Conversation } from '@/components/layout/Sidebar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getConversations, getMessages, sendMessage, markAsRead } from '@/actions/dm.actions';
-import { Loader2, MessageSquare, Send, Video, Sparkles } from 'lucide-react';
+import { getFriends } from '@/actions/friend.actions';
+import { Loader2, MessageSquare, Send, Video, Sparkles, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -48,15 +49,43 @@ export default function DMsPage() {
         queryFn: () => getConversations()
     });
 
+    const { data: friendsData } = useQuery({
+        queryKey: ['friends'],
+        queryFn: getFriends,
+        enabled: !!userIdFromQuery,
+    });
+
     // Auto-select peer if userId is in query params
+    // Works even if no prior conversation exists (new friend)
     useEffect(() => {
-        if (userIdFromQuery && convData?.conversations) {
+        if (!userIdFromQuery) return;
+
+        // 1. Try to find an existing conversation
+        if (convData?.conversations) {
             const existing = convData.conversations.find((c: Conversation) => c.peer.id === userIdFromQuery);
             if (existing) {
                 setActivePeer(existing);
+                return;
             }
         }
-    }, [userIdFromQuery, convData]);
+
+        // 2. No conversation yet — create a synthetic peer from friends list
+        if (friendsData) {
+            const friend = friendsData.find((f: any) => f.id === userIdFromQuery);
+            if (friend) {
+                setActivePeer({
+                    peer: {
+                        id: friend.id,
+                        username: friend.username || 'Vibe Buddy',
+                        avatar: friend.avatar,
+                    },
+                    lastMessage: '',
+                    createdAt: new Date().toISOString(),
+                    isUnread: false,
+                });
+            }
+        }
+    }, [userIdFromQuery, convData, friendsData]);
 
     const { data: messages, isLoading: isLoadingMessages } = useQuery({
         queryKey: ['messages', activePeer?.peer.id],
@@ -115,7 +144,7 @@ export default function DMsPage() {
         <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden transition-colors duration-300">
             <Navbar className={cn(isChatOpen && "hidden md:flex")} />
 
-            <main className="flex-1 overflow-hidden flex flex-col md:flex-row container mx-auto py-0 md:py-4 px-0 md:px-4 gap-4 max-w-7xl">
+            <main className="flex-1 overflow-hidden flex flex-col md:flex-row container mx-auto py-0 md:py-4 px-0 md:px-4 gap-4 max-w-7xl pb-24 md:pb-0">
                 {/* Conversations Sidebar */}
                 <div className={cn(
                     "w-full md:w-80 h-full flex flex-col gap-4 shrink-0 px-4 md:px-0 py-4 md:py-0 transition-all",
@@ -238,21 +267,30 @@ export default function DMsPage() {
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Input Area */}
-                            <form className="p-4 border-t border-border bg-muted/30 flex gap-3 items-center z-10" onSubmit={handleSendMessage}>
+                            {/* Input Area — padded so it clears mobile nav bar */}
+                            <form
+                                className="p-3 md:p-4 border-t border-border bg-muted/30 flex gap-2 md:gap-3 items-center z-10 pb-safe"
+                                style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+                                onSubmit={handleSendMessage}
+                            >
                                 <Input
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="Type your message..."
-                                    className="h-12 px-6 flex-1 rounded-2xl bg-muted border-border focus-visible:ring-primary/20 placeholder:text-muted-foreground/30 text-foreground"
+                                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e as any); }}
+                                    placeholder="Type a message…"
+                                    autoComplete="off"
+                                    className="h-12 px-4 flex-1 rounded-2xl bg-muted border-border focus-visible:ring-primary/20 placeholder:text-muted-foreground/30 text-foreground text-sm"
                                 />
                                 <Button
                                     type="submit"
                                     disabled={!input.trim() || sendMutation.isPending}
                                     size="icon"
-                                    className="rounded-2xl w-12 h-12 shrink-0 shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-transform bg-primary"
+                                    className="rounded-2xl w-12 h-12 shrink-0 shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:scale-95 transition-all bg-primary disabled:opacity-30"
                                 >
-                                    <Send className="w-5 h-5 text-white" />
+                                    {sendMutation.isPending
+                                        ? <Loader2 className="w-4 h-4 text-white animate-spin" />
+                                        : <Send className="w-4 h-4 text-white" />
+                                    }
                                 </Button>
                             </form>
                         </>
