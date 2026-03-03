@@ -27,8 +27,8 @@ export default function ChatPage() {
     const [isBlurred, setIsBlurred] = useState(true);
 
     // Refs for intervals to prevent leaks
-    const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
-    const retryInterval = useRef<NodeJS.Timeout | null>(null);
+    const heartbeatInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+    const retryInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // ──────────────────────────────────────────────────────────────────────────
     // 1. STABLE CALLBACKS
@@ -39,12 +39,31 @@ export default function ChatPage() {
         toast({ title: 'Matched!', description: 'Say hello to your new vibe buddy.' });
     }, [setMatched, toast]);
 
+    const handleStart = useCallback(() => {
+        setSearching(true);
+        socket.emit('joinQueue');
+        toast({ title: 'Searching...', description: 'Finding a vibe for you.' });
+    }, [setSearching, socket, toast]);
+
     const handlePeerDisconnect = useCallback(() => {
         toast({ title: 'Stranger disconnected', description: 'They left the vibe.' });
         disconnect();
         webrtc.cleanup();
         setIsBlurred(true);
-    }, [disconnect, toast]);
+        // Immediately start searching for a new match
+        handleStart();
+    }, [disconnect, toast, handleStart]);
+
+    const handleSkip = useCallback(() => {
+        console.log("[UI] Skipping match...");
+        if (session.strangerId) {
+            socket.emit('skip', { peerId: session.strangerId });
+        }
+        disconnect();
+        webrtc.cleanup();
+        setIsBlurred(true);
+        handleStart();
+    }, [session.strangerId, socket, disconnect, handleStart]);
 
     const onMessage = useCallback(({ from, content }: { from: string, content: string }) => {
         addMessage({
@@ -101,19 +120,19 @@ export default function ChatPage() {
             router.push('/dms');
         });
 
-        socket.on('answer-made', async ({ answer }) => {
+        socket.on('answer-made', async ({ answer }: { answer: any }) => {
             await webrtc.handleAnswer(answer);
         });
 
-        socket.on('offer', async ({ from, sdp }) => {
+        socket.on('offer', async ({ from, sdp }: { from: string, sdp: any }) => {
             await webrtc.handleOffer(from, sdp);
         });
 
-        socket.on('answer', async ({ sdp }) => {
+        socket.on('answer', async ({ sdp }: { sdp: any }) => {
             await webrtc.handleAnswer(sdp);
         });
 
-        socket.on('iceCandidate', async ({ candidate }) => {
+        socket.on('iceCandidate', async ({ candidate }: { candidate: any }) => {
             await webrtc.handleIceCandidate(candidate);
         });
 
@@ -127,12 +146,11 @@ export default function ChatPage() {
             socket.off('answer');
             socket.off('iceCandidate');
         };
-    }, [status, handleMatch, handlePeerDisconnect, onMessage, router, toast, disconnect]);
+    }, [status, handleMatch, handlePeerDisconnect, onMessage, router, toast, disconnect, socket]);
 
     // ──────────────────────────────────────────────────────────────────────────
     // 5. INTERVALS (Search Retry)
     // ──────────────────────────────────────────────────────────────────────────
-
     useEffect(() => {
         if (status !== 'authenticated') return;
 
@@ -151,7 +169,7 @@ export default function ChatPage() {
         return () => {
             if (retryInterval.current) clearInterval(retryInterval.current);
         };
-    }, [status, isSearching, session.isMatched]);
+    }, [status, isSearching, session.isMatched, socket]);
 
     // ──────────────────────────────────────────────────────────────────────────
     // 6. UI ACTIONS
@@ -163,23 +181,6 @@ export default function ChatPage() {
     useEffect(() => {
         webrtc.toggleVideo(videoEnabled);
     }, [videoEnabled]);
-
-    const handleStart = () => {
-        setSearching(true);
-        socket.emit('joinQueue');
-        toast({ title: 'Searching...', description: 'Finding a vibe for you.' });
-    };
-
-    const handleSkip = () => {
-        console.log("[UI] Skipping match...");
-        if (session.strangerId) {
-            socket.emit('skip', { peerId: session.strangerId });
-        }
-        disconnect();
-        webrtc.cleanup();
-        setIsBlurred(true);
-        handleStart();
-    };
 
     const handleClose = () => {
         socket.emit('leaveQueue');

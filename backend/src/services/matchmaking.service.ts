@@ -19,37 +19,38 @@ export class MatchmakingService {
         local queue = KEYS[1]
         local myId = ARGV[1]
         local heartbeatPrefix = ARGV[2]
-        local skipsKey = "skipped:" .. myId
+        local mySkipsKey = "skipped:" .. myId
 
-        -- Ensure I am not in the queue while I search
+        -- 1. Remove myself from queue to search
         redis.call('SREM', queue, myId)
 
-        -- Try to find a peer (O(1) random)
-        -- We try up to 10 times to dodge skipped or offline users
-        for i=1, 10 do
-            local peerId = redis.call('SRANDMEMBER', queue)
-            if not peerId then break end
+        -- 2. Strictly O(1) single random pick
+        local peerId = redis.call('SRANDMEMBER', queue)
+        
+        if peerId and peerId ~= myId then
+            -- Verify peer is online
+            local isAlive = redis.call('EXISTS', heartbeatPrefix .. peerId)
             
-            if peerId ~= myId then
-                -- Check heartbeat: If offline, remove from queue and continue
-                local isAlive = redis.call('EXISTS', heartbeatPrefix .. peerId)
-                if isAlive == 0 then
-                    redis.call('SREM', queue, peerId)
-                else
-                    -- Check skipped
-                    local isSkipped = redis.call('SISMEMBER', skipsKey, peerId)
-                    if isSkipped == 0 then
-                        -- Atomically claim this peer
-                        local removed = redis.call('SREM', queue, peerId)
-                        if removed == 1 then
-                            return peerId
-                        end
+            if isAlive == 1 then
+                -- Verify skip (bidirectional check for safety)
+                local peerSkipsKey = "skipped:" .. peerId
+                local iSkippedPeer = redis.call('SISMEMBER', mySkipsKey, peerId)
+                local peerSkippedMe = redis.call('SISMEMBER', peerSkipsKey, myId)
+
+                if iSkippedPeer == 0 and peerSkippedMe == 0 then
+                    -- Atomically claim this peer
+                    local removed = redis.call('SREM', queue, peerId)
+                    if removed == 1 then
+                        return peerId
                     end
                 end
+            else
+                -- Peer is actually offline, clean up the ghost
+                redis.call('SREM', queue, peerId)
             end
         end
 
-        -- No luck matching? Join the queue.
+        -- 3. No match or skipped? Join the pool.
         redis.call('SADD', queue, myId)
         return nil
     `;
@@ -103,10 +104,15 @@ export class MatchmakingService {
     }
 
     async skipPeer(userId: string, peerId: string): Promise<void> {
-        const key = `skipped:${userId}`;
+        const u1Key = `skipped:${userId}`;
+        const u2Key = `skipped:${peerId}`;
+        const skipTTL = 60; // 60 seconds skip cooldown
+
         await redis.pipeline()
-            .sadd(key, peerId)
-            .expire(key, 120)
+            .sadd(u1Key, peerId)
+            .expire(u1Key, skipTTL)
+            .sadd(u2Key, userId)
+            .expire(u2Key, skipTTL)
             .exec();
     }
 

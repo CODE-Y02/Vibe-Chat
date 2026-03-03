@@ -53,10 +53,22 @@ export const registerMatchmakingHandlers = (io: Server, socket: AuthenticatedSoc
 
     socket.on('skip', async ({ peerId }: { peerId: string }) => {
         console.log(`[Socket Handler] ${user.userId} skipping ${peerId}.`);
+        
+        // 1. Mark as skipped (bidirectional in service)
         await matchmakingService.skipPeer(user.userId, peerId);
+        
+        // 2. Notify the peer if they are still connected
+        const peerSocket = await matchmakingService.getUserSocket(peerId);
+        if (peerSocket) {
+            console.log(`[Socket Handler] Informing ${peerId} they were skipped.`);
+            io.to(peerSocket).emit('peerDisconnected');
+        }
+        
+        // 3. Clear sessions
         await redis.del(`session:${user.userId}`);
+        await redis.del(`session:${peerId}`);
 
-        // Immediate rematch attempt
+        // 4. Immediate rematch attempt for the skipper
         const match = await matchmakingService.joinQueue(user.userId);
         if (match) {
             const { u1, u2 } = match;
