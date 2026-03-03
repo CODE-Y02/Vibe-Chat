@@ -4,9 +4,11 @@ const nextConfig: NextConfig = {
     async rewrites() {
         return [
             {
+                // Any request to /supabase/... is proxied to Supabase.
+                // This lets the browser talk to our domain instead of supabase.co
+                // (bypasses Jio ISP block on the supabase.co domain).
                 source: '/supabase/:path*',
-                // Use the environment variable for the destination
-                destination: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/:path*`,
+                destination: 'https://nujpmmtiaxhxzjgegaxs.supabase.co/:path*',
             },
         ];
     },
