@@ -7,7 +7,7 @@ import { FriendCard } from '@/components/dms/FriendCard';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, UserPlus, Loader2 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 

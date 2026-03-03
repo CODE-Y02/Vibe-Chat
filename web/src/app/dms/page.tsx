@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSocket } from '@/hooks/use-socket';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 import { useChatStore } from '@/store/useChatStore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';

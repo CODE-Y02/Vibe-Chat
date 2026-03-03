@@ -2,10 +2,11 @@
 
 import { authenticatedFetch } from "@/lib/api-helper";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
+import { createClient } from "@/utils/supabase/server";
 
 export async function getProfile() {
-    const session = await auth();
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user?.id) return null;
 
     try {

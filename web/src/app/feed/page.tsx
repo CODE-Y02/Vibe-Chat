@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { createPost } from '@/actions/feed.actions';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -63,8 +63,8 @@ export default function FeedPage() {
                 <Card className="p-8 mb-12 glass-card border border-border shadow-2xl rounded-[2.5rem] bg-card/50 backdrop-blur-xl">
                     <div className="flex gap-5">
                         <Avatar className="w-14 h-14 border-2 border-primary/20 shadow-2xl">
-                            <AvatarImage src={user?.image || ""} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-black text-lg">{user?.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                            <AvatarFallback className="bg-primary/10 text-primary font-black text-lg">{((user?.user_metadata?.full_name || user?.email) || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 space-y-6">
                             <Textarea

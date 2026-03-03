@@ -7,7 +7,6 @@ const safeUserSelect = {
     username: true,
     email: true,
     avatar: true,
-    isAnonymous: true,
     createdAt: true,
     updatedAt: true,
 } as const;
@@ -50,7 +49,6 @@ export class UserService {
             where: {
                 AND: [
                     { NOT: { id: currentUserId } }, // exclude self
-                    { isAnonymous: false },
                     {
                         OR: [
                             { username: { contains: query, mode: 'insensitive' } },

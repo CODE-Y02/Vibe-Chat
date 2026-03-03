@@ -8,14 +8,13 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  username      String?   @unique
-  email         String?   @unique
-  passwordHash  String?
-  isAnonymous   Boolean   @default(false)
-  avatar        String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  supabaseAuthId  String?   @unique
+  username        String?   @unique
+  email           String?   @unique
+  avatar          String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   posts         Post[]     @relation("UserPosts")
   reactions     Reaction[]

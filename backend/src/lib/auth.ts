@@ -1,44 +1,36 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import prisma from './prisma.js';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export interface TokenPayload {
     userId: string;
-    username?: string;
-    isAnonymous: boolean;
 }
 
-export const generateTokens = (payload: TokenPayload) => {
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: '7d' });
-    return { accessToken, refreshToken };
-};
-
-export const verifyAccessToken = (token: string): TokenPayload | null => {
+export const verifyAccessToken = async (token: string): Promise<TokenPayload | null> => {
     try {
-        return jwt.verify(token, JWT_SECRET) as TokenPayload;
-    } catch (error) {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) return null;
+
+        // Fetch internal user ID from Prisma using the supabase Auth ID
+        const internalUser = await prisma.user.findUnique({
+            where: { supabaseAuthId: user.id },
+            select: { id: true }
+        });
+
+        if (!internalUser) return null;
+
+        return {
+            userId: internalUser.id
+        };
+    } catch (err) {
+        console.error('Error verifying Supabase token:', err);
         return null;
     }
-};
-
-export const verifyRefreshToken = (token: string): TokenPayload | null => {
-    try {
-        return jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
-    } catch (error) {
-        return null;
-    }
-};
-
-export const hashPassword = async (password: string): Promise<string> => {
-    return bcrypt.hash(password, 10);
-};
-
-export const comparePassword = async (password: string, hash: string): Promise<boolean> => {
-    return bcrypt.compare(password, hash);
 };

@@ -2,7 +2,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { logger, errorHandler } from './lib/utils.js';
-import authRoutes from './routes/auth.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
 import friendRoutes from './routes/friend.routes.js';
 import feedRoutes from './routes/feed.routes.js';
 import dmRoutes from './routes/dm.routes.js';
@@ -41,10 +41,7 @@ app.get('/docs/scalar', apiReference({ spec: { url: '/openapi.json' } }));
 // Middlewares
 app.use('*', logger);
 app.use('*', cors());
-app.use('/auth/*', rateLimiter(10, 60)); // 10 requests per minute for auth
-
-// Routes
-app.route('/auth', authRoutes);
+app.route('/webhooks', webhookRoutes);
 app.route('/friends', friendRoutes);
 app.route('/feed', feedRoutes);
 app.route('/messages', dmRoutes);

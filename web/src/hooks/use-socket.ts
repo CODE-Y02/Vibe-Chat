@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { socket } from '@/lib/socket';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 
 /**
  * High-Scale Socket Hook (Singleton Wrapper)
@@ -13,10 +13,10 @@ export function useSocket() {
     const [isConnected, setIsConnected] = useState(socket.connected);
 
     useEffect(() => {
-        if (!session?.accessToken) return;
+        if (!session?.session?.access_token) return;
 
         // 🟢 Sync the shared singleton auth token
-        socket.auth = { token: session.accessToken };
+        socket.auth = { token: session.session.access_token };
 
         const onConnect = () => {
             console.log('[useSocket] Shared socket connected');
@@ -50,7 +50,7 @@ export function useSocket() {
             socket.off('disconnect', onDisconnect);
             clearInterval(heartbeatInterval);
         };
-    }, [session?.accessToken]);
+    }, [session?.session?.access_token]);
 
     return {
         socket,

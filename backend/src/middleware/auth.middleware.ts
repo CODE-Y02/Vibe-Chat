@@ -11,7 +11,7 @@ export const authMiddleware = async (c: Context<Env>, next: Next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const payload = verifyAccessToken(token);
+    const payload = await verifyAccessToken(token);
 
     if (!payload) {
         throw new AppError(401, 'Invalid or expired token');

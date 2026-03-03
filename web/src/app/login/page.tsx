@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
-    const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+    const [formData, setFormData] = useState({ username: '', email: '' });
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -21,8 +21,8 @@ export default function AuthPage() {
         e.preventDefault();
         setError(null);
 
-        if (!formData.email || !formData.password) {
-            setError("Email and password are required");
+        if (!formData.email) {
+            setError("Email is required");
             return;
         }
 
@@ -41,10 +41,7 @@ export default function AuthPage() {
 
         if (isLogin) {
             try {
-                await login({
-                    email: formData.email,
-                    password: formData.password,
-                });
+                await login(formData.email);
             } catch (err: any) {
                 const message = err?.response?.data?.error || err?.message || "Login failed.";
                 setError(typeof message === 'string' ? message : JSON.stringify(message));
@@ -59,7 +56,6 @@ export default function AuthPage() {
                     body: JSON.stringify({
                         username: formData.username,
                         email: formData.email,
-                        password: formData.password,
                     }),
                 });
 
@@ -69,10 +65,7 @@ export default function AuthPage() {
                     throw new Error(errMsg);
                 }
 
-                await login({
-                    email: formData.email,
-                    password: formData.password,
-                });
+                await login(formData.email);
             } catch (err: any) {
                 const message = err?.response?.data?.error || err?.message || "Signup failed.";
                 setError(typeof message === 'string' ? message : JSON.stringify(message));
@@ -165,19 +158,7 @@ export default function AuthPage() {
                                     />
                                 </div>
 
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
-                                    <Input
-                                        type="password"
-                                        name="password"
-                                        id="password"
-                                        placeholder="Password"
-                                        autoComplete={isLogin ? "current-password" : "new-password"}
-                                        className="pl-12 h-14 rounded-2xl bg-white/[0.03] border-white/5 focus-visible:border-primary/50 focus-visible:ring-primary/20 transition-all text-white placeholder:text-white/20"
-                                        value={formData.password}
-                                        onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                                    />
-                                </div>
+
 
                                 {!isLogin && (
                                     <div className="flex items-start gap-3 mt-4 px-2">

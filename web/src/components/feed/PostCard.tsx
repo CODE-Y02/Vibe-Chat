@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Heart, MessageCircle, Share2, MoreHorizontal, Loader2, Repeat2, Bookmark, Trash2, Edit3 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 import { useQueryClient } from '@tanstack/react-query';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -284,7 +284,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
 
                         {(replying || quoting) && (
                             <div className="mt-3 flex gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <Avatar className="w-8 h-8 shrink-0"><AvatarImage src={session?.user?.image ?? undefined} /><AvatarFallback className="bg-primary text-white text-[10px] font-bold uppercase">{(session?.user?.name ?? 'U').slice(0, 2)}</AvatarFallback></Avatar>
+                                <Avatar className="w-8 h-8 shrink-0"><AvatarImage src={session?.user?.user_metadata?.avatar_url ?? undefined} /><AvatarFallback className="bg-primary text-white text-[10px] font-bold uppercase">{((session?.user?.user_metadata?.full_name || session?.user?.email) ?? 'U').slice(0, 2)}</AvatarFallback></Avatar>
                                 <div className="flex-1 min-w-0">
                                     <Textarea autoFocus placeholder={quoting ? "Add a comment..." : `Reply to ${authorName}...`} className="resize-none bg-transparent border-none focus-visible:ring-0 px-2 py-3 text-md placeholder:text-muted-foreground/30 min-h-[80px] text-foreground" value={quoting ? quoteContent : replyContent} onChange={e => quoting ? setQuoteContent(e.target.value) : setReplyContent(e.target.value)} />
                                     {quoting && <QuotePost post={displayPost} />}

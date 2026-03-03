@@ -17,8 +17,8 @@ interface ProfileModalProps {
 
 export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
     const [formData, setFormData] = useState({
-        username: user?.name || user?.username || "",
-        avatar: user?.image || user?.avatar || "",
+        username: (user?.user_metadata?.full_name || user?.email) || user?.username || user?.name || "",
+        avatar: user?.user_metadata?.avatar_url || user?.avatar || user?.image || "",
         bio: user?.bio || "",
     });
     const [loading, setLoading] = useState(false);

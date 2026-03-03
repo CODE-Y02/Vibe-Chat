@@ -26,7 +26,7 @@ export const setupSockets = (io: Server) => {
             return next(new Error('Authentication error'));
         }
 
-        const payload = verifyAccessToken(token);
+        const payload = await verifyAccessToken(token);
         if (!payload) {
             console.error(`[Socket Auth Error] Invalid/Expired token for socket: ${socket.id}`);
             return next(new Error('Invalid token'));

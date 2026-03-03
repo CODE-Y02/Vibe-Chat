@@ -4,7 +4,7 @@ import { useTheme } from "next-themes";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut } from "@/components/layout/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageSquare, LayoutGrid, Users, Video, Menu, Moon, Sun, LogOut, User as UserIcon, Sparkles } from "lucide-react";
@@ -168,15 +168,15 @@ export function Navbar({ className }: { className?: string }) {
                                         className="relative h-12 w-12 rounded-2xl overflow-hidden border border-white/10 p-0.5 shadow-glow-sm"
                                     >
                                         <Avatar className="h-full w-full rounded-[14px]">
-                                            <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
-                                            <AvatarFallback className="bg-primary/20 text-primary font-black uppercase text-xs">{(session.user.name || "U").slice(0, 2)}</AvatarFallback>
+                                            <AvatarImage src={session.user.user_metadata?.avatar_url || ""} alt={session.user.user_metadata?.full_name || session.user.email || ""} />
+                                            <AvatarFallback className="bg-primary/20 text-primary font-black uppercase text-xs">{((session.user.user_metadata?.full_name || session.user.email) || "U").slice(0, 2)}</AvatarFallback>
                                         </Avatar>
                                     </motion.button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-64 glass-card border-white/5 p-4 mt-4" align="end">
                                     <DropdownMenuLabel className="px-2 pb-4">
                                         <div className="flex flex-col space-y-1">
-                                            <p className="text-sm font-black text-foreground uppercase tracking-wider">{session.user.name}</p>
+                                            <p className="text-sm font-black text-foreground uppercase tracking-wider">{session.user.user_metadata?.full_name || session.user.email}</p>
                                             <p className="text-[10px] font-bold text-muted-foreground truncate">
                                                 {session.user.email}
                                             </p>
@@ -188,7 +188,7 @@ export function Navbar({ className }: { className?: string }) {
                                         <span>Profile</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator className="bg-border" />
-                                    <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })} className="rounded-xl px-4 py-3 cursor-pointer hover:bg-red-500/10 text-xs font-black uppercase tracking-widest text-red-400 focus:text-red-400 focus:bg-red-500/10 transition-all">
+                                    <DropdownMenuItem onClick={() => signOut()} className="rounded-xl px-4 py-3 cursor-pointer hover:bg-red-500/10 text-xs font-black uppercase tracking-widest text-red-400 focus:text-red-400 focus:bg-red-500/10 transition-all">
                                         <LogOut className="mr-3 h-4 w-4" />
                                         <span>Log out</span>
                                     </DropdownMenuItem>

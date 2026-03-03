@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Send, Smile, Maximize2, Minimize2, Shield, UserPlus, Check, Loader2, Flag } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
 import { sendFriendRequest } from '@/actions/friend.actions';

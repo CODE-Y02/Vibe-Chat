@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { webrtc } from '@/lib/webrtc';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 import { motion, AnimatePresence } from 'framer-motion';
 import { reportUser } from '@/actions/moderation.actions';
 
@@ -68,10 +68,10 @@ export default function ChatPage() {
     // 3. CONNECTION LIFECYCLE (Stable)
     // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
-        if (status !== 'authenticated' || !sessionData?.accessToken || !socket) return;
+        if (status !== 'authenticated' || !sessionData?.session?.access_token || !socket) return;
 
         console.log("[ChatPage] Lifecycle: Initializing match state...");
-        socket.auth = { token: sessionData.accessToken };
+        socket.auth = { token: sessionData.session.access_token };
 
         // Reconnect if needed
         if (!socket.connected) {
@@ -83,7 +83,7 @@ export default function ChatPage() {
             disconnect(); // Clear local chat store
             webrtc.cleanup(); // Clean up media
         };
-    }, [status, socket, disconnect, sessionData?.accessToken]);
+    }, [status, socket, disconnect, sessionData?.session?.access_token]);
 
     // ──────────────────────────────────────────────────────────────────────────
     // 4. EVENT LISTENERS (Separate to avoid connection churn)

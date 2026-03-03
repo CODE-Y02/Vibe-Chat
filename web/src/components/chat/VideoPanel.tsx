@@ -8,7 +8,7 @@ import { VideoOff, MicOff, Shield, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { classifyImage, isNSFW } from '@/lib/nsfwValidator';
 import { sendAutoFlag } from '@/actions/moderation.actions';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 
 interface VideoPanelProps {
     isLocal?: boolean;

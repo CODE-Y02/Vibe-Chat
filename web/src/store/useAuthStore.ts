@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
+import { createClient } from '@/utils/supabase/client';
 
 export interface User {
     id: string;
@@ -12,7 +12,7 @@ interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
     setUser: (user: User | null) => void;
-    login: (credentials: { username?: string; email?: string; password: string }) => Promise<void>;
+    login: (email: string) => Promise<void>;
     logout: () => Promise<void>;
 }
 
@@ -20,21 +20,23 @@ export const useAuthStore = create<AuthState>((set) => ({
     user: null,
     isAuthenticated: false,
     setUser: (user) => set({ user, isAuthenticated: !!user }),
-    login: async (credentials) => {
-        const result = await nextAuthSignIn("credentials", {
-            ...credentials,
-            redirect: false, // handle redirect manually for better error UX
+    login: async (email: string) => {
+        const supabase = createClient();
+        const { error } = await supabase.auth.signInWithOtp({
+            email,
+            options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+            },
         });
 
-        if (result?.error) {
-            throw new Error("Invalid username or password");
+        if (error) {
+            throw new Error(error.message);
         }
-
-        // Redirect to chat on success
-        window.location.href = "/chat";
     },
     logout: async () => {
-        await nextAuthSignOut({ callbackUrl: "/" });
+        const supabase = createClient();
+        await supabase.auth.signOut();
         set({ user: null, isAuthenticated: false });
+        window.location.href = "/login";
     },
 }));

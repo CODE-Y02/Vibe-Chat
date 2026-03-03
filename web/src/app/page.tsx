@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Video, Sparkles, ArrowRight, Shield, Zap, Globe, MessageSquare, Heart, ShieldCheck, Fingerprint, Lock, Layers } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/components/layout/SessionProvider";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRef } from 'react';
 
@@ -77,12 +77,12 @@ export default function Landing() {
               <Link href="/dms" className="flex items-center gap-3 group">
                 <div className="text-right hidden sm:block">
                   <p className="text-[10px] font-black uppercase tracking-widest text-primary">Connected</p>
-                  <p className="text-xs font-bold text-white/60">{session.user?.name}</p>
+                  <p className="text-xs font-bold text-white/60">{session.user?.user_metadata?.full_name || session.user?.email}</p>
                 </div>
                 <Avatar className="h-10 w-10 border border-white/10 group-hover:border-primary/50 transition-colors shadow-glow-sm">
-                  <AvatarImage src={session.user?.image || ""} />
+                  <AvatarImage src={session.user?.user_metadata?.avatar_url || ""} />
                   <AvatarFallback className="bg-primary/20 text-primary uppercase text-[10px] font-black">
-                    {(session.user?.name || "U").slice(0, 2)}
+                    {((session.user?.user_metadata?.full_name || session.user?.email) || "U").slice(0, 2)}
                   </AvatarFallback>
                 </Avatar>
               </Link>
