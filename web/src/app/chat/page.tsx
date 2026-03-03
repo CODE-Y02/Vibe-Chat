@@ -379,22 +379,22 @@ export default function ChatPage() {
 
                 {/* PiP & CHAT */}
                 <div className="pointer-events-none absolute inset-0 z-40 flex flex-col justify-end p-6 md:p-12">
-                    <div className="flex flex-col-reverse md:flex-row items-end justify-between gap-6">
+                    <div className="flex flex-col md:flex-row items-end justify-between gap-4 md:gap-6 w-full">
                         {/* Local Preview */}
                         <motion.div
                             initial={{ x: -20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
-                            className="pointer-events-auto w-36 sm:w-44 md:w-80 aspect-[4/3] relative group"
+                            className="pointer-events-auto w-32 sm:w-44 md:w-80 aspect-[4/3] relative group shrink-0"
                         >
                             <VideoPanel
                                 isLocal
                                 className={cn(
-                                    "w-full h-full border border-white/20 shadow-glow rounded-[2rem] overflow-hidden bg-black transition-all group-hover:scale-105",
+                                    "w-full h-full border border-white/20 shadow-glow rounded-3xl overflow-hidden bg-black transition-all group-hover:scale-105",
                                     !videoEnabled && "grayscale opacity-50"
                                 )}
                             />
-                            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white/80">You</span>
+                            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/80">You</span>
                             </div>
                         </motion.div>
 
@@ -403,7 +403,7 @@ export default function ChatPage() {
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
                             className={cn(
-                                "pointer-events-auto w-full md:w-[460px] h-[350px] md:h-[650px] transition-all",
+                                "pointer-events-auto w-full md:w-[460px] h-[320px] md:h-[650px] transition-all",
                                 !session.isMatched && "hidden md:flex"
                             )}
                         >

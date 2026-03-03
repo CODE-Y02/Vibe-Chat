@@ -69,7 +69,7 @@ export default function FriendsPage() {
 
             <Navbar />
 
-            <main className="container mx-auto px-6 py-12 lg:py-24 max-w-5xl relative z-10">
+            <main className="container mx-auto px-6 py-12 lg:py-24 pb-32 md:pb-12 max-w-5xl relative z-10">
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

@@ -67,45 +67,7 @@ export function Navbar({ className }: { className?: string }) {
                     className="flex h-20 items-center justify-between px-8 glass border border-white/5 rounded-[32px] shadow-glow-sm"
                 >
                     <div className="flex items-center gap-6">
-                        <Sheet open={open} onOpenChange={setOpen}>
-                            <SheetTrigger asChild>
-                                <Button variant="ghost" size="icon" className="md:hidden text-muted-foreground hover:text-foreground">
-                                    <Menu className="h-6 w-6" />
-                                </Button>
-                            </SheetTrigger>
-                            <SheetContent side="left" className="w-[300px] bg-background border-border p-8">
-                                <div className="flex flex-col gap-10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-primary p-2.5 rounded-2xl shadow-glow">
-                                            <Video className="w-6 h-6 text-white" />
-                                        </div>
-                                        <span className="font-black text-2xl italic tracking-tighter text-foreground uppercase leading-none">VibeChat</span>
-                                    </div>
-                                    <nav className="flex flex-col gap-4">
-                                        {navItems.map((item) => {
-                                            const Icon = item.icon;
-                                            const isActive = pathname === item.href;
-                                            return (
-                                                <Link key={item.href} href={item.href} onClick={() => setOpen(false)}>
-                                                    <motion.span
-                                                        whileTap={{ scale: 0.95 }}
-                                                        className={cn(
-                                                            "flex items-center gap-4 px-6 py-4 rounded-2xl transition-all cursor-pointer font-black text-xs uppercase tracking-[0.2em]",
-                                                            isActive
-                                                                ? "bg-primary text-white shadow-glow"
-                                                                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
-                                                        )}
-                                                    >
-                                                        <Icon className="w-5 h-5" />
-                                                        {item.label}
-                                                    </motion.span>
-                                                </Link>
-                                            );
-                                        })}
-                                    </nav>
-                                </div>
-                            </SheetContent>
-                        </Sheet>
+                        {/* Mobile menu removed to favor bottom navigation bar */}
 
                         <Link href="/">
                             <motion.span

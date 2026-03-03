@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/layout/Providers";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { cn } from "@/lib/utils";
 
 const outfit = Outfit({
@@ -29,6 +30,7 @@ export default function RootLayout({
       >
         <Providers>
           {children}
+          <MobileNav />
         </Providers>
       </body>
     </html>
