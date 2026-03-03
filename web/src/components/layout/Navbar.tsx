@@ -46,10 +46,10 @@ export function Navbar({ className }: { className?: string }) {
 
     if (!mounted) {
         return (
-            <header className={cn("sticky top-0 z-50 w-full px-6 py-4 mb-4", className)}>
+            <header className={cn("sticky top-0 z-50 w-full px-4 md:px-6 py-3 md:py-4 bg-background/80 backdrop-blur-xl", className)}>
                 <div className="container mx-auto">
-                    <div className="flex h-20 items-center justify-between px-8 glass border border-white/5 rounded-[32px]">
-                        {/* Loading skeleton or empty spacer */}
+                    <div className="flex h-16 md:h-20 items-center justify-between px-5 md:px-8 glass border border-border/40 rounded-[24px] md:rounded-[32px]">
+                        {/* Loading skeleton */}
                     </div>
                 </div>
             </header>
@@ -59,12 +59,12 @@ export function Navbar({ className }: { className?: string }) {
     const isCurrentlyDark = theme === "dark";
 
     return (
-        <header className={cn("sticky top-0 z-50 w-full px-6 py-4 mb-0 md:mb-4", className)}>
+        <header className={cn("sticky top-0 z-50 w-full px-4 md:px-6 py-3 md:py-4 bg-background/80 backdrop-blur-xl", className)}>
             <div className="container mx-auto">
                 <motion.div
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="flex h-20 items-center justify-between px-8 glass border border-white/5 rounded-[32px] shadow-glow-sm"
+                    className="flex h-16 md:h-20 items-center justify-between px-5 md:px-8 glass border border-border/40 rounded-[24px] md:rounded-[32px] shadow-sm"
                 >
                     <div className="flex items-center gap-6">
                         {/* Mobile menu removed to favor bottom navigation bar */}

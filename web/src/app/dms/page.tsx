@@ -102,20 +102,37 @@ export default function DMsPage() {
         }
     });
 
+    // ── Real-time socket listener (global — runs even without an open chat) ──
     useEffect(() => {
-        if (socket && activePeer) {
-            socket.on('message', (msg: any) => {
-                if (msg.senderId === activePeer.peer.id || msg.receiverId === activePeer.peer.id) {
-                    queryClient.invalidateQueries({ queryKey: ['messages', activePeer.peer.id] });
-                }
-                queryClient.invalidateQueries({ queryKey: ['conversations'] });
-            });
+        if (!socket) return;
 
-            return () => {
-                socket.off('message');
-            };
-        }
-    }, [socket, activePeer, queryClient]);
+        const handleIncoming = (msg: { from: string; content: string }) => {
+            // Always refresh conversations sidebar (unread counts)
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
+
+            // If the active chat is with this sender, append optimistically
+            if (activePeer?.peer.id === msg.from) {
+                queryClient.setQueryData(
+                    ['messages', msg.from],
+                    (old: any[] = []) => [
+                        ...old,
+                        {
+                            id: `rt-${Date.now()}`,
+                            senderId: msg.from,
+                            receiverId: session?.user?.id,
+                            content: msg.content,
+                            isRead: false,
+                            createdAt: new Date().toISOString(),
+                        },
+                    ]
+                );
+            }
+        };
+
+        socket.on('message', handleIncoming);
+        return () => { socket.off('message', handleIncoming); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, activePeer?.peer.id, queryClient]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -234,31 +251,54 @@ export default function DMsPage() {
                             </div>
 
                             {/* Messages Area */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-gradient-to-b from-transparent to-primary/[0.02]">
+                            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2 custom-scrollbar">
                                 <AnimatePresence initial={false}>
                                     {isLoadingMessages ? (
                                         <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                                    ) : messages?.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full py-20 text-center gap-3">
+                                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                                                <MessageSquare className="w-7 h-7 text-primary/50" />
+                                            </div>
+                                            <p className="text-sm font-bold text-muted-foreground/50 uppercase tracking-widest">No messages yet</p>
+                                            <p className="text-xs text-muted-foreground/30">Say hello! 👋</p>
+                                        </div>
                                     ) : (
                                         messages?.map((msg: any) => {
                                             const isMe = msg.senderId === session?.user?.id;
                                             return (
                                                 <motion.div
                                                     key={msg.id}
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
                                                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    className={cn("flex flex-col max-w-[85%] md:max-w-[75%]", isMe ? "ml-auto items-end" : "mr-auto items-start")}
+                                                    transition={{ duration: 0.15 }}
+                                                    className={cn(
+                                                        "flex items-end gap-2 max-w-[80%] md:max-w-[70%]",
+                                                        isMe ? "ml-auto flex-row-reverse" : "mr-auto"
+                                                    )}
                                                 >
-                                                    <div className={cn(
-                                                        "px-5 py-3 rounded-2xl text-sm shadow-xl transition-all relative overflow-hidden",
-                                                        isMe
-                                                            ? "bg-primary text-white rounded-tr-sm font-medium glow-sm bg-vibe-gradient"
-                                                            : "bg-muted text-foreground border border-border rounded-tl-sm backdrop-blur-md"
-                                                    )}>
-                                                        {msg.content}
+                                                    {!isMe && (
+                                                        <Avatar className="w-7 h-7 shrink-0 mb-1">
+                                                            <AvatarImage src={activePeer.peer.avatar} />
+                                                            <AvatarFallback className="bg-muted text-primary text-[10px] font-black">
+                                                                {activePeer.peer.username.slice(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                    )}
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <div className={cn(
+                                                            "px-4 py-2.5 text-sm leading-relaxed shadow-sm break-words",
+                                                            isMe ? "msg-me" : "msg-them"
+                                                        )}>
+                                                            {msg.content}
+                                                        </div>
+                                                        <span className={cn(
+                                                            "text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 px-1",
+                                                            isMe ? "text-right" : "text-left"
+                                                        )}>
+                                                            {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-[9px] text-muted-foreground/50 mt-1 font-black uppercase tracking-widest px-1">
-                                                        {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
-                                                    </span>
                                                 </motion.div>
                                             );
                                         })
@@ -267,25 +307,25 @@ export default function DMsPage() {
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Input Area — padded so it clears mobile nav bar */}
+                            {/* Input — sits above MobileNav (96px) on mobile */}
                             <form
-                                className="p-3 md:p-4 border-t border-border bg-muted/30 flex gap-2 md:gap-3 items-center z-10 pb-safe"
-                                style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+                                className="p-3 md:p-4 border-t border-border bg-background/80 backdrop-blur-md flex gap-2 items-center z-10"
+                                style={{ paddingBottom: 'calc(max(0.75rem, env(safe-area-inset-bottom)) + 6rem)' }}
                                 onSubmit={handleSendMessage}
                             >
                                 <Input
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e as any); }}
-                                    placeholder="Type a message…"
+                                    placeholder="Message…"
                                     autoComplete="off"
-                                    className="h-12 px-4 flex-1 rounded-2xl bg-muted border-border focus-visible:ring-primary/20 placeholder:text-muted-foreground/30 text-foreground text-sm"
+                                    className="h-11 px-4 flex-1 rounded-2xl bg-muted/60 border-border/60 focus-visible:ring-primary/30 placeholder:text-muted-foreground/40 text-foreground text-sm"
                                 />
                                 <Button
                                     type="submit"
                                     disabled={!input.trim() || sendMutation.isPending}
                                     size="icon"
-                                    className="rounded-2xl w-12 h-12 shrink-0 shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:scale-95 transition-all bg-primary disabled:opacity-30"
+                                    className="rounded-2xl w-11 h-11 shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-30 active:scale-95 transition-all shadow-md"
                                 >
                                     {sendMutation.isPending
                                         ? <Loader2 className="w-4 h-4 text-white animate-spin" />
