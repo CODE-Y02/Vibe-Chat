@@ -136,6 +136,14 @@ export default function ChatPage() {
             await webrtc.handleIceCandidate(candidate);
         });
 
+        socket.on('skip-cooldown', ({ remaining }: { remaining: number }) => {
+            toast({ 
+                title: 'Skip Cooldown', 
+                description: `You're skipping too fast. Wait ${remaining}s.`,
+                variant: 'destructive'
+            });
+        });
+
         return () => {
             socket.off('matched');
             socket.off('peerDisconnected');
@@ -145,6 +153,7 @@ export default function ChatPage() {
             socket.off('offer');
             socket.off('answer');
             socket.off('iceCandidate');
+            socket.off('skip-cooldown');
         };
     }, [status, handleMatch, handlePeerDisconnect, onMessage, router, toast, disconnect, socket]);
 
@@ -158,10 +167,10 @@ export default function ChatPage() {
         if (isSearching && !session.isMatched) {
             retryInterval.current = setInterval(() => {
                 if (socket.connected) {
-                    console.log("[Search] Retrying atomic match...");
+                    console.log("[Search] Pinging queue...");
                     socket.emit('joinQueue');
                 }
-            }, 5000);
+            }, 10000);
         } else {
             if (retryInterval.current) clearInterval(retryInterval.current);
         }

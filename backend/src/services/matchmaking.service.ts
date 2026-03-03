@@ -24,39 +24,50 @@ export class MatchmakingService {
         -- 1. Remove myself from queue to search
         redis.call('SREM', queue, myId)
 
-        -- 2. Strictly O(1) single random pick
-        local peerId = redis.call('SRANDMEMBER', queue)
-        
-        if peerId and peerId ~= myId then
-            -- Verify peer is online
-            local isAlive = redis.call('EXISTS', heartbeatPrefix .. peerId)
-            
-            if isAlive == 1 then
-                -- Verify skip (bidirectional check for safety)
-                local peerSkipsKey = "skipped:" .. peerId
-                local iSkippedPeer = redis.call('SISMEMBER', mySkipsKey, peerId)
-                local peerSkippedMe = redis.call('SISMEMBER', peerSkipsKey, myId)
+        -- 2. Try to find a valid match (up to 5 attempts to skip ghosts)
+        local retries = 5
+        while retries > 0 do
+            local peerId = redis.call('SRANDMEMBER', queue)
+            if not peerId then break end -- Queue is empty
 
-                if iSkippedPeer == 0 and peerSkippedMe == 0 then
-                    -- Atomically claim this peer
-                    local removed = redis.call('SREM', queue, peerId)
-                    if removed == 1 then
-                        return peerId
+            if peerId ~= myId then
+                -- Verify peer is online
+                local isAlive = redis.call('EXISTS', heartbeatPrefix .. peerId)
+                
+                if isAlive == 1 then
+                    -- Verify skip (bidirectional check)
+                    local peerSkipsKey = "skipped:" .. peerId
+                    local iSkippedPeer = redis.call('SISMEMBER', mySkipsKey, peerId)
+                    local peerSkippedMe = redis.call('SISMEMBER', peerSkipsKey, myId)
+
+                    if iSkippedPeer == 0 and peerSkippedMe == 0 then
+                        -- Atomically claim this peer
+                        local removed = redis.call('SREM', queue, peerId)
+                        if removed == 1 then
+                            return peerId
+                        end
                     end
+                else
+                    -- Peer is actually offline, clean up the ghost and retry
+                    redis.call('SREM', queue, peerId)
                 end
-            else
-                -- Peer is actually offline, clean up the ghost
-                redis.call('SREM', queue, peerId)
             end
+            retries = retries - 1
         end
 
-        -- 3. No match or skipped? Join the pool.
+        -- 3. No match found? Join the pool.
         redis.call('SADD', queue, myId)
         return nil
     `;
 
     async isShadowbanned(userId: string): Promise<boolean> {
         return (await redis.exists(`${USER_SHADOWBANNED_PREFIX}${userId}`)) === 1;
+    }
+
+    async addBackToQueue(userId: string): Promise<void> {
+        const isBanned = await this.isShadowbanned(userId);
+        const activeQueue = isBanned ? SHADOWBAN_QUEUE : MATCHMAKING_QUEUE;
+        await redis.sadd(activeQueue, userId);
     }
 
     async joinQueue(userId: string): Promise<MatchResult | null> {

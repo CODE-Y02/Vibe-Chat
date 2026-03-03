@@ -10,9 +10,25 @@ export class ModerationService {
     }
 
     async reportUser(reporterId: string, reportedId: string, reason: string): Promise<Report> {
-        return prisma.report.create({
+        const report = await prisma.report.create({
             data: { reporterId, reportedId, reason },
         });
+
+        // Atomic Report Count & Auto-Shadowban
+        const reportKey = `reports:${reportedId}`;
+        const reportCount = await redis.incr(reportKey);
+
+        if (reportCount === 1) {
+            await redis.expire(reportKey, 86400); // Reset reports window every 24h
+        }
+
+        if (reportCount >= 3) {
+            // Shadowban for 24 hours
+            await redis.set(`${USER_SHADOWBANNED_PREFIX}${reportedId}`, 'true', 'EX', 86400);
+            console.log(`[ModerationService] User ${reportedId} automatically shadowbanned after 3 reports.`);
+        }
+
+        return report;
     }
 
     async autoFlag(userId: string): Promise<{ strikes: number; shadowbanned: boolean }> {
