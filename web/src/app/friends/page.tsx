@@ -110,9 +110,9 @@ export default function FriendsPage() {
                                 <span className="text-[10px] font-black uppercase tracking-widest opacity-20">Synchronizing...</span>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="flex flex-col gap-3">
                                 {friends?.length === 0 ? (
-                                    <div className="col-span-full py-40 text-center glass-card rounded-[3rem] border border-white/5">
+                                    <div className="py-40 text-center glass-card rounded-[3rem] border border-white/5">
                                         <div className="w-20 h-20 bg-white/[0.03] rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
                                             <Users className="w-10 h-10 text-white/10" />
                                         </div>
@@ -123,7 +123,7 @@ export default function FriendsPage() {
                                     friends?.map((friend: any) => (
                                         <FriendCard
                                             key={friend.id}
-                                            friend={friend}
+                                            friend={{ ...friend, status: friend.status || 'offline' }}
                                             type="friend"
                                             onMessage={(f) => router.push(`/dms?userId=${f.id}`)}
                                         />
@@ -140,9 +140,9 @@ export default function FriendsPage() {
                                 <span className="text-[10px] font-black uppercase tracking-widest opacity-20">Fetching Invites...</span>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="flex flex-col gap-3">
                                 {requests?.length === 0 ? (
-                                    <div className="col-span-full py-40 text-center glass-card rounded-[3rem] border border-white/5">
+                                    <div className="py-40 text-center glass-card rounded-[3rem] border border-white/5">
                                         <div className="w-20 h-20 bg-white/[0.03] rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
                                             <UserPlus className="w-10 h-10 text-white/10" />
                                         </div>
@@ -153,7 +153,7 @@ export default function FriendsPage() {
                                     requests?.map((req: any) => (
                                         <FriendCard
                                             key={req.id}
-                                            friend={req}
+                                            friend={{ ...req, status: req.status || 'offline' }}
                                             type="request"
                                             onAccept={(id) => acceptMutation.mutate(id)}
                                             onReject={(id) => rejectMutation.mutate(id)}

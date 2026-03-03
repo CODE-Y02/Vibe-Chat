@@ -30,11 +30,14 @@ export async function sendFriendRequest(friendId: string) {
             body: JSON.stringify({ friendId }),
             headers: { "Content-Type": "application/json" },
         });
-        if (!res.ok) throw new Error("Failed to send request");
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            return { error: body?.error || "Failed to send request" };
+        }
         revalidatePath("/friends");
         return { success: true };
     } catch (error) {
-        return { error: "Failed to send request" };
+        return { error: "Network error. Please try again." };
     }
 }
 
@@ -45,12 +48,15 @@ export async function acceptFriendRequest(userId: string) {
             body: JSON.stringify({ userId }),
             headers: { "Content-Type": "application/json" },
         });
-        if (!res.ok) throw new Error("Failed to accept request");
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            return { error: body?.error || "Failed to accept request" };
+        }
         revalidatePath("/friends");
         revalidatePath("/dms");
         return { success: true };
     } catch (error) {
-        return { error: "Failed to accept request" };
+        return { error: "Network error. Please try again." };
     }
 }
 
@@ -61,11 +67,14 @@ export async function rejectFriendRequest(userId: string) {
             body: JSON.stringify({ userId }),
             headers: { "Content-Type": "application/json" },
         });
-        if (!res.ok) throw new Error("Failed to reject request");
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            return { error: body?.error || "Failed to reject request" };
+        }
         revalidatePath("/friends");
         return { success: true };
     } catch (error) {
-        return { error: "Failed to reject request" };
+        return { error: "Network error. Please try again." };
     }
 }
 

@@ -192,7 +192,12 @@ export default function ChatPage() {
     }, [videoEnabled]);
 
     const handleClose = () => {
-        socket.emit('leaveQueue');
+        // Notify the peer that we left, so they get rematched
+        if (session.strangerId) {
+            socket.emit('skip', { peerId: session.strangerId });
+        } else {
+            socket.emit('leaveQueue');
+        }
         disconnect();
         webrtc.cleanup();
         router.push('/dms');
