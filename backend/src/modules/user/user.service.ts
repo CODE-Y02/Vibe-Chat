@@ -7,6 +7,7 @@ const safeUserSelect = {
     username: true,
     email: true,
     avatar: true,
+    bio: true,
     createdAt: true,
     updatedAt: true,
 } as const;
@@ -22,7 +23,7 @@ export class UserService {
         return user;
     }
 
-    async updateProfile(userId: string, data: { username?: string; avatar?: string }) {
+    async updateProfile(userId: string, data: { username?: string; avatar?: string; bio?: string }) {
         if (data.username) {
             const existing = await prisma.user.findFirst({
                 where: { username: data.username, NOT: { id: userId } },
@@ -35,6 +36,7 @@ export class UserService {
             data: {
                 ...(data.username && { username: data.username }),
                 ...(data.avatar && { avatar: data.avatar }),
+                ...(data.bio !== undefined && { bio: data.bio }),
             },
             select: safeUserSelect,
         });

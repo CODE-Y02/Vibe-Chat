@@ -55,6 +55,7 @@ userRoutes.openapi(
                         schema: z.object({
                             username: z.string().min(3).max(20).optional(),
                             avatar: z.string().url().optional(),
+                            bio: z.string().max(160).optional(),
                         }),
                     },
                 },

@@ -80,6 +80,17 @@ export default function DMsPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // Handle mobile hardware back button to close chat instead of leaving page
+    useEffect(() => {
+        const handlePopState = () => {
+            if (activePeer) {
+                setActivePeer(null);
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [activePeer]);
+
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || !activePeer) return;
@@ -114,6 +125,9 @@ export default function DMsPage() {
                                 conversations={convData?.conversations || []}
                                 activePeerId={activePeer?.peer.id}
                                 onSelectConversation={(conv) => {
+                                    if (!activePeer) {
+                                        window.history.pushState({ isChatOpen: true }, '', '');
+                                    }
                                     setActivePeer(conv);
                                     markAsRead(conv.peer.id);
                                 }}
@@ -143,7 +157,13 @@ export default function DMsPage() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => setActivePeer(null)}
+                                        onClick={() => {
+                                            if (window.history.state?.isChatOpen) {
+                                                window.history.back();
+                                            } else {
+                                                setActivePeer(null);
+                                            }
+                                        }}
                                         className="md:hidden -ml-2 rounded-xl text-muted-foreground"
                                     >
                                         <ArrowLeft className="w-5 h-5" />

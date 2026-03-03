@@ -16,7 +16,7 @@ export const getUserById = async (c: Context<Env>) => {
 
 export const updateProfile = async (c: Context<Env>) => {
     const { userId } = c.get('user');
-    const body = await c.req.json() as { username?: string; avatar?: string };
+    const body = await c.req.json() as { username?: string; avatar?: string; bio?: string };
     const user = await userService.updateProfile(userId, body);
     return c.json(user);
 };

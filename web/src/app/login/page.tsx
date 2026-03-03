@@ -78,13 +78,13 @@ export default function AuthPage() {
                 />
             </div>
 
-            <Link href="/">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button variant="ghost" className="absolute top-8 left-8 text-white/40 hover:text-white hover:bg-white/5 gap-2 rounded-2xl px-6 h-12 backdrop-blur-xl">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="absolute top-8 left-8 z-50">
+                <Button variant="ghost" asChild className="text-white/40 hover:text-white hover:bg-white/5 gap-2 rounded-2xl px-6 h-12 backdrop-blur-xl">
+                    <Link href="/">
                         <ArrowLeft className="w-4 h-4" /> Back
-                    </Button>
-                </motion.div>
-            </Link>
+                    </Link>
+                </Button>
+            </motion.div>
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
