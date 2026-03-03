@@ -264,8 +264,11 @@ export default function DMsPage() {
                                             <p className="text-xs text-muted-foreground/30">Say hello! 👋</p>
                                         </div>
                                     ) : (
-                                        messages?.map((msg: any) => {
-                                            const isMe = msg.senderId === session?.user?.id;
+                                        messages?.map((msg: any, idx: number) => {
+                                            // KEY FIX: compare against peer's DB id, not Supabase auth UUID
+                                            const isMe = msg.senderId !== activePeer.peer.id;
+                                            const prevMsg = messages[idx - 1];
+                                            const isFirstInGroup = !prevMsg || prevMsg.senderId !== msg.senderId;
                                             return (
                                                 <motion.div
                                                     key={msg.id}
@@ -277,25 +280,30 @@ export default function DMsPage() {
                                                         isMe ? "ml-auto flex-row-reverse" : "mr-auto"
                                                     )}
                                                 >
+                                                    {/* Peer avatar — only on first of a group */}
                                                     {!isMe && (
-                                                        <Avatar className="w-7 h-7 shrink-0 mb-1">
+                                                        <Avatar className={cn("w-7 h-7 shrink-0", !isFirstInGroup && "invisible")}>
                                                             <AvatarImage src={activePeer.peer.avatar} />
                                                             <AvatarFallback className="bg-muted text-primary text-[10px] font-black">
                                                                 {activePeer.peer.username.slice(0, 2).toUpperCase()}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                     )}
-                                                    <div className="flex flex-col gap-0.5">
+
+                                                    <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>
+                                                        {/* Sender label on first bubble of group */}
+                                                        {!isMe && isFirstInGroup && (
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 px-1 mb-0.5">
+                                                                {activePeer.peer.username}
+                                                            </span>
+                                                        )}
                                                         <div className={cn(
-                                                            "px-4 py-2.5 text-sm leading-relaxed shadow-sm break-words",
+                                                            "px-4 py-2.5 text-sm leading-relaxed shadow-sm break-words max-w-full",
                                                             isMe ? "msg-me" : "msg-them"
                                                         )}>
                                                             {msg.content}
                                                         </div>
-                                                        <span className={cn(
-                                                            "text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 px-1",
-                                                            isMe ? "text-right" : "text-left"
-                                                        )}>
+                                                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30 px-1">
                                                             {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
                                                         </span>
                                                     </div>
