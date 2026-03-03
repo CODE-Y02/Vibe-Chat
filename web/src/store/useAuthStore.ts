@@ -50,21 +50,15 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
 
         if (data?.url) {
-            // Parse the URL and replace the supabase host with our Vercel proxy.
-            // We do NOT rely on NEXT_PUBLIC_SUPABASE_URL here because env vars
-            // can be undefined at runtime in the browser. Instead we swap the
-            // origin directly from the returned URL.
-            const originalUrl = new URL(data.url);
-            const proxiedUrl = data.url.replace(
-                originalUrl.origin,                          // e.g. https://nujpmmtiaxhxzjgegaxs.supabase.co
-                `${window.location.origin}/supabase`        // e.g. https://vibe-chat-iota.vercel.app/supabase
-            );
-            console.log('[Auth] Proxying OAuth via:', proxiedUrl);
-            window.location.href = proxiedUrl;
+            // data.url is already proxied via our createBrowserClient base URL
+            // (window.location.origin/supabase) — no replacement needed.
+            console.log('[Auth] Redirecting via proxy:', data.url);
+            window.location.href = data.url;
         } else {
-            console.error('[Auth] No URL returned from signInWithOAuth – cannot redirect.');
+            console.error('[Auth] No URL returned from signInWithOAuth.');
         }
     },
+
 
     logout: async () => {
         const supabase = createClient();
