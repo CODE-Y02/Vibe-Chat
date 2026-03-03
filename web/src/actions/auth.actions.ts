@@ -6,8 +6,8 @@ import { createClient } from "@/utils/supabase/server";
 
 export async function getProfile() {
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return null;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return null;
 
     try {
         const res = await authenticatedFetch(`/users/me`);
