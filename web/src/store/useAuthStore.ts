@@ -37,14 +37,25 @@ export const useAuthStore = create<AuthState>((set) => ({
     },
     loginWithGoogle: async () => {
         const supabase = createClient();
-        const { error } = await supabase.auth.signInWithOAuth({
+        const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
                 redirectTo: `${window.location.origin}/auth/callback`,
+                skipBrowserRedirect: true,
             },
         });
+
         if (error) {
             throw new Error(error.message);
+        }
+
+        if (data?.url) {
+            // Replace the direct Supabase URL with our proxied URL to bypass ISP blocks
+            const proxiedUrl = data.url.replace(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                `${window.location.origin}/supabase`
+            );
+            window.location.href = proxiedUrl;
         }
     },
     logout: async () => {
