@@ -37,29 +37,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     },
     loginWithGoogle: async () => {
         const supabase = createClient();
-        const { data, error } = await supabase.auth.signInWithOAuth({
+        const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
                 redirectTo: `${window.location.origin}/auth/callback`,
-                skipBrowserRedirect: true,
             },
         });
-
         if (error) {
             throw new Error(error.message);
         }
-
-        if (data?.url) {
-            // data.url is already proxied via our createBrowserClient base URL
-            // (window.location.origin/supabase) — no replacement needed.
-            console.log('[Auth] Redirecting via proxy:', data.url);
-            window.location.href = data.url;
-        } else {
-            console.error('[Auth] No URL returned from signInWithOAuth.');
-        }
     },
-
-
     logout: async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
