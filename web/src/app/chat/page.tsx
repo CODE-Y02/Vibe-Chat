@@ -46,24 +46,36 @@ export default function ChatPage() {
     }, [setSearching, socket, toast]);
 
     const handlePeerDisconnect = useCallback(() => {
-        toast({ title: 'Stranger disconnected', description: 'They left the vibe.' });
-        disconnect();
-        webrtc.cleanup();
-        setIsBlurred(true);
-        // Immediately start searching for a new match
-        handleStart();
-    }, [disconnect, toast, handleStart]);
+        toast({ title: `${session.isDirectCall ? session.peerName : 'Stranger'} disconnected`, description: 'They left the vibe.' });
+        
+        if (session.isDirectCall) {
+            disconnect();
+            webrtc.cleanup();
+            router.push('/dms');
+        } else {
+            disconnect();
+            webrtc.cleanup();
+            setIsBlurred(true);
+            handleStart();
+        }
+    }, [disconnect, toast, handleStart, session.isDirectCall, session.peerName, router]);
 
     const handleSkip = useCallback(() => {
-        console.log("[UI] Skipping match...");
         if (session.strangerId) {
             socket.emit('skip', { peerId: session.strangerId });
         }
-        disconnect();
-        webrtc.cleanup();
-        setIsBlurred(true);
-        handleStart();
-    }, [session.strangerId, socket, disconnect, handleStart]);
+        
+        if (session.isDirectCall) {
+            disconnect();
+            webrtc.cleanup();
+            router.push('/dms');
+        } else {
+            disconnect();
+            webrtc.cleanup();
+            setIsBlurred(true);
+            handleStart();
+        }
+    }, [session.strangerId, session.isDirectCall, socket, disconnect, handleStart, router]);
 
     const onMessage = useCallback(({ from, content }: { from: string, content: string }) => {
         addMessage({
@@ -73,6 +85,12 @@ export default function ChatPage() {
             timestamp: Date.now()
         });
     }, [addMessage]);
+
+    const handleIncomingDM = useCallback(({ senderId, content }: { senderId: string, content: string }) => {
+        if (session.strangerId === senderId) {
+            onMessage({ from: senderId, content });
+        }
+    }, [session.strangerId, onMessage]);
 
     // ──────────────────────────────────────────────────────────────────────────
     // 2. AUTH / REDIRECT LOGIC
@@ -113,6 +131,7 @@ export default function ChatPage() {
         socket.on('matched', handleMatch);
         socket.on('peerDisconnected', handlePeerDisconnect);
         socket.on('message', onMessage);
+        socket.on('dm', handleIncomingDM);
 
         socket.on('call-rejected', () => {
             toast({ title: 'Call rejected', variant: 'destructive' });
@@ -148,6 +167,7 @@ export default function ChatPage() {
             socket.off('matched');
             socket.off('peerDisconnected');
             socket.off('message');
+            socket.off('dm');
             socket.off('call-rejected');
             socket.off('answer-made');
             socket.off('offer');
@@ -274,10 +294,13 @@ export default function ChatPage() {
 
                 <div className="pointer-events-auto">
                     <Button
-                        onClick={isSearching ? () => { socket.emit('leaveQueue'); disconnect(); } : handleSkip}
-                        className="rounded-2xl px-6 md:px-10 h-12 md:h-14 font-black uppercase tracking-widest text-xs bg-white text-black hover:scale-105 active:scale-95 shadow-glow-lg transition-all"
+                        onClick={session.isDirectCall ? handleClose : (isSearching ? () => { socket.emit('leaveQueue'); disconnect(); } : handleSkip)}
+                        className={cn(
+                            "rounded-2xl px-6 md:px-10 h-12 md:h-14 font-black uppercase tracking-widest text-xs transition-all shadow-glow-lg",
+                            session.isDirectCall ? "bg-red-500 text-white hover:bg-red-600" : "bg-white text-black hover:scale-105 active:scale-95"
+                        )}
                     >
-                        {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : "Skip"}
+                        {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : (session.isDirectCall ? "End Call" : "Skip")}
                     </Button>
                 </div>
             </header>

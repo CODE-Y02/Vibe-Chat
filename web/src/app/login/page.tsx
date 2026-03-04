@@ -194,7 +194,7 @@ export default function AuthPage() {
                                     <span className="flex items-center gap-2">
                                         <Loader2 className="w-5 h-5 animate-spin" /> SENDING MAGIC LINK
                                     </span>
-                                ) : (isLogin ? 'SEND MAGIC LINK' : 'CREATE ACCOUNT VIA EMAIL')}
+                                ) : (isLogin ? 'SEND MAGIC LINK' : 'CREATE ACCOUNT')}
                             </Button>
                         </motion.div>
 

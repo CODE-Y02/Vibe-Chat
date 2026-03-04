@@ -10,8 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useSession } from "@/components/layout/SessionProvider";
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { sendFriendRequest } from '@/actions/friend.actions';
+import { sendMessage } from '@/actions/dm.actions';
 import { toast } from '@/hooks/use-toast';
 
 interface MessageBubbleProps {
@@ -48,6 +49,7 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
     const [text, setText] = useState('');
     const [isMinimized, setIsMinimized] = useState(false);
     const { session, addMessage } = useChatStore();
+    const queryClient = useQueryClient();
     const bottomRef = useRef<HTMLDivElement>(null);
 
     const friendMutation = useMutation({
@@ -81,19 +83,34 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
         }
     }, [session.messages, isMinimized]);
 
-    const handleSend = (e: React.FormEvent) => {
+    const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!text.trim() || !session.isMatched || !session.strangerId) return;
+        const content = text.trim();
+        if (!content || !session.isMatched || !session.strangerId) return;
 
         const message: Message = {
             id: Date.now().toString(),
             senderId: sessionData?.user?.id || 'me',
-            text: text.trim(),
+            text: content,
             timestamp: Date.now()
         };
 
         addMessage(message);
-        socket.emit('sendMessage', { to: session.strangerId, content: text.trim() });
+        
+        // DEDUPLICATE: For friend-to-friend calls, only use REST Pathway.
+        // REST broadcasts a 'dm' socket event, so emitting 'sendMessage' too would cause duplicate messages.
+        if (session.isDirectCall) {
+            try {
+                await sendMessage(session.strangerId, content);
+                queryClient.invalidateQueries({ queryKey: ["messages", session.strangerId] });
+            } catch (err) {
+                console.error("Failed to persist call message to DM history", err);
+            }
+        } else {
+            // For anonymous vibes, keep using the light-weight socket event
+            socket.emit('sendMessage', { to: session.strangerId, content });
+        }
+        
         setText('');
     };
 
@@ -161,8 +178,10 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                                             <span className="absolute bottom-0.5 right-0.5 w-3 h-3 md:w-3.5 md:h-3.5 bg-emerald-500 border-2 md:border-[3px] border-[#0a0a0a] rounded-full"></span>
                                         </motion.div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <h3 className="font-black text-[9px] md:text-[10px] tracking-[0.2em] uppercase text-white/80 truncate">Stranger</h3>
+                                    <div>
+                                        <h3 className="font-black text-[9px] md:text-[10px] tracking-[0.2em] uppercase text-white/80 truncate">
+                                            {session.isDirectCall ? (session.peerName || 'Friend') : 'Stranger'}
+                                        </h3>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <span className="text-[8px] md:text-[9px] text-primary font-black uppercase tracking-widest">Live Connection</span>
                                         </div>

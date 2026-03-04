@@ -7,11 +7,13 @@ import { AuthenticatedSocket } from './types.js';
 import { registerMatchmakingHandlers } from './matchmaking.handler.js';
 import { registerSignalingHandlers } from './signaling.handler.js';
 import { registerChatHandlers } from './chat.handler.js';
-import { setIO } from '../modules/dm/dm.controller.js';
+import { setIO as setDMIO } from '../modules/dm/dm.controller.js';
+import { setFriendIO } from '../modules/friend/friend.controller.js';
 
 export const setupSockets = (io: Server) => {
     // Share io instance with REST controllers that need to push socket events
-    setIO(io);
+    setDMIO(io);
+    setFriendIO(io);
 
     // To support 100K users horizontally, we must replicate events across instances
     const pubClient = redis.duplicate();

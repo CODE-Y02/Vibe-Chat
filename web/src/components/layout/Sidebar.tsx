@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 
 export interface Conversation {
@@ -92,7 +92,7 @@ export function Sidebar({ conversations, activePeerId, onSelectConversation, cla
                                         {conv.peer.username}
                                     </p>
                                     <span className="text-[10px] text-muted-foreground/50 font-black uppercase tracking-tighter">
-                                        {formatDistanceToNow(new Date(conv.createdAt), { addSuffix: false })}
+                                        {formatTime(conv.createdAt)}
                                     </span>
                                 </div>
                                 <p className={cn(

@@ -16,7 +16,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatTime } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 
@@ -40,7 +40,7 @@ export default function DMsPage() {
 
     const handleCall = () => {
         if (!activePeer || !session?.user) return;
-        setMatched("direct-room", activePeer.peer.id, activePeer.peer.username, activePeer.peer.avatar);
+        setMatched("direct-room", activePeer.peer.id, activePeer.peer.username, activePeer.peer.avatar, true);
         router.push("/chat");
     };
 
@@ -323,7 +323,7 @@ export default function DMsPage() {
                                                             {msg.content}
                                                         </div>
                                                         <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30 px-1">
-                                                            {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                                                            {formatTime(msg.createdAt)}
                                                         </span>
                                                     </div>
                                                 </motion.div>

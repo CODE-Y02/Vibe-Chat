@@ -7,10 +7,12 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "@/components/layout/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquare, LayoutGrid, Users, Video, Menu, Moon, Sun, LogOut, User as UserIcon, Sparkles } from "lucide-react";
+import { MessageSquare, LayoutGrid, Users, Video, Menu, Moon, Sun, LogOut, User as UserIcon, Sparkles, UserPlus, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
+import { useSocket } from "@/hooks/use-socket";
+import { useToast } from "@/hooks/use-toast";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -36,9 +38,44 @@ export function Navbar({ className }: { className?: string }) {
 
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
+    const { socket } = useSocket();
+    const { toast } = useToast();
 
     // Prevent hydration mismatch
     useEffect(() => setMounted(true), []);
+
+    // Global listeners for friend notifications
+    useEffect(() => {
+        if (!socket) return;
+
+        const onFriendRequest = () => {
+            toast({
+                title: "New Friend Request!",
+                description: "Someone wants to vibe with you.",
+                action: (
+                    <Link href="/friends">
+                        <Button size="sm" className="bg-primary text-white font-bold h-8 rounded-lg px-4 text-[10px] uppercase tracking-widest">View</Button>
+                    </Link>
+                )
+            });
+        };
+
+        const onFriendAccepted = () => {
+            toast({
+                title: "Vibe Connected!",
+                description: "Your friend request was accepted.",
+                className: "bg-vibe-gradient text-white border-none shadow-glow",
+            });
+        };
+
+        socket.on('friend_request', onFriendRequest);
+        socket.on('friend_accepted', onFriendAccepted);
+
+        return () => {
+            socket.off('friend_request', onFriendRequest);
+            socket.off('friend_accepted', onFriendAccepted);
+        };
+    }, [socket, toast]);
 
     const toggleTheme = () => {
         setTheme(theme === "dark" ? "light" : "dark");
