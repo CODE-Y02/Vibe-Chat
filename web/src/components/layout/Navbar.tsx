@@ -100,27 +100,17 @@ export function Navbar({ className }: { className?: string }) {
     }
 
     const isCurrentlyDark = theme === "dark";
-    const isLanding = pathname === "/";
 
     return (
-        <header className={cn(
-            "sticky top-0 z-50 w-full px-4 md:px-6 py-3 md:py-4",
-            isLanding ? "bg-black/20 backdrop-blur-2xl border-b border-white/5" : "bg-background/80 backdrop-blur-xl",
-            className
-        )}>
+        <header className={cn("sticky top-0 z-50 w-full px-4 md:px-6 py-3 md:py-4 bg-background/80 backdrop-blur-xl", className)}>
             <div className="container mx-auto">
                 <motion.div
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className={cn(
-                        "flex h-16 md:h-20 items-center justify-between px-5 md:px-8 rounded-[24px] md:rounded-[32px] transition-all",
-                        isLanding ? "bg-white/[0.03] border border-white/10" : "glass border border-border/40 shadow-sm"
-                    )}
+                    className="flex h-16 md:h-20 items-center justify-between px-5 md:px-8 glass border border-border/40 rounded-[24px] md:rounded-[32px] shadow-sm"
                 >
                     <div className="flex items-center gap-6">
-                        {/* Mobile menu removed to favor bottom navigation bar */}
-
-                        <Link href="/">
+                        <Link href="/feed">
                             <motion.span
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -136,46 +126,34 @@ export function Navbar({ className }: { className?: string }) {
                         </Link>
                     </div>
 
-                    <nav className="hidden md:flex items-center gap-2">
-                         {isLanding && (
-                             <div className="flex items-center gap-6 mr-6 px-6 py-2 rounded-2xl bg-white/[0.03] border border-white/5">
-                                 {siteItems.map(item => (
-                                     <Link key={item.href} href={item.href} className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">
-                                         {item.label}
-                                     </Link>
-                                 ))}
-                             </div>
-                         )}
-
-                        <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-2xl border border-border">
-                            {navItems.map((item) => {
-                                const Icon = item.icon;
-                                const isActive = pathname === item.href;
-                                return (
-                                    <Link key={item.href} href={item.href}>
-                                        <div className="relative">
-                                            <motion.span
-                                                whileHover={{ y: -1 }}
-                                                className={cn(
-                                                    "relative flex items-center gap-3 px-6 py-3 rounded-xl transition-all cursor-pointer font-black text-[10px] uppercase tracking-[0.2em] z-10",
-                                                    isActive ? "text-white" : "text-muted-foreground hover:text-foreground"
-                                                )}
-                                            >
-                                                <Icon className="w-4 h-4" />
-                                                {item.label}
-                                            </motion.span>
-                                            {isActive && (
-                                                <motion.div
-                                                    layoutId="nav-pill"
-                                                    className="absolute inset-0 bg-primary rounded-xl shadow-glow-sm"
-                                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                                />
+                    <nav className="hidden md:flex items-center gap-2 bg-muted/30 p-1.5 rounded-2xl border border-border">
+                        {navItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = pathname === item.href;
+                            return (
+                                <Link key={item.href} href={item.href}>
+                                    <div className="relative">
+                                        <motion.span
+                                            whileHover={{ y: -1 }}
+                                            className={cn(
+                                                "relative flex items-center gap-3 px-6 py-3 rounded-xl transition-all cursor-pointer font-black text-[10px] uppercase tracking-[0.2em] z-10",
+                                                isActive ? "text-white" : "text-muted-foreground hover:text-foreground"
                                             )}
-                                        </div>
-                                    </Link>
-                                );
-                            })}
-                        </div>
+                                        >
+                                            <Icon className="w-4 h-4" />
+                                            {item.label}
+                                        </motion.span>
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="nav-pill"
+                                                className="absolute inset-0 bg-primary rounded-xl shadow-glow-sm"
+                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                            />
+                                        )}
+                                    </div>
+                                </Link>
+                            );
+                        })}
                     </nav>
 
                     <div className="flex items-center gap-4">

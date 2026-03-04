@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { useSession } from "@/components/layout/SessionProvider";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRef } from 'react';
-import { Navbar } from '@/components/layout/Navbar';
+import { PublicNavbar } from '@/components/layout/PublicNavbar';
 
 export default function Landing() {
   const { data: session } = useSession();
@@ -48,7 +48,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans overflow-x-hidden">
-      <Navbar />
+      <PublicNavbar />
       {/* Background Mesh */}
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />

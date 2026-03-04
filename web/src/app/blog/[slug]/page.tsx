@@ -1,7 +1,7 @@
 "use client";
 
 import posts from "@/config/blog-posts.json";
-import { Navbar } from "@/components/layout/Navbar";
+import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Calendar, User, Tag } from "lucide-react";
@@ -17,7 +17,7 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans">
-      <Navbar />
+      <PublicNavbar />
 
       <main className="container mx-auto px-4 max-w-4xl py-24 md:py-48 relative z-10">
         <Link href="/blog" className="inline-flex items-center gap-3 font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all mb-12 group">

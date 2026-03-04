@@ -1,7 +1,7 @@
 "use client";
 
 import posts from "@/config/blog-posts.json";
-import { Navbar } from "@/components/layout/Navbar";
+import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, Calendar, User, Tag } from "lucide-react";
@@ -10,7 +10,7 @@ import { formatTime } from "@/lib/utils";
 export default function BlogIndex() {
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans">
-      <Navbar />
+      <PublicNavbar />
       
       <main className="container mx-auto px-4 py-20 md:py-32 relative z-10">
         <motion.div
