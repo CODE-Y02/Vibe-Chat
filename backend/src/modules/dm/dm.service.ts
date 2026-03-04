@@ -39,7 +39,7 @@ export class DMService {
     }
 
     async getUnreadCount(userId: string) {
-        return prisma.message.groupBy({
+        const counts = await prisma.message.groupBy({
             by: ['senderId'],
             where: {
                 receiverId: userId,
@@ -49,6 +49,8 @@ export class DMService {
                 senderId: true,
             },
         });
+        
+        return { totalUnreadChats: counts.length };
     }
 
     async getConversations(userId: string, page = 1, limit = 10) {

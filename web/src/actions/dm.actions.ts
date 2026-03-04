@@ -52,9 +52,9 @@ export async function markAsRead(userId: string) {
 export async function getUnreadCount() {
     try {
         const res = await authenticatedFetch("/messages/unread");
-        if (!res.ok) return 0;
+        if (!res.ok) return { totalUnreadChats: 0 };
         return await res.json();
     } catch (error) {
-        return 0;
+        return { totalUnreadChats: 0 };
     }
 }

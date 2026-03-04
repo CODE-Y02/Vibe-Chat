@@ -10,6 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileModal } from "./ProfileModal";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { useFeedStore } from "@/store/useFeedStore";
+import { useFriendStore } from "@/store/useFriendStore";
+import { useDMStore } from "@/store/useDMStore";
 
 const navItems = [
     { href: "/feed", label: "Feed", icon: LayoutGrid },
@@ -25,9 +28,12 @@ export function MobileNav() {
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
+    const { hasNewPosts } = useFeedStore();
+    const { hasNewRequests } = useFriendStore();
+    const { totalUnreadCount } = useDMStore();
+
     useEffect(() => setMounted(true), []);
 
-    const isCoreRoute = ["/feed", "/dms", "/friends"].some(r => pathname === r) || pathname.startsWith("/chat");
     // Actually /chat has its own UI usually. Let's exclude it.
     const showNav = ["/feed", "/dms", "/friends", "/profile"].some(r => pathname === r || pathname.startsWith(r));
 
@@ -62,15 +68,26 @@ export function MobileNav() {
                         }
 
                         return (
-                            <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 group">
+                            <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 group relative">
                                 <motion.div
                                     whileTap={{ scale: 0.9 }}
                                     className={cn(
-                                        "p-2 rounded-2xl transition-all",
+                                        "p-2 rounded-2xl transition-all relative",
                                         isActive ? "text-primary bg-primary/10" : "text-foreground/30 group-hover:text-foreground"
                                     )}
                                 >
                                     <Icon className={cn("w-6 h-6", isActive && "fill-current")} />
+                                    {item.label === "Feed" && hasNewPosts && (
+                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background shadow-sm" />
+                                    )}
+                                    {item.label === "Friends" && hasNewRequests && (
+                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background shadow-sm" />
+                                    )}
+                                    {item.label === "Chats" && totalUnreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-red-500 rounded-full border-2 border-background text-[8px] font-black text-white flex items-center justify-center shadow-sm pointer-events-none">
+                                            {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+                                        </span>
+                                    )}
                                 </motion.div>
                                 <span className={cn(
                                     "text-[8px] font-black uppercase tracking-widest leading-none",

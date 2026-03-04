@@ -2,7 +2,6 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn, formatTime } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
 
 export interface Conversation {
     peer: {

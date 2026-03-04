@@ -102,9 +102,12 @@ export class MatchmakingService {
     }
 
     async leaveQueue(userId: string): Promise<void> {
-        const isBanned = await this.isShadowbanned(userId);
-        const activeQueue = isBanned ? SHADOWBAN_QUEUE : MATCHMAKING_QUEUE;
-        await redis.srem(activeQueue, userId);
+        // Atomic removal from both possible queues eliminates the need for an async check,
+        // preventing race conditions during socket disconnects.
+        await redis.pipeline()
+            .srem(MATCHMAKING_QUEUE, userId)
+            .srem(SHADOWBAN_QUEUE, userId)
+            .exec();
     }
 
     async updateHeartbeat(userId: string): Promise<void> {

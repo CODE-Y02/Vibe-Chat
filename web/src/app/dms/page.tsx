@@ -6,7 +6,7 @@ import { Sidebar, Conversation } from '@/components/layout/Sidebar';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { getConversations, getMessages, sendMessage, markAsRead } from '@/actions/dm.actions';
 import { getFriends } from '@/actions/friend.actions';
-import { Loader2, MessageSquare, Send, Video, Sparkles, UserPlus } from 'lucide-react';
+import { Loader2, MessageSquare, Send, Video, Sparkles, ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,12 +15,12 @@ import { useSession } from "@/components/layout/SessionProvider";
 import { useChatStore } from '@/store/useChatStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
 import { cn, formatTime } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { useDMStore } from '@/store/useDMStore';
 
 export default function DMsPage() {
+    const { decrementUnread } = useDMStore();
     const { data: session, status } = useSession();
     const queryClient = useQueryClient();
     const router = useRouter();
@@ -242,6 +242,9 @@ export default function DMsPage() {
                                 onSelectConversation={(conv) => {
                                     if (!activePeer) {
                                         window.history.pushState({ isChatOpen: true }, '', '');
+                                    }
+                                    if (conv.isUnread) {
+                                        decrementUnread();
                                     }
                                     setActivePeer(conv);
                                     markAsRead(conv.peer.id);

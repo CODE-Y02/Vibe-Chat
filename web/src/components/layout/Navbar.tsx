@@ -7,11 +7,9 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "@/components/layout/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquare, LayoutGrid, Users, Video, Menu, Moon, Sun, LogOut, User as UserIcon, Sparkles, UserPlus, Check } from "lucide-react";
+import { MessageSquare, LayoutGrid, Users, Video, Moon, Sun, LogOut, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
-import { useSocket } from "@/hooks/use-socket";
 import { useToast } from "@/hooks/use-toast";
 import {
     DropdownMenu,
@@ -22,7 +20,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ProfileModal } from "./ProfileModal";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 const navItems = [
     { href: "/dms", label: "Chats", icon: MessageSquare },
@@ -30,76 +28,29 @@ const navItems = [
     { href: "/friends", label: "Friends", icon: Users },
 ];
 
-const siteItems = [
-    { href: "/#features", label: "Features" },
-    { href: "/#safety", label: "Safety" },
-    { href: "/blog", label: "Blog" },
-];
-
+import { useUnreadTracker } from "@/hooks/use-unread-tracker";
 import { useFeedStore } from "@/store/useFeedStore";
+import { useFriendStore } from "@/store/useFriendStore";
+import { useDMStore } from "@/store/useDMStore";
 
 export function Navbar({ className }: { className?: string }) {
     const pathname = usePathname();
     const { data: session } = useSession();
-    const internalId = session?.internalId;
-    const [open, setOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
 
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
-    const { socket } = useSocket();
     const { toast } = useToast();
 
-    const { hasNewPosts, setHasNewPosts } = useFeedStore();
+    const { hasNewPosts } = useFeedStore();
+    const { hasNewRequests } = useFriendStore();
+    const { totalUnreadCount } = useDMStore();
 
-    // Clear new posts when visiting feed
-    useEffect(() => {
-        if (pathname === "/feed") {
-            setHasNewPosts(false);
-        }
-    }, [pathname, setHasNewPosts]);
+    // 🚀 Centralized Real-time Tracking (moved to custom hook)
+    useUnreadTracker(toast);
 
     // Prevent hydration mismatch
     useEffect(() => setMounted(true), []);
-
-    // Global listeners for friend notifications
-    useEffect(() => {
-        if (!socket) return;
-
-        const onFriendRequest = () => {
-            toast({
-                title: "New Friend Request!",
-                description: "Someone wants to vibe with you.",
-                action: (
-                    <Link href="/friends">
-                        <Button size="sm" className="bg-primary text-white font-bold h-8 rounded-lg px-4 text-[10px] uppercase tracking-widest">View</Button>
-                    </Link>
-                )
-            });
-        };
-
-        const onFriendAccepted = () => {
-            toast({
-                title: "Vibe Connected!",
-                description: "Your friend request was accepted.",
-                className: "bg-vibe-gradient text-white border-none shadow-glow",
-            });
-        };
-
-        const onNewPost = () => {
-            setHasNewPosts(true);
-        };
-
-        socket.on('friend_request', onFriendRequest);
-        socket.on('friend_accepted', onFriendAccepted);
-        socket.on('new_post', onNewPost);
-
-        return () => {
-            socket.off('friend_request', onFriendRequest);
-            socket.off('friend_accepted', onFriendAccepted);
-            socket.off('new_post', onNewPost);
-        };
-    }, [socket, toast, setHasNewPosts]);
 
     const toggleTheme = () => {
         setTheme(theme === "dark" ? "light" : "dark");
@@ -149,6 +100,9 @@ export function Navbar({ className }: { className?: string }) {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
                             const isFeed = item.label === "Feed";
+                            const isChats = item.label === "Chats";
+                            const isFriends = item.label === "Friends";
+
                             return (
                                 <Link key={item.href} href={item.href}>
                                     <div className="relative">
@@ -163,6 +117,14 @@ export function Navbar({ className }: { className?: string }) {
                                             {item.label}
                                             {isFeed && hasNewPosts && (
                                                 <span className="absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)] border border-white/20" />
+                                            )}
+                                            {isFriends && hasNewRequests && (
+                                                <span className="absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)] border border-white/20" />
+                                            )}
+                                            {isChats && totalUnreadCount > 0 && (
+                                                <span className="absolute -top-1 right-2 inline-flex items-center justify-center min-w-4 h-4 px-1 bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)] border border-white/20 text-[9px] text-white font-black leading-none">
+                                                    {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+                                                </span>
                                             )}
                                         </motion.span>
                                         {isActive && (
