@@ -9,6 +9,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { SessionProvider } from "@/components/layout/SessionProvider";
 import { SocketManager } from "./SocketManager";
 import { IncomingCallModal } from "../chat/IncomingCallModal";
+import { OutgoingCallModal } from "../chat/OutgoingCallModal";
 export function Providers({ children, ...props }: ThemeProviderProps) {
     const [queryClient] = useState(() => new QueryClient({
         defaultOptions: {
@@ -32,6 +33,7 @@ export function Providers({ children, ...props }: ThemeProviderProps) {
                     <SocketManager>
                         {children}
                         <IncomingCallModal />
+                        <OutgoingCallModal />
                     </SocketManager>
                 </SessionProvider>
                 <Toaster />

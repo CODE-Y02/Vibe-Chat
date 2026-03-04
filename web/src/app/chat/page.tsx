@@ -123,6 +123,8 @@ export default function ChatPage() {
         if (session.isDirectCall && incomingCall?.offer) {
             console.log("[ChatPage] Auto-answering friend call...");
             webrtc.handleOffer(incomingCall.from, incomingCall.offer).then(() => {
+                // Also emit call-accepted so caller's modal knows to close
+                socket.emit('call-accepted', { to: incomingCall.from });
                 setIsBlurred(false);
                 setIncomingCall(null);
             });

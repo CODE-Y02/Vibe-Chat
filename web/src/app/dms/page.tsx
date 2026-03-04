@@ -35,13 +35,17 @@ export default function DMsPage() {
     const { socket } = useSocket();
     const [activePeer, setActivePeer] = useState<Conversation | null>(null);
     const [input, setInput] = useState("");
-    const { setMatched } = useChatStore();
+    const { setMatched, setOutgoingCall } = useChatStore();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const handleCall = () => {
         if (!activePeer || !session?.user) return;
         setMatched("direct-room", activePeer.peer.id, activePeer.peer.username, activePeer.peer.avatar, true);
-        router.push("/chat");
+        setOutgoingCall({
+            to: activePeer.peer.id,
+            toName: activePeer.peer.username,
+            toAvatar: activePeer.peer.avatar || ""
+        });
     };
 
     const { data: convData, isLoading: isLoadingConvs, isError: isConvsError } = useQuery({
