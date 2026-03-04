@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MessageSquare, LayoutGrid, Users, Video } from "lucide-react";
+import { MessageSquare, LayoutGrid, Users, Video, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useSession } from "@/components/layout/SessionProvider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileModal } from "./ProfileModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
 
 const navItems = [
     { href: "/feed", label: "Feed", icon: LayoutGrid },
@@ -21,6 +22,10 @@ export function MobileNav() {
     const pathname = usePathname();
     const { data: session } = useSession();
     const [profileOpen, setProfileOpen] = useState(false);
+    const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => setMounted(true), []);
 
     const isCoreRoute = ["/feed", "/dms", "/friends"].some(r => pathname === r) || pathname.startsWith("/chat");
     // Actually /chat has its own UI usually. Let's exclude it.
@@ -76,6 +81,24 @@ export function MobileNav() {
                             </Link>
                         );
                     })}
+
+                    {/* Theme Toggle — since top nav is hidden on mobile */}
+                    {mounted && (
+                        <button
+                            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                            className="flex flex-col items-center gap-1 group"
+                        >
+                            <motion.div
+                                whileTap={{ scale: 0.9 }}
+                                className="p-2 rounded-2xl text-foreground/30 hover:text-primary transition-all"
+                            >
+                                {theme === "dark" ? <Sun className="w-5 h-5 text-orange-400" /> : <Moon className="w-5 h-5 text-slate-700" />}
+                            </motion.div>
+                            <span className="text-[8px] font-black uppercase tracking-widest leading-none text-foreground/20">
+                                Mode
+                            </span>
+                        </button>
+                    )}
 
                     {/* Profile button — opens modal, no logout risk */}
                     <button

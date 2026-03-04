@@ -39,6 +39,7 @@ const siteItems = [
 export function Navbar({ className }: { className?: string }) {
     const pathname = usePathname();
     const { data: session } = useSession();
+    const internalId = session?.internalId;
     const [open, setOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
 
@@ -102,7 +103,7 @@ export function Navbar({ className }: { className?: string }) {
     const isCurrentlyDark = theme === "dark";
 
     return (
-        <header className={cn("sticky top-0 z-50 w-full px-4 md:px-6 py-3 md:py-4 bg-background/80 backdrop-blur-xl", className)}>
+        <header className={cn("sticky top-0 z-50 w-full px-4 md:px-6 py-3 md:py-4 bg-background/80 backdrop-blur-xl hidden md:block", className)}>
             <div className="container mx-auto">
                 <motion.div
                     initial={{ y: -20, opacity: 0 }}
@@ -110,7 +111,7 @@ export function Navbar({ className }: { className?: string }) {
                     className="flex h-16 md:h-20 items-center justify-between px-5 md:px-8 glass border border-border/40 rounded-[24px] md:rounded-[32px] shadow-sm"
                 >
                     <div className="flex items-center gap-6">
-                        <Link href="/feed">
+                        <Link href="/">
                             <motion.span
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}

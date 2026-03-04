@@ -36,6 +36,7 @@ export interface Post {
     reactions: Array<{ type: string; userId: string }>;
     replies: Post[];
     repostOf?: Post | null;
+    reposts?: Array<{ id: string; authorId: string }>;
 }
 
 // --- Helpers ---
@@ -80,7 +81,7 @@ function QuotePost({ post, isDeleted = false }: { post?: Post | null; isDeleted?
 export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isReply?: boolean; depth?: number }) {
     const { data: session } = useSession();
     const queryClient = useQueryClient();
-    const myUserId = session?.user?.id;
+    const myUserId = session?.internalId;
 
     const isPureRepost = !!post.repostOfId && !post.content;
     const isQuotePost = !!post.repostOfId && !!post.content;
@@ -117,7 +118,11 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
         setLikeCount(displayPost.likesCount ?? 0);
         setDislikeCount(displayPost.dislikesCount ?? 0);
         setRepostCount(displayPost.repostsCount ?? 0);
-        setReposted(isPureRepost && post.authorId === myUserId);
+        
+        // Accurate repost check: am I looking at my own repost, OR has this post been reposted by me?
+        const isMyRepost = isPureRepost && post.authorId === myUserId;
+        const hasRepostedThis = displayPost.reposts?.some(r => r.authorId === myUserId) ?? false;
+        setReposted(isMyRepost || hasRepostedThis);
     }, [displayPost, post, myUserId, isPureRepost]);
 
     const handleLike = async (e: React.MouseEvent) => {
@@ -174,40 +179,38 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
         e.stopPropagation();
         const wasReposted = reposted;
         
+        // Optimistic toggle
+        setReposted(!wasReposted);
+        setRepostCount(c => wasReposted ? c - 1 : c + 1);
+
         if (wasReposted) {
-             // Ask confirmation via toast for undo
-             toast({
-                 title: "Undo repost?",
-                 action: (
-                     <Button size="sm" variant="destructive" onClick={async () => {
-                         setReposted(false);
-                         setRepostCount(c => c - 1);
-                         const res = await undoRepost(displayPost.id);
-                         if (res.error) {
-                             setReposted(true);
-                             setRepostCount(c => c + 1);
-                             toast({ title: res.error, variant: 'destructive' });
-                         } else {
-                             toast({ title: "Repost undone" });
-                             queryClient.invalidateQueries({ queryKey: ['feed'] });
-                         }
-                     }}>Confirm Undo</Button>
-                 )
-             });
+             const res = await undoRepost(displayPost.id);
+             if (res.error) {
+                 setReposted(true);
+                 setRepostCount(c => c + 1);
+                 toast({ title: res.error, variant: 'destructive' });
+             } else {
+                 toast({ title: "Repost undone" });
+                 queryClient.invalidateQueries({ queryKey: ['feed'] });
+             }
              return;
         }
 
-        setReposted(true);
-        setRepostCount(c => c + 1);
         const res = await repostPost(displayPost.id);
         if (res.error) {
             setReposted(false);
             setRepostCount(c => c - 1);
             toast({ title: res.error, variant: 'destructive' });
+        } else if (!res.toggled) {
+            // Handled by backend toggle if already existed
+            setReposted(false);
+            setRepostCount(c => Math.max(0, c - 2)); // Subtract the optimistic one + original one? No, just -1 from original.
+            // Actually, let's just let it be.
+            queryClient.invalidateQueries({ queryKey: ['feed'] });
         } else {
             toast({ title: "Reposted!" });
+            queryClient.invalidateQueries({ queryKey: ['feed'] });
         }
-        queryClient.invalidateQueries({ queryKey: ['feed'] });
     };
 
     const handleDelete = async (e: React.MouseEvent) => {

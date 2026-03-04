@@ -36,6 +36,10 @@ export class FeedService {
                     author: { select: safeAuthorSelect },
                 },
             },
+            reposts: {
+                where: { authorId: currentUserId, content: null, deletedAt: null },
+                select: { id: true, authorId: true }
+            }
         };
     }
 
