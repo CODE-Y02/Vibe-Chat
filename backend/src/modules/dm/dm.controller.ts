@@ -2,6 +2,7 @@ import { Context } from 'hono';
 import { dmService } from './dm.service.js';
 import { Env } from '../../types.js';
 import { matchmakingService } from '../../services/matchmaking.service.js';
+import { AppError } from '../../lib/utils.js';
 
 // io injected at socket setup time via setIO()
 let _io: any = null;
@@ -10,7 +11,7 @@ export const setIO = (io: any) => { _io = io; };
 export const sendMessage = async (c: Context<Env>) => {
     const user = c.get('user');
     const { receiverId, content } = (await c.req.json()) as { receiverId: string; content: string };
-    if (!receiverId || !content?.trim()) return c.json({ error: 'receiverId and content are required' }, 400);
+    if (!receiverId || !content?.trim()) throw new AppError(400, 'receiverId and content are required');
 
     const result = await dmService.sendMessage(user.userId, receiverId, content);
 

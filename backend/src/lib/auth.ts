@@ -18,23 +18,24 @@ export const verifyAccessToken = async (token: string): Promise<TokenPayload | n
         const { data: { user }, error } = await supabase.auth.getUser(token);
         if (error || !user) return null;
 
-        // Upsert — handles the case where the webhook hasn't fired yet
-        // (user authenticated but our DB doesn't have them yet)
-        const internalUser = await prisma.user.upsert({
+        // 🟢 OPTIMIZATION: Check for existing user first to avoid heavy upsert writes on every heartbeat
+        let internalUser = await prisma.user.findUnique({
             where: { supabaseAuthId: user.id },
-            update: {
-                // Keep email + avatar in sync in case it changed
-                email: user.email ?? '',
-                avatar: user.user_metadata?.avatar_url ?? undefined,
-            },
-            create: {
-                supabaseAuthId: user.id,
-                email: user.email ?? '',
-                username: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'user',
-                avatar: user.user_metadata?.avatar_url ?? undefined,
-            },
             select: { id: true }
         });
+
+        if (!internalUser) {
+            console.log(`[Auth] Creating internal record for new user: ${user.id}`);
+            internalUser = await prisma.user.create({
+                data: {
+                    supabaseAuthId: user.id,
+                    email: user.email ?? '',
+                    username: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'user',
+                    avatar: user.user_metadata?.avatar_url ?? undefined,
+                },
+                select: { id: true }
+            });
+        }
 
         return { userId: internalUser.id };
     } catch (err) {
