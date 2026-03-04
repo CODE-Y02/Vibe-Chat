@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar, Conversation } from '@/components/layout/Sidebar';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { getConversations, getMessages, sendMessage, markAsRead } from '@/actions/dm.actions';
 import { getFriends } from '@/actions/friend.actions';
 import { Loader2, MessageSquare, Send, Video, Sparkles, UserPlus } from 'lucide-react';
@@ -48,13 +48,22 @@ export default function DMsPage() {
         });
     };
 
-    const { data: convData, isLoading: isLoadingConvs, isError: isConvsError } = useQuery({
+    const { 
+        data: convDataInfinite, 
+        isLoading: isLoadingConvs, 
+        fetchNextPage: fetchNextConvs, 
+        hasNextPage: hasNextConvs,
+        isFetchingNextPage: isFetchingNextConvs
+    } = useInfiniteQuery({
         queryKey: ['conversations'],
-        queryFn: () => getConversations(),
-        retry: 1,
+        queryFn: ({ pageParam = 1 }) => getConversations(pageParam as number),
+        getNextPageParam: (lastPage) => lastPage.conversations.length === lastPage.limit ? lastPage.page + 1 : undefined,
+        initialPageParam: 1,
         staleTime: 30_000,
         refetchOnWindowFocus: true,
     });
+
+    const conversations = convDataInfinite?.pages.flatMap(p => p.conversations) || [];
 
     const { data: friendsData } = useQuery({
         queryKey: ['friends'],
@@ -68,8 +77,8 @@ export default function DMsPage() {
         if (!userIdFromQuery) return;
 
         // 1. Try to find an existing conversation
-        if (convData?.conversations) {
-            const existing = convData.conversations.find((c: Conversation) => c.peer.id === userIdFromQuery);
+        if (conversations.length > 0) {
+            const existing = conversations.find((c: Conversation) => c.peer.id === userIdFromQuery);
             if (existing) {
                 setActivePeer(existing);
                 return;
@@ -92,39 +101,55 @@ export default function DMsPage() {
                 });
             }
         }
-    }, [userIdFromQuery, convData, friendsData]);
+    }, [userIdFromQuery, conversations.length, friendsData]);
 
-    const { data: messages, isLoading: isLoadingMessages } = useQuery({
+    const { 
+        data: msgDataInfinite, 
+        isLoading: isLoadingMessages,
+        fetchNextPage: fetchNextMessages,
+        hasNextPage: hasNextMessages,
+        isFetchingNextPage: isFetchingMoreMessages
+    } = useInfiniteQuery({
         queryKey: ['messages', activePeer?.peer.id],
-        queryFn: () => activePeer ? getMessages(activePeer.peer.id) : Promise.resolve([]),
+        queryFn: ({ pageParam = 1 }) => activePeer ? getMessages(activePeer.peer.id, pageParam as number) : Promise.resolve([]),
+        getNextPageParam: (lastPage: any[], allPages: any[]) => lastPage.length === 50 ? allPages.length + 1 : undefined,
         enabled: !!activePeer,
-        retry: false,
+        initialPageParam: 1,
         staleTime: 10_000,
     });
+
+    const messages = msgDataInfinite ? [...msgDataInfinite.pages].reverse().flat() : [];
 
     const sendMutation = useMutation({
         mutationFn: ({ to, content }: { to: string, content: string }) => sendMessage(to, content),
         onMutate: async ({ to, content }) => {
-            // Cancel in-flight refetches so they don't overwrite our optimistic update
             await queryClient.cancelQueries({ queryKey: ['messages', to] });
 
             const tempMsg = {
                 id: `opt-${Date.now()}`,
-                senderId: 'me-optimistic', // != peer id → isMe = true
+                senderId: 'me-optimistic', 
                 receiverId: to,
                 content,
                 isRead: false,
                 createdAt: new Date().toISOString(),
             };
+            
+            // Append to the first page (latest messages)
             queryClient.setQueryData(
                 ['messages', to],
-                (old: any[] = []) => [...old, tempMsg]
+                (old: any) => {
+                    if (!old || !old.pages || old.pages.length === 0) {
+                        return { pages: [[tempMsg]], pageParams: [1] };
+                    }
+                    const newPages = [...old.pages];
+                    newPages[0] = [...newPages[0], tempMsg];
+                    return { ...old, pages: newPages };
+                }
             );
             return { to };
         },
         onSuccess: (_data, { to }) => {
             setInput("");
-            // Refetch with real data from DB (clears the opt- temp message)
             queryClient.invalidateQueries({ queryKey: ['messages', to] });
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
         },
@@ -141,14 +166,19 @@ export default function DMsPage() {
             id: string; senderId: string; receiverId: string;
             content: string; createdAt: string; isRead: boolean;
         }) => {
-            // Always refresh conversations sidebar
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
 
-            // Append to open chat if it matches sender
             if (activePeer?.peer.id === msg.senderId) {
                 queryClient.setQueryData(
                     ['messages', msg.senderId],
-                    (old: any[] = []) => [...old, msg]
+                    (old: any) => {
+                        if (!old || !old.pages || old.pages.length === 0) {
+                            return { pages: [[msg]], pageParams: [1] };
+                        }
+                        const newPages = [...old.pages];
+                        newPages[0] = [...newPages[0], msg];
+                        return { ...old, pages: newPages };
+                    }
                 );
             }
         };
@@ -158,8 +188,12 @@ export default function DMsPage() {
     }, [socket, activePeer?.peer.id, queryClient]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        // Only auto-scroll to bottom if we are NOT fetching older messages
+        // This prevents the screen from violently jumping to the bottom when history loads
+        if (!isFetchingMoreMessages) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages.length === 0, messages[messages.length - 1]?.id]);
 
     // Handle mobile hardware back button to close chat instead of leaving page
     useEffect(() => {
@@ -203,7 +237,7 @@ export default function DMsPage() {
                             <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
                         ) : (
                             <Sidebar
-                                conversations={convData?.conversations || []}
+                                conversations={conversations}
                                 activePeerId={activePeer?.peer.id}
                                 onSelectConversation={(conv) => {
                                     if (!activePeer) {
@@ -212,6 +246,12 @@ export default function DMsPage() {
                                     setActivePeer(conv);
                                     markAsRead(conv.peer.id);
                                 }}
+                                onEndReached={() => {
+                                    if (hasNextConvs && !isFetchingNextConvs) {
+                                        fetchNextConvs();
+                                    }
+                                }}
+                                isFetchingNextPage={isFetchingNextConvs}
                             />
                         )}
                     </div>
@@ -274,7 +314,14 @@ export default function DMsPage() {
                             </div>
 
                             {/* Messages Area */}
-                            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2 custom-scrollbar">
+                            <div 
+                                className="flex-1 overflow-y-auto px-4 py-6 space-y-2 custom-scrollbar"
+                                onScroll={(e) => {
+                                    if (e.currentTarget.scrollTop === 0 && hasNextMessages && !isFetchingMoreMessages) {
+                                        fetchNextMessages();
+                                    }
+                                }}
+                            >
                                 <AnimatePresence initial={false}>
                                     {isLoadingMessages ? (
                                         <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>

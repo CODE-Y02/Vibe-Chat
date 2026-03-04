@@ -75,7 +75,7 @@ export default function Landing() {
 
           <motion.h1
             variants={itemVariants}
-            className="text-8xl sm:text-7xl md:text-9xl lg:text-[13rem] font-black tracking-[-0.06em] mb-8 md:mb-12 leading-[0.85] md:leading-[0.75] uppercase"
+            className="text-6xl sm:text-7xl md:text-9xl lg:text-[13rem] font-black tracking-[-0.06em] mb-8 md:mb-12 leading-[0.85] md:leading-[0.75] uppercase"
           >
             Match<span className="text-primary italic">.</span><br />
             Connect.<br />
