@@ -70,6 +70,7 @@ model Post {
   
   // Denormalized counters for high-scale performance
   likesCount   Int       @default(0)
+  dislikesCount Int       @default(0)
   repliesCount Int       @default(0)
   repostsCount Int       @default(0)
   

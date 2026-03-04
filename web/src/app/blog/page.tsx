@@ -9,7 +9,7 @@ import { formatTime } from "@/lib/utils";
 
 export default function BlogIndex() {
   return (
-    <div className="min-h-screen bg-[#020202] text-white selection:bg-primary/30 font-sans">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans">
       <Navbar />
       
       <main className="container mx-auto px-4 py-20 md:py-32 relative z-10">
@@ -26,7 +26,7 @@ export default function BlogIndex() {
             Social<br />
             <span className="italic text-primary">Insights.</span>
           </h1>
-          <p className="text-xl md:text-2xl text-white/40 max-w-2xl mx-auto font-medium">
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto font-medium">
             Thoughts on security, the future of human discovery, and our mission to rebuild random social from the ground up.
           </p>
         </motion.div>
@@ -47,19 +47,19 @@ export default function BlogIndex() {
                       alt={post.title}
                       className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700 grayscale-[0.5] group-hover:grayscale-0"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#020202] to-transparent opacity-60" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60" />
                   </div>
                   
                   <div className="p-8 md:p-12 flex-1 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center gap-6 mb-8 opacity-40 text-[10px] font-black uppercase tracking-widest">
+                      <div className="flex items-center gap-6 mb-8 opacity-40 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         <span className="flex items-center gap-2"><Calendar className="w-3 h-3" /> {post.date}</span>
                         <span className="flex items-center gap-2"><User className="w-3 h-3" /> {post.author}</span>
                       </div>
                       <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight mb-6 leading-tight group-hover:text-primary transition-colors">
                         {post.title}
                       </h2>
-                      <p className="text-white/40 text-sm md:text-base leading-relaxed mb-10 font-medium">
+                      <p className="text-muted-foreground text-sm md:text-base leading-relaxed mb-10 font-medium">
                         {post.description}
                       </p>
                     </div>
@@ -75,7 +75,7 @@ export default function BlogIndex() {
         </div>
       </main>
 
-      <footer className="py-20 border-t border-white/5 opacity-20 text-[10px] font-black uppercase tracking-widest text-center mt-32">
+      <footer className="py-20 border-t border-border opacity-20 text-[10px] font-black uppercase tracking-widest text-center mt-32 text-muted-foreground">
         <p>© 2026 VibeChat / Insights for the future.</p>
       </footer>
     </div>

@@ -212,12 +212,20 @@ export class FeedService {
 
             if (existing) {
                 await tx.reaction.delete({ where: { id: existing.id } });
-                await tx.post.update({ where: { id: postId }, data: { likesCount: { decrement: 1 } } });
+                const counterField = type.toLowerCase().includes('like') ? 'likesCount' : 'dislikesCount';
+                await tx.post.update({ 
+                    where: { id: postId }, 
+                    data: { [counterField]: { decrement: 1 } } 
+                });
                 return { toggled: false };
             }
 
             const reaction = await tx.reaction.create({ data: { userId, postId, type } });
-            await tx.post.update({ where: { id: postId }, data: { likesCount: { increment: 1 } } });
+            const counterField = type.toLowerCase().includes('like') ? 'likesCount' : 'dislikesCount';
+            await tx.post.update({ 
+                where: { id: postId }, 
+                data: { [counterField]: { increment: 1 } } 
+            });
             return { toggled: true, reaction };
         });
     }

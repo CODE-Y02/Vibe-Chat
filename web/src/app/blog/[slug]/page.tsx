@@ -16,11 +16,11 @@ export default function BlogPost() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white selection:bg-primary/30 font-sans">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans">
       <Navbar />
 
       <main className="container mx-auto px-4 max-w-4xl py-24 md:py-48 relative z-10">
-        <Link href="/blog" className="inline-flex items-center gap-3 font-black text-[10px] uppercase tracking-widest text-white/40 hover:text-white transition-all mb-12 group">
+        <Link href="/blog" className="inline-flex items-center gap-3 font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all mb-12 group">
           <ArrowLeft className="w-3 h-3 group-hover:-translate-x-2 transition-transform" />
           BACK TO ALL POSTS
         </Link>
@@ -38,7 +38,7 @@ export default function BlogPost() {
             {post.title}
           </h1>
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-12 opacity-40 text-[10px] sm:text-xs font-black uppercase tracking-widest border-l-2 border-white/5 pl-8 md:pl-12 py-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-12 opacity-40 text-[10px] sm:text-xs font-black uppercase tracking-widest border-l-2 border-border pl-8 md:pl-12 py-2 text-muted-foreground">
             <span className="flex items-center gap-3"><Calendar className="w-4 h-4" /> {post.date}</span>
             <span className="flex items-center gap-3"><User className="w-4 h-4" /> {post.author}</span>
           </div>
@@ -57,22 +57,22 @@ export default function BlogPost() {
         </motion.div>
 
         <article className="prose prose-invert max-w-none space-y-12 md:space-y-16">
-          <p className="text-xl md:text-3xl font-medium leading-relaxed text-white/80 italic border-l-4 border-primary pl-8 md:pl-12">
+          <p className="text-xl md:text-3xl font-medium leading-relaxed text-foreground/80 italic border-l-4 border-primary pl-8 md:pl-12">
             {post.description}
           </p>
           
-          <div className="text-lg md:text-2xl font-medium text-white/60 leading-[1.8] space-y-12 whitespace-pre-line">
+          <div className="text-lg md:text-2xl font-medium text-muted-foreground leading-[1.8] space-y-12 whitespace-pre-line">
             {post.content}
           </div>
         </article>
 
-        <div className="mt-32 pt-20 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-12">
+        <div className="mt-32 pt-20 border-t border-border flex flex-col md:flex-row items-center justify-between gap-12">
           <div className="flex items-center gap-4 group cursor-pointer">
-            <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-white/5 overflow-hidden transition-all group-hover:bg-primary/20">
+            <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-muted overflow-hidden transition-all group-hover:bg-primary/20">
               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=codeyo2" alt="Author" className="w-full h-full object-cover" />
             </div>
             <div>
-              <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-white/40 mb-1">Written By</p>
+              <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-muted-foreground/40 mb-1">Written By</p>
               <p className="text-xl md:text-3xl font-black uppercase tracking-tighter">THE VIBE COLLECTIVE</p>
             </div>
           </div>
@@ -87,7 +87,7 @@ export default function BlogPost() {
         </div>
       </main>
 
-      <footer className="py-20 border-t border-white/5 opacity-20 text-[10px] font-black uppercase tracking-widest text-center">
+      <footer className="py-20 border-t border-border opacity-20 text-[10px] font-black uppercase tracking-widest text-center text-muted-foreground">
         <p>© 2026 VibeChat / Powered by the vibe.</p>
       </footer>
     </div>

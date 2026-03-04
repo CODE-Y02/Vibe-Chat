@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useSession } from "@/components/layout/SessionProvider";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRef } from 'react';
+import { Navbar } from '@/components/layout/Navbar';
 
 export default function Landing() {
   const { data: session } = useSession();
@@ -46,58 +47,14 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white selection:bg-primary/30 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans overflow-x-hidden">
+      <Navbar />
       {/* Background Mesh */}
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px]" />
       </div>
 
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/40 backdrop-blur-2xl">
-        <div className="container mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-3">
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              className="bg-primary p-2 rounded-xl md:rounded-2xl shadow-glow transition-all"
-            >
-              <Video className="w-5 h-5 md:w-6 md:h-6 text-white" />
-            </motion.div>
-            <span className="text-xl md:text-2xl font-black tracking-tighter uppercase italic">Vibe<span className="text-primary text-2xl md:text-3xl">.</span></span>
-          </div>
-
-          <div className="hidden lg:flex items-center gap-8 px-6 py-2 rounded-2xl bg-white/[0.03] border border-white/5">
-            <a href="#features" className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Features</a>
-            <a href="#safety" className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Safety</a>
-            <Link href="/blog" className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Blog</Link>
-          </div>
-
-          <div className="flex items-center gap-3 md:gap-6">
-            {session ? (
-              <Link href="/dms" className="flex items-center gap-2 md:gap-3 group">
-                <div className="text-right hidden sm:block">
-                  <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-primary leading-tight">Connected</p>
-                  <p className="text-[10px] md:text-xs font-bold text-white/60 truncate max-w-[100px]">{session.user?.user_metadata?.full_name || session.user?.email}</p>
-                </div>
-                <Avatar className="h-8 w-8 md:h-10 md:w-10 border border-white/10 group-hover:border-primary/50 transition-colors shadow-glow-sm">
-                  <AvatarImage src={session.user?.user_metadata?.avatar_url || ""} aria-label="Users Profile" />
-                  <AvatarFallback className="bg-primary/20 text-primary uppercase text-[8px] md:text-[10px] font-black">
-                    {((session.user?.user_metadata?.full_name || session.user?.email) || "U").slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-              </Link>
-            ) : (
-              <Link href="/login">
-                <Button className="rounded-xl md:rounded-2xl px-4 md:px-8 h-10 md:h-12 bg-white text-black hover:bg-primary hover:text-white font-black shadow-xl transition-all group overflow-hidden relative border-none">
-                  <span className="relative z-10 flex items-center gap-2 text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap">
-                    JOIN THE VIBE <ArrowRight className="w-3 h-3 md:w-4 md:h-4 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </nav>
 
       {/* Hero Section */}
       <main>
@@ -110,7 +67,7 @@ export default function Landing() {
         >
           <motion.div
             variants={itemVariants}
-            className="inline-flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-full bg-white/[0.03] border border-white/10 mb-8 md:mb-12 backdrop-blur-md shadow-inner"
+            className="inline-flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-full bg-muted/30 border border-border mb-8 md:mb-12 backdrop-blur-md shadow-inner"
           >
             <Sparkles className="w-3 h-3 md:w-4 md:h-4 text-primary animate-pulse" />
             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.4em] opacity-60">The Future of Social Interaction</span>
@@ -127,9 +84,9 @@ export default function Landing() {
 
           <motion.p
             variants={itemVariants}
-            className="text-base sm:text-xl md:text-3xl text-white/40 max-w-sm sm:max-w-xl md:max-w-4xl mx-auto mb-12 md:mb-20 leading-tight font-medium tracking-tight"
+            className="text-base sm:text-xl md:text-3xl text-muted-foreground/60 max-w-sm sm:max-w-xl md:max-w-4xl mx-auto mb-12 md:mb-20 leading-tight font-medium tracking-tight"
           >
-            Experience instant human connection in a privacy-first ecosystem. <span className="text-white">Encrypted, AI-moderated, and Borderless.</span>
+            Experience instant human connection in a privacy-first ecosystem. <span className="text-foreground">Encrypted, AI-moderated, and Borderless.</span>
           </motion.p>
 
           <motion.div
@@ -151,7 +108,7 @@ export default function Landing() {
           {/* Social Proof / Stats */}
           <motion.div
             variants={itemVariants}
-            className="mt-20 md:mt-40 flex flex-wrap justify-center gap-8 md:gap-32 opacity-30 italic font-black text-sm md:text-2xl tracking-tighter text-white/50"
+            className="mt-20 md:mt-40 flex flex-wrap justify-center gap-8 md:gap-32 opacity-30 italic font-black text-sm md:text-2xl tracking-tighter text-muted-foreground"
           >
             <div>1.2M+ VIBES</div>
             <div>0 DATA LOGS</div>
@@ -172,13 +129,13 @@ export default function Landing() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: idx * 0.1 }}
-                className="p-8 md:p-10 rounded-[2rem] md:rounded-[3rem] bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all hover:bg-white/[0.04] group shadow-2xl"
+                className="p-8 md:p-10 rounded-[2rem] md:rounded-[3rem] bg-muted/20 border border-border hover:border-primary/20 transition-all hover:bg-muted/40 group shadow-2xl"
               >
-                <div className="mb-6 md:mb-8 p-3 md:p-4 bg-black/20 rounded-2xl md:rounded-3xl w-fit group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                <div className="mb-6 md:mb-8 p-3 md:p-4 bg-muted/40 rounded-2xl md:rounded-3xl w-fit group-hover:scale-110 group-hover:rotate-6 transition-transform">
                   {feature.icon}
                 </div>
                 <h3 className="text-lg md:text-xl font-black uppercase tracking-tight mb-3 md:mb-4">{feature.title}</h3>
-                <p className="text-white/40 text-xs md:text-sm leading-relaxed font-medium">{feature.description}</p>
+                <p className="text-muted-foreground text-xs md:text-sm leading-relaxed font-medium">{feature.description}</p>
               </motion.article>
             ))}
           </div>
@@ -204,7 +161,7 @@ export default function Landing() {
                 Private by<br />
                 <span className="text-emerald-400">Architecture.</span>
               </h2>
-              <p className="text-lg md:text-xl text-white/40 leading-relaxed font-medium">
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed font-medium">
                 We believe your face is your data. Unlike legacy platforms, VibeChat doesn't "cloud scan" your private video calls. Our AI identifies harmful content locally, on your device hardware, before a single byte reaches the network.
               </p>
               <ul className="space-y-3 md:space-y-4">
@@ -214,7 +171,7 @@ export default function Landing() {
                   "On-Device NSFW Filtering",
                   "Encrypted Metadata Handling"
                 ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 md:gap-4 text-[10px] md:text-sm font-black uppercase tracking-widest text-white/80">
+                  <li key={i} className="flex items-center gap-3 md:gap-4 text-[10px] md:text-sm font-black uppercase tracking-widest text-foreground/80">
                     <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400" />
                     {item}
                   </li>
@@ -227,7 +184,7 @@ export default function Landing() {
               viewport={{ once: true }}
               className="flex-1 relative order-1 lg:order-2 w-full max-w-sm md:max-w-none mx-auto lg:mx-0"
             >
-              <div className="aspect-square rounded-[2rem] md:rounded-[4rem] bg-gradient-to-br from-white/10 to-transparent border border-white/10 p-8 md:p-12 relative overflow-hidden shadow-glow-lg">
+              <div className="aspect-square rounded-[2rem] md:rounded-[4rem] bg-gradient-to-br from-primary/10 to-transparent border border-border p-8 md:p-12 relative overflow-hidden shadow-glow-lg">
                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2874&auto=format&fit=crop')] bg-cover opacity-20 grayscale" aria-hidden="true" />
                 <div className="relative h-full flex flex-col justify-center items-center text-center space-y-6 md:space-y-8">
                   <div className="w-20 h-20 md:w-32 md:h-32 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center animate-pulse">
@@ -259,17 +216,17 @@ export default function Landing() {
             <span className="text-gradient">Upgrade</span> your Social?
           </h2>
           <Link href="/login">
-            <Button size="lg" className="w-full sm:w-auto rounded-full px-8 md:px-16 h-20 md:h-24 bg-white text-black hover:bg-primary hover:text-white transition-all text-lg md:text-xl font-black shadow-glow-lg">
+            <Button size="lg" className="w-full sm:w-auto rounded-full px-8 md:px-16 h-20 md:h-24 bg-foreground text-background hover:bg-primary hover:text-white transition-all text-lg md:text-xl font-black shadow-glow-lg">
               JOIN THE REVOLUTION
             </Button>
           </Link>
-          <div className="mt-24 md:mt-48 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
+          <div className="mt-24 md:mt-48 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/20">
             <p className="text-center md:text-left">© 2026 CODE-Y02 / VibeChat. All rights reserved.</p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-10">
-              <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-              <a href="#" className="hover:text-white transition-colors">Discord</a>
+              <Link href="/blog" className="hover:text-primary transition-colors">Blog</Link>
+              <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+              <a href="#" className="hover:text-primary transition-colors">Discord</a>
             </div>
           </div>
         </div>

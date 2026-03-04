@@ -126,3 +126,42 @@ export async function undoRepost(postId: string) {
         return { error: "Failed to undo repost" };
     }
 }
+
+export async function updatePost(postId: string, content: string) {
+    const validated = PostSchema.safeParse({ content });
+    if (!validated.success) return { error: "Invalid content" };
+
+    try {
+        const res = await authenticatedFetch(`/feed/${postId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ content }),
+            headers: { "Content-Type": "application/json" },
+        });
+        const data = await res.json();
+        if (!res.ok) return { error: data.error ?? "Failed to update post" };
+        revalidatePath("/feed");
+        return { success: true };
+    } catch {
+        return { error: "Failed to update post" };
+    }
+}
+
+export async function bookmarkPost(postId: string) {
+    try {
+        const res = await authenticatedFetch(`/feed/${postId}/bookmark`, { method: "POST" });
+        if (!res.ok) return { error: "Failed to bookmark" };
+        return { success: true };
+    } catch {
+        return { error: "Failed to bookmark" };
+    }
+}
+
+export async function undoBookmark(postId: string) {
+    try {
+        const res = await authenticatedFetch(`/feed/${postId}/bookmark`, { method: "DELETE" });
+        if (!res.ok) return { error: "Failed to remove bookmark" };
+        return { success: true };
+    } catch {
+        return { error: "Failed to remove bookmark" };
+    }
+}

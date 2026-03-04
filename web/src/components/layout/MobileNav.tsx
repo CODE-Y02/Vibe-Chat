@@ -22,7 +22,11 @@ export function MobileNav() {
     const { data: session } = useSession();
     const [profileOpen, setProfileOpen] = useState(false);
 
-    if (!session || pathname === "/chat") return null;
+    const isCoreRoute = ["/feed", "/dms", "/friends"].some(r => pathname === r) || pathname.startsWith("/chat");
+    // Actually /chat has its own UI usually. Let's exclude it.
+    const showNav = ["/feed", "/dms", "/friends", "/profile"].some(r => pathname === r || pathname.startsWith(r));
+
+    if (!session || !showNav) return null;
 
     return (
         <>

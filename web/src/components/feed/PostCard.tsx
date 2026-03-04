@@ -6,11 +6,12 @@ import { toast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Loader2, Repeat2, Bookmark, Trash2, Edit3 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Loader2, Repeat2, Bookmark, Trash2, Edit3, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useSession } from "@/components/layout/SessionProvider";
 import { useQueryClient } from '@tanstack/react-query';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { bookmarkPost, undoBookmark, updatePost } from '@/actions/feed.actions';
 
 // --- Types ---
 export interface PostAuthor {
@@ -25,8 +26,9 @@ export interface Post {
     parentId: string | null;
     repostOfId: string | null;
     deletedAt?: string | null;
-    likesCount: number;
-    repliesCount: number;
+    likesCount   : number;
+    dislikesCount: number;
+    repliesCount : number;
     repostsCount: number;
     createdAt: string;
     authorId: string;
@@ -87,9 +89,15 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const canDelete = post.authorId === myUserId;
 
     const [liked, setLiked] = useState(false);
+    const [disliked, setDisliked] = useState(false);
     const [likeCount, setLikeCount] = useState(displayPost.likesCount ?? 0);
+    const [dislikeCount, setDislikeCount] = useState(displayPost.dislikesCount ?? 0);
     const [repostCount, setRepostCount] = useState(displayPost.repostsCount ?? 0);
     const [reposted, setReposted] = useState(false);
+    const [bookmarked, setBookmarked] = useState(false);
+
+    const [editing, setEditing] = useState(false);
+    const [editContent, setEditContent] = useState(displayPost.content || '');
 
     const [showReplies, setShowReplies] = useState(false);
     const [replying, setReplying] = useState(false);
@@ -104,8 +112,10 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const totalReplies = displayPost.repliesCount ?? 0;
 
     useEffect(() => {
-        setLiked(displayPost.reactions?.some(r => r.userId === myUserId) ?? false);
+        setLiked(displayPost.reactions?.some(r => r.userId === myUserId && r.type === 'like') ?? false);
+        setDisliked(displayPost.reactions?.some(r => r.userId === myUserId && r.type === 'dislike') ?? false);
         setLikeCount(displayPost.likesCount ?? 0);
+        setDislikeCount(displayPost.dislikesCount ?? 0);
         setRepostCount(displayPost.repostsCount ?? 0);
         setReposted(isPureRepost && post.authorId === myUserId);
     }, [displayPost, post, myUserId, isPureRepost]);
@@ -113,12 +123,49 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const wasLiked = liked;
+        const wasDisliked = disliked;
+        
+        // Optimistic toggle
         setLiked(!wasLiked);
         setLikeCount(c => wasLiked ? c - 1 : c + 1);
+        if (wasDisliked) {
+            setDisliked(false);
+            setDislikeCount(c => c - 1);
+        }
+
         const res = await reactToPost(displayPost.id, 'like');
         if (res.error) {
             setLiked(wasLiked);
             setLikeCount(c => wasLiked ? c + 1 : c - 1);
+            if (wasDisliked) {
+                setDisliked(true);
+                setDislikeCount(c => c + 1);
+            }
+            toast({ title: res.error, variant: 'destructive' });
+        }
+    };
+
+    const handleDislike = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const wasLiked = liked;
+        const wasDisliked = disliked;
+
+        // Optimistic toggle
+        setDisliked(!wasDisliked);
+        setDislikeCount(c => wasDisliked ? c - 1 : c + 1);
+        if (wasLiked) {
+            setLiked(false);
+            setLikeCount(c => c - 1);
+        }
+
+        const res = await reactToPost(displayPost.id, 'dislike');
+        if (res.error) {
+            setDisliked(wasDisliked);
+            setDislikeCount(c => wasDisliked ? c + 1 : c - 1);
+            if (wasLiked) {
+                setLiked(true);
+                setLikeCount(c => c + 1);
+            }
             toast({ title: res.error, variant: 'destructive' });
         }
     };
@@ -126,28 +173,86 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const handleRepostToggle = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const wasReposted = reposted;
-        setReposted(!wasReposted);
-        setRepostCount(c => wasReposted ? c - 1 : c + 1);
+        
+        if (wasReposted) {
+             // Ask confirmation via toast for undo
+             toast({
+                 title: "Undo repost?",
+                 action: (
+                     <Button size="sm" variant="destructive" onClick={async () => {
+                         setReposted(false);
+                         setRepostCount(c => c - 1);
+                         const res = await undoRepost(displayPost.id);
+                         if (res.error) {
+                             setReposted(true);
+                             setRepostCount(c => c + 1);
+                             toast({ title: res.error, variant: 'destructive' });
+                         } else {
+                             toast({ title: "Repost undone" });
+                             queryClient.invalidateQueries({ queryKey: ['feed'] });
+                         }
+                     }}>Confirm Undo</Button>
+                 )
+             });
+             return;
+        }
 
+        setReposted(true);
+        setRepostCount(c => c + 1);
         const res = await repostPost(displayPost.id);
         if (res.error) {
-            setReposted(wasReposted);
-            setRepostCount(c => wasReposted ? c + 1 : c - 1);
+            setReposted(false);
+            setRepostCount(c => c - 1);
             toast({ title: res.error, variant: 'destructive' });
+        } else {
+            toast({ title: "Reposted!" });
         }
         queryClient.invalidateQueries({ queryKey: ['feed'] });
     };
 
     const handleDelete = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!confirm("Delete this vibe?")) return;
-        const res = await deletePost(post.id);
+        toast({
+            title: "Delete this vibe?",
+            description: "You can't undo this action from the feed.",
+            action: (
+                <Button variant="destructive" size="sm" onClick={async () => {
+                    const res = await deletePost(post.id);
+                    if (res.error) {
+                        toast({ title: res.error, variant: 'destructive' });
+                    } else {
+                        toast({ title: "Vibe deleted" });
+                        queryClient.invalidateQueries({ queryKey: ['feed'] });
+                    }
+                }}>Confirm Delete</Button>
+            )
+        });
+    };
+
+    const handleBookmark = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const wasBookmarked = bookmarked;
+        setBookmarked(!wasBookmarked);
+        const res = wasBookmarked ? await undoBookmark(displayPost.id) : await bookmarkPost(displayPost.id);
+        if (res.error) {
+            setBookmarked(wasBookmarked);
+            toast({ title: res.error, variant: "destructive" });
+        } else {
+            toast({ title: wasBookmarked ? "Removed from bookmarks" : "Saved to bookmarks" });
+        }
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editContent.trim()) return;
+        setSubmitting(true);
+        const res = await updatePost(post.id, editContent.trim());
+        setSubmitting(false);
         if (res.error) {
             toast({ title: res.error, variant: 'destructive' });
         } else {
-            toast({ title: "Vibe deleted" });
+            toast({ title: "Vibe updated" });
+            setEditing(false);
             queryClient.invalidateQueries({ queryKey: ['feed'] });
-            if (post.parentId) queryClient.invalidateQueries({ queryKey: ['replies', post.parentId] });
         }
     };
 
@@ -245,20 +350,37 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="glass-card border-border shadow-2xl">
-                                    {canDelete && <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>}
-                                    <DropdownMenuItem className="gap-2 cursor-pointer focus:bg-primary/10 focus:text-primary font-bold"><Bookmark className="w-4 h-4" /> Bookmark</DropdownMenuItem>
+                                    {canDelete && (
+                                        <>
+                                            <DropdownMenuItem onClick={() => setEditing(true)} className="gap-2 cursor-pointer focus:bg-primary/10 font-bold"><Edit3 className="w-4 h-4" /> Edit</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>
+                                        </>
+                                    )}
+                                    <DropdownMenuItem onClick={handleBookmark} className={`gap-2 cursor-pointer focus:bg-primary/10 font-bold ${bookmarked ? 'text-primary' : ''}`}>
+                                        <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} /> {bookmarked ? 'Unbookmark' : 'Bookmark'}
+                                    </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </header>
 
-                        {isPureRepost && !post.repostOf ? <QuotePost isDeleted /> : (
+                        {editing ? (
+                             <div className="mt-2 space-y-3">
+                                 <Textarea autoFocus className="bg-muted/30 border-border focus-visible:ring-primary rounded-xl" value={editContent} onChange={e => setEditContent(e.target.value)} />
+                                 <div className="flex justify-end gap-2">
+                                     <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="rounded-full">Cancel</Button>
+                                     <Button size="sm" onClick={handleSaveEdit} disabled={!editContent.trim() || submitting} className="rounded-full bg-primary font-black uppercase text-[10px] tracking-widest h-8 px-6">
+                                         {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save Changes'}
+                                     </Button>
+                                 </div>
+                             </div>
+                        ) : isPureRepost && !post.repostOf ? <QuotePost isDeleted /> : (
                             <>
                                 {displayPost.content && <p className={`${depth > 0 ? 'text-[14px]' : 'text-[15px]'} text-foreground/90 leading-normal mb-2 break-words`}>{displayPost.content}</p>}
                                 {isQuotePost && <QuotePost post={post.repostOf} />}
                             </>
                         )}
 
-                        <footer className="flex items-center justify-between max-w-sm pt-1 text-muted-foreground">
+                        <footer className="flex items-center justify-between max-w-sm pt-1 text-muted-foreground mt-1">
                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(v => !v); setQuoting(false); setShowReplies(true); }} className="h-8 px-2 gap-2 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors group">
                                 <MessageCircle className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
                                 {totalReplies > 0 && <span className="text-xs font-bold">{totalReplies}</span>}
@@ -275,10 +397,16 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                                     <DropdownMenuItem onClick={() => { setQuoting(true); setReplying(false); }} className="gap-3 cursor-pointer p-3 focus:bg-primary/10 focus:text-primary rounded-lg transition-all"><Edit3 className="w-5 h-5" /><div className="flex flex-col"><span className="font-bold text-sm tracking-tight">Quote</span></div></DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                            <Button variant="ghost" size="sm" onClick={handleLike} className={`h-8 px-2 gap-2 rounded-full transition-colors group ${liked ? 'text-pink-600' : 'hover:text-pink-600 hover:bg-pink-600/10'}`}>
-                                <Heart className={`w-4.5 h-4.5 group-hover:scale-110 transition-transform ${liked ? 'fill-current scale-110' : ''}`} />
-                                {likeCount > 0 && <span className="text-xs font-bold">{likeCount}</span>}
-                            </Button>
+                            <div className="flex items-center gap-1 group">
+                                <Button variant="ghost" size="sm" onClick={handleLike} className={`h-8 px-2 gap-2 rounded-full transition-colors ${liked ? 'text-pink-600 bg-pink-600/5' : 'hover:text-pink-600 hover:bg-pink-600/10'}`}>
+                                    <ThumbsUp className={`w-4 h-4 group-hover:scale-110 transition-transform ${liked ? 'fill-current scale-110' : ''}`} />
+                                    {likeCount > 0 && <span className="text-xs font-bold">{likeCount}</span>}
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={handleDislike} className={`h-8 px-2 gap-2 rounded-full transition-colors ${disliked ? 'text-amber-600 bg-amber-600/5' : 'hover:text-amber-600 hover:bg-amber-600/10'}`}>
+                                    <ThumbsDown className={`w-4 h-4 group-hover:scale-110 transition-transform ${disliked ? 'fill-current scale-110' : ''}`} />
+                                    {dislikeCount > 0 && <span className="text-xs font-bold">{dislikeCount}</span>}
+                                </Button>
+                            </div>
                             <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors"><Share2 className="w-4.5 h-4.5" /></Button>
                         </footer>
 
