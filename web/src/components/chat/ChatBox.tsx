@@ -5,7 +5,7 @@ import { useChatStore, Message } from '@/store/useChatStore';
 import { socket } from '@/lib/socket';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Smile, Maximize2, Minimize2, Shield, UserPlus, Check, Loader2, Flag, Sparkles } from 'lucide-react';
+import { Send, Smile, Maximize2, Minimize2, Shield, UserPlus, Check, Loader2, Flag } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useSession } from "@/components/layout/SessionProvider";
@@ -48,31 +48,9 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
     const { data: sessionData } = useSession();
     const [text, setText] = useState('');
     const [isMinimized, setIsMinimized] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [vibeSaved, setVibeSaved] = useState(false);
-    
     // Select specific state to minimize re-renders
     const session = useChatStore(state => state.session);
     const addMessage = useChatStore(state => state.addMessage);
-
-    const handleSaveVibe = () => {
-        if (!session.strangerId || isSaving || vibeSaved) return;
-        setIsSaving(true);
-        
-        socket.emit('save-vibe', { 
-            to: session.strangerId, 
-            transcript: session.messages 
-        });
-
-        toast({
-            title: "Remembrance Signaled!",
-            description: "If they also choose to remember, this vibe will be archived.",
-            className: "bg-vibe-gradient text-white border-none shadow-glow"
-        });
-
-        // Local timeout to prevent spam
-        setTimeout(() => setIsSaving(false), 2000);
-    };
 
     const queryClient = useQueryClient();
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -225,21 +203,6 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 md:gap-2">
-                                    <Button
-                                        onClick={handleSaveVibe}
-                                        disabled={isSaving || session.vibeSaved || session.isDirectCall}
-                                        variant="ghost"
-                                        size="icon"
-                                        className={cn(
-                                            "h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl transition-all border",
-                                            session.vibeSaved 
-                                                ? "bg-amber-500/20 text-amber-500 border-amber-500/20" 
-                                                : "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/60 border-border"
-                                        )}
-                                        title="Remember this Vibe"
-                                    >
-                                        <Sparkles className={cn("w-4 h-4 md:w-5 md:h-5", isSaving && "animate-pulse")} />
-                                    </Button>
                                     <Button
                                         onClick={onReport}
                                         variant="ghost"
