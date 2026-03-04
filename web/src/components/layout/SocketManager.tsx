@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { socket } from "@/lib/socket";
 import { useChatStore } from "@/store/useChatStore";
 import { useSession } from "@/components/layout/SessionProvider";
@@ -10,9 +10,18 @@ import { webrtc } from "@/lib/webrtc";
 
 export function SocketManager({ children }: { children: React.ReactNode }) {
     const { data: sessionData } = useSession();
-    const { setIncomingCall, setOutgoingCall, setMatched, disconnect } = useChatStore();
-    const router = useRouter();
     const token = sessionData?.session?.access_token;
+
+    // ✅ FIX: useRef for router + store actions to prevent listener churn
+    const routerRef = useRef(useRouter());
+    const storeRef = useRef(useChatStore.getState());
+
+    // Keep refs current without triggering re-renders
+    useEffect(() => {
+        return useChatStore.subscribe((state) => {
+            storeRef.current = state;
+        });
+    }, []);
 
     useEffect(() => {
         if (!token) {
@@ -24,28 +33,46 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
         if (!socket.connected) socket.connect();
 
         // 📞 CALL SIGNALING
-        const handleCallMade = (data: any) => setIncomingCall(data);
-        const handleCallAccepted = () => {
-            setOutgoingCall(null);
-            router.push("/chat");
+        const handleCallMade = (data: any) => {
+            console.log("[SocketManager] Incoming call from:", data.fromName);
+            storeRef.current.setIncomingCall(data);
         };
+
+        const handleCallAccepted = (data: any) => {
+            console.log("[SocketManager] Call accepted by peer");
+            storeRef.current.setOutgoingCall(null);
+            routerRef.current.push("/chat");
+        };
+
         const handleCallRejected = () => {
-             toast.error("Vibe Declined", { description: "User is not active right now." });
-             setOutgoingCall(null);
+            console.log("[SocketManager] Call rejected");
+            toast.error("Vibe Declined", { description: "User is not available right now." });
+            storeRef.current.setOutgoingCall(null);
         };
-        const handleCallCancelled = () => setIncomingCall(null);
+
+        const handleCallCancelled = () => {
+            console.log("[SocketManager] Call cancelled by caller");
+            storeRef.current.setIncomingCall(null);
+        };
 
         // 📡 WEBRTC SIGNALING (GLOBAL)
-        const handleOffer = async ({ from, sdp }: { from: string, sdp: any }) => {
-            console.log("[SocketManager] Receiving Offer from:", from);
+        const handleOffer = async ({ from, sdp }: { from: string; sdp: any }) => {
+            console.log("[SocketManager] WebRTC offer from:", from);
             await webrtc.handleOffer(from, sdp);
         };
+
         const handleAnswer = async ({ sdp }: { sdp: any }) => {
-            console.log("[SocketManager] Receiving Answer...");
+            console.log("[SocketManager] WebRTC answer received");
             await webrtc.handleAnswer(sdp);
         };
+
+        // ✅ FIX: Event name matches backend — `iceCandidate` not `ice-candidate`
         const handleIceCandidate = async ({ candidate }: { candidate: any }) => {
             await webrtc.handleIceCandidate(candidate);
+        };
+
+        const handleConnectError = (err: any) => {
+            console.error("[SocketManager] Connection error:", err.message);
         };
 
         socket.on("call-made", handleCallMade);
@@ -54,7 +81,8 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
         socket.on("call-cancelled", handleCallCancelled);
         socket.on("offer", handleOffer);
         socket.on("answer", handleAnswer);
-        socket.on("ice-candidate", handleIceCandidate);
+        socket.on("iceCandidate", handleIceCandidate);
+        socket.on("connect_error", handleConnectError);
 
         return () => {
             socket.off("call-made", handleCallMade);
@@ -63,9 +91,10 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
             socket.off("call-cancelled", handleCallCancelled);
             socket.off("offer", handleOffer);
             socket.off("answer", handleAnswer);
-            socket.off("ice-candidate", handleIceCandidate);
+            socket.off("iceCandidate", handleIceCandidate);
+            socket.off("connect_error", handleConnectError);
         };
-    }, [token, setIncomingCall, setOutgoingCall, router]);
+    }, [token]); // ✅ FIX: Only `token` as dependency — no router, no store actions
 
     return <>{children}</>;
 }

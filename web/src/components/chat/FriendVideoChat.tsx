@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { webrtc } from '@/lib/webrtc';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export function FriendVideoChat() {
     const session = useChatStore(state => state.session);
@@ -21,52 +21,44 @@ export function FriendVideoChat() {
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [videoEnabled, setVideoEnabled] = useState(true);
 
-    const handlePeerDisconnect = useCallback(() => {
-        toast.info(`${session.peerName || 'Friend'} disconnected`, { description: 'The vibe has ended.' });
-        disconnect();
-        webrtc.cleanup();
-        router.push('/dms');
-    }, [disconnect, session.peerName, router]);
-
     const handleClose = useCallback(() => {
         disconnect();
         webrtc.cleanup();
         router.push('/dms');
     }, [disconnect, router]);
 
+    // Peer disconnect listener
     useEffect(() => {
         if (!socket) return;
-        socket.on('peerDisconnected', handlePeerDisconnect);
-        socket.on('call-rejected', () => {
-            toast.error('Call rejected');
-            handleClose();
-        });
 
-        // Handsake logic
+        const onPeerDisconnect = () => {
+            toast.info(`${session.peerName || 'Friend'} left`, { description: 'The vibe has ended.' });
+            handleClose();
+        };
+
+        socket.on('peerDisconnected', onPeerDisconnect);
+        return () => { socket.off('peerDisconnected', onPeerDisconnect); };
+    }, [socket, session.peerName, handleClose]);
+
+    // WebRTC handshake: initiator sends offer
+    useEffect(() => {
         if (session.isMatched && session.isInitiator && session.strangerId) {
-            console.log("[FriendChat] Handshaking...");
+            console.log("[FriendChat] I am the initiator. Sending offer in 1s...");
             const timer = setTimeout(() => {
                 webrtc.initiateOffer(session.strangerId!);
             }, 1000);
             return () => clearTimeout(timer);
         }
+    }, [session.isMatched, session.isInitiator, session.strangerId]);
 
-        return () => {
-            socket.off('peerDisconnected');
-            socket.off('call-rejected');
-        };
-    }, [socket, handlePeerDisconnect, handleClose, session.isMatched, session.isInitiator, session.strangerId]);
+    // Audio/Video toggle
+    useEffect(() => { webrtc.toggleAudio(audioEnabled); }, [audioEnabled]);
+    useEffect(() => { webrtc.toggleVideo(videoEnabled); }, [videoEnabled]);
 
+    // Cleanup on unmount
     useEffect(() => {
-        return () => {
-            webrtc.cleanup();
-        };
+        return () => { webrtc.cleanup(); };
     }, []);
-
-    useEffect(() => {
-        webrtc.toggleAudio(audioEnabled);
-        webrtc.toggleVideo(videoEnabled);
-    }, [audioEnabled, videoEnabled]);
 
     return (
         <div className="h-screen w-full flex flex-col bg-[#050505] text-white selection:bg-primary/50 transition-colors duration-1000 relative overflow-hidden">
@@ -102,34 +94,45 @@ export function FriendVideoChat() {
                 </div>
             </header>
 
+            {/* Main */}
             <main className="flex-1 relative flex items-center justify-center p-6 md:p-12 gap-6 md:gap-10">
-                {/* Glow Background */}
+                {/* Glow */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                     <div className="w-[60vw] h-[60vw] bg-primary/10 rounded-full blur-[180px] opacity-40 animate-pulse" />
                 </div>
 
                 <div className="w-full h-full max-w-[1700px] flex flex-col md:flex-row gap-6 md:gap-10 items-center justify-center pt-24 md:pt-32 relative z-10 overflow-hidden">
                     {/* LOCAL */}
-                    <motion.div initial={{ x: -60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 100 }} className="w-full md:w-[48%] h-[40vh] md:h-full max-h-[85vh] rounded-[60px] md:rounded-[80px] overflow-hidden shadow-[0_60px_100px_rgba(0,0,0,0.9)] border border-white/5 group relative">
+                    <motion.div
+                        initial={{ x: -60, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 100 }}
+                        className="w-full md:w-[48%] h-[40vh] md:h-full max-h-[85vh] rounded-[60px] md:rounded-[80px] overflow-hidden shadow-[0_60px_100px_rgba(0,0,0,0.9)] border border-white/5 group relative"
+                    >
                         <VideoPanel isLocal className={cn("w-full h-full border-none transition-transform duration-700 group-hover:scale-[1.02]", !videoEnabled && "grayscale opacity-40")} />
                         <div className="absolute inset-x-0 bottom-0 p-10 bg-gradient-to-t from-black via-black/40 to-transparent">
-                             <p className="text-[12px] font-black uppercase tracking-[0.5em] text-white/50 italic">You (Exclusive)</p>
+                            <p className="text-[12px] font-black uppercase tracking-[0.5em] text-white/50 italic">You (Exclusive)</p>
                         </div>
                     </motion.div>
 
                     {/* REMOTE */}
-                    <motion.div initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 100, delay: 0.1 }} className="w-full md:w-[48%] h-[40vh] md:h-full max-h-[85vh] rounded-[60px] md:rounded-[80px] overflow-hidden shadow-[0_60px_100px_rgba(0,0,0,0.9)] border border-white/5 group relative">
+                    <motion.div
+                        initial={{ x: 60, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 100, delay: 0.1 }}
+                        className="w-full md:w-[48%] h-[40vh] md:h-full max-h-[85vh] rounded-[60px] md:rounded-[80px] overflow-hidden shadow-[0_60px_100px_rgba(0,0,0,0.9)] border border-white/5 group relative"
+                    >
                         <VideoPanel isMatched={session.isMatched} className="w-full h-full border-none transition-transform duration-700 group-hover:scale-[1.02]" />
                         <div className="absolute inset-x-0 bottom-0 p-10 bg-gradient-to-t from-black via-black/40 to-transparent flex justify-between items-end">
                             <div className="flex flex-col gap-2">
                                 <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white leading-none">{session.peerName || 'Buddy'}</h3>
                                 <div className="flex items-center gap-2">
-                                     <Zap className="w-3 h-3 text-emerald-400 animate-pulse" />
-                                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/80 leading-none">Vibe Established</span>
+                                    <Zap className="w-3 h-3 text-emerald-400 animate-pulse" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/80 leading-none">Vibe Established</span>
                                 </div>
                             </div>
                             <div className="bg-white/5 p-4 rounded-3xl backdrop-blur-3xl border border-white/5">
-                                 <ShieldCheck className="w-8 h-8 text-emerald-500/30" />
+                                <ShieldCheck className="w-8 h-8 text-emerald-500/30" />
                             </div>
                         </div>
                     </motion.div>
