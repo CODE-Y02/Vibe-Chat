@@ -5,7 +5,7 @@ import { useChatStore, Message } from '@/store/useChatStore';
 import { socket } from '@/lib/socket';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Smile, Maximize2, Minimize2, Shield, UserPlus, Check, Loader2, Flag } from 'lucide-react';
+import { Send, Smile, Maximize2, Minimize2, Shield, UserPlus, Check, Loader2, Flag, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useSession } from "@/components/layout/SessionProvider";
@@ -48,11 +48,32 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
     const { data: sessionData } = useSession();
     const [text, setText] = useState('');
     const [isMinimized, setIsMinimized] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [vibeSaved, setVibeSaved] = useState(false);
     
     // Select specific state to minimize re-renders
     const session = useChatStore(state => state.session);
     const addMessage = useChatStore(state => state.addMessage);
-    
+
+    const handleSaveVibe = () => {
+        if (!session.strangerId || isSaving || vibeSaved) return;
+        setIsSaving(true);
+        
+        socket.emit('save-vibe', { 
+            to: session.strangerId, 
+            transcript: session.messages 
+        });
+
+        toast({
+            title: "Remembrance Signaled!",
+            description: "If they also choose to remember, this vibe will be archived.",
+            className: "bg-vibe-gradient text-white border-none shadow-glow"
+        });
+
+        // Local timeout to prevent spam
+        setTimeout(() => setIsSaving(false), 2000);
+    };
+
     const queryClient = useQueryClient();
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -93,15 +114,19 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
         const content = text.trim();
         if (!content || !session.isMatched || !session.strangerId) return;
 
+        const myId = sessionData?.internalId || 'me';
         const message: Message = {
             id: Date.now().toString(),
-            senderId: sessionData?.user?.id || 'me',
+            senderId: myId,
             text: content,
             timestamp: Date.now()
         };
 
         addMessage(message);
         
+        // Stop typing immediately on send
+        socket.emit('typing', { to: session.strangerId, isTyping: false });
+
         if (session.isDirectCall) {
             try {
                 await sendMessage(session.strangerId, content);
@@ -116,6 +141,18 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
         setText('');
     };
 
+    // 🟢 PREMIUM: Typing Indicator Logic
+    useEffect(() => {
+        if (!session.strangerId || !session.isMatched) return;
+
+        const isTyping = text.length > 0;
+        const timeout = setTimeout(() => {
+            socket.emit('typing', { to: session.strangerId, isTyping });
+        }, 300); // Debounce typing trigger
+
+        return () => clearTimeout(timeout);
+    }, [text, session.strangerId, session.isMatched]);
+
     return (
         <AnimatePresence mode="wait">
             {isMinimized ? (
@@ -124,7 +161,7 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
                     initial={{ scale: 0.8, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.8, opacity: 0, y: 20 }}
-                    className="absolute bottom-4 right-4 md:bottom-12 md:right-12 w-[calc(100%-2rem)] md:w-80 z-50"
+                    className="absolute bottom-4 right-4 md:bottom-12 md:right-12 w-[calc(100%-2rem)] md:w-80 z-50 pointer-events-auto"
                 >
                     <Button
                         onClick={() => setIsMinimized(false)}
@@ -143,7 +180,7 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
                     initial={{ opacity: 0, y: 30, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 30, scale: 0.95 }}
-                    className="flex flex-col h-full rounded-t-[2.5rem] md:rounded-[3rem] overflow-hidden glass-card border border-border/20 relative bg-card/60 backdrop-blur-3xl"
+                    className="flex flex-col h-full rounded-t-[2.5rem] md:rounded-[3rem] overflow-hidden glass-card border border-border/20 relative bg-card/60 backdrop-blur-3xl pointer-events-auto"
                 >
                     {!session.isMatched ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-8 md:p-12 space-y-6 md:space-y-8">
@@ -178,7 +215,7 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
                                             <span className="absolute bottom-0.5 right-0.5 w-3 h-3 md:w-3.5 md:h-3.5 bg-emerald-500 border-2 md:border-[3px] border-card rounded-full"></span>
                                         </motion.div>
                                     </div>
-                                    <div>
+                                    <div className="min-w-0">
                                         <h3 className="font-black text-[9px] md:text-[10px] tracking-[0.2em] uppercase text-foreground/80 truncate">
                                             {session.isDirectCall ? (session.peerName || 'Friend') : 'Stranger'}
                                         </h3>
@@ -188,6 +225,21 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 md:gap-2">
+                                    <Button
+                                        onClick={handleSaveVibe}
+                                        disabled={isSaving || session.vibeSaved || session.isDirectCall}
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn(
+                                            "h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl transition-all border",
+                                            session.vibeSaved 
+                                                ? "bg-amber-500/20 text-amber-500 border-amber-500/20" 
+                                                : "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/60 border-border"
+                                        )}
+                                        title="Remember this Vibe"
+                                    >
+                                        <Sparkles className={cn("w-4 h-4 md:w-5 md:h-5", isSaving && "animate-pulse")} />
+                                    </Button>
                                     <Button
                                         onClick={onReport}
                                         variant="ghost"
@@ -222,7 +274,7 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-1 no-scrollbar bg-gradient-to-b from-transparent to-primary/[0.03]">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-1 no-scrollbar bg-gradient-to-b from-transparent to-primary/[0.03] relative">
                                 <AnimatePresence initial={false}>
                                     {session.messages.length === 0 ? (
                                         <motion.div
@@ -238,15 +290,35 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
                                             <MessageBubble
                                                 key={msg.id}
                                                 message={msg}
-                                                isOwn={msg.senderId === (sessionData?.user?.id || 'me')}
+                                                isOwn={msg.senderId === (sessionData?.internalId || 'me')}
                                             />
                                         ))
                                     )}
                                 </AnimatePresence>
-                                <div ref={bottomRef} />
+                                <div ref={bottomRef} className="h-10" />
+                                
+                                {/* 🟢 PREMIUM: PEER TYING INDICATOR */}
+                                <AnimatePresence>
+                                    {session.isPeerTyping && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 10 }}
+                                            className="absolute bottom-24 left-8 flex items-center gap-2"
+                                        >
+                                            <div className="flex gap-1 bg-muted/20 backdrop-blur-xl border border-border/10 p-2.5 rounded-full rounded-bl-sm">
+                                                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-1.5 h-1.5 bg-primary rounded-full" />
+                                                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-1.5 h-1.5 bg-primary/60 rounded-full" />
+                                                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-1.5 h-1.5 bg-primary/30 rounded-full" />
+                                            </div>
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground animate-pulse leading-none">Vibe Buddy Typing...</span>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             <form className="p-4 md:p-6 border-t border-border bg-muted/20 flex gap-3 md:gap-4 items-center z-10" onSubmit={handleSend}>
+
                                 <Input
                                     value={text}
                                     onChange={(e) => setText(e.target.value)}

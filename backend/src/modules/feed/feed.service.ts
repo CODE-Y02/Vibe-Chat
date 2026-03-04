@@ -169,20 +169,26 @@ export class FeedService {
     }
 
     async getFeed(userId: string, cursor?: string, limit = 20) {
+        // 🚀 SCALING FIX: Fetch friend IDs first to avoid slow OR joins in global post search
+        const friendships = await prisma.friend.findMany({
+            where: {
+                OR: [
+                    { userId: userId, status: 'ACCEPTED' },
+                    { friendId: userId, status: 'ACCEPTED' }
+                ]
+            },
+            select: { userId: true, friendId: true }
+        });
+
+        const friendIds = friendships.map(f => f.userId === userId ? f.friendId : f.userId);
+        
+        // Include self
+        const allowedAuthorIds = [...friendIds, userId];
+
         return prisma.post.findMany({
             where: {
                 deletedAt: null,
-                OR: [
-                    { authorId: userId },
-                    {
-                        author: {
-                            OR: [
-                                { friendOf: { some: { userId: userId, status: 'ACCEPTED' } } },
-                                { friends: { some: { friendId: userId, status: 'ACCEPTED' } } }
-                            ]
-                        }
-                    }
-                ],
+                authorId: { in: allowedAuthorIds },
                 parentId: null,
             },
             orderBy: { createdAt: 'desc' },

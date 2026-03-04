@@ -36,6 +36,8 @@ const siteItems = [
     { href: "/blog", label: "Blog" },
 ];
 
+import { useFeedStore } from "@/store/useFeedStore";
+
 export function Navbar({ className }: { className?: string }) {
     const pathname = usePathname();
     const { data: session } = useSession();
@@ -47,6 +49,15 @@ export function Navbar({ className }: { className?: string }) {
     const [mounted, setMounted] = useState(false);
     const { socket } = useSocket();
     const { toast } = useToast();
+
+    const { hasNewPosts, setHasNewPosts } = useFeedStore();
+
+    // Clear new posts when visiting feed
+    useEffect(() => {
+        if (pathname === "/feed") {
+            setHasNewPosts(false);
+        }
+    }, [pathname, setHasNewPosts]);
 
     // Prevent hydration mismatch
     useEffect(() => setMounted(true), []);
@@ -75,14 +86,20 @@ export function Navbar({ className }: { className?: string }) {
             });
         };
 
+        const onNewPost = () => {
+            setHasNewPosts(true);
+        };
+
         socket.on('friend_request', onFriendRequest);
         socket.on('friend_accepted', onFriendAccepted);
+        socket.on('new_post', onNewPost);
 
         return () => {
             socket.off('friend_request', onFriendRequest);
             socket.off('friend_accepted', onFriendAccepted);
+            socket.off('new_post', onNewPost);
         };
-    }, [socket, toast]);
+    }, [socket, toast, setHasNewPosts]);
 
     const toggleTheme = () => {
         setTheme(theme === "dark" ? "light" : "dark");
@@ -131,6 +148,7 @@ export function Navbar({ className }: { className?: string }) {
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
+                            const isFeed = item.label === "Feed";
                             return (
                                 <Link key={item.href} href={item.href}>
                                     <div className="relative">
@@ -143,6 +161,9 @@ export function Navbar({ className }: { className?: string }) {
                                         >
                                             <Icon className="w-4 h-4" />
                                             {item.label}
+                                            {isFeed && hasNewPosts && (
+                                                <span className="absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)] border border-white/20" />
+                                            )}
                                         </motion.span>
                                         {isActive && (
                                             <motion.div

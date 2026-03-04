@@ -1,11 +1,40 @@
 import { Context } from 'hono';
 import { feedService } from './feed.service.js';
 import { Env } from '../../types.js';
+import { AppError } from '../../lib/utils.js';
+import prisma from '../../lib/prisma.js';
+
+let _io: any = null;
+export const setFeedIO = (io: any) => { _io = io; };
 
 export const createPost = async (c: Context<Env>) => {
     const { userId } = c.get('user');
     const { content } = (await c.req.json()) as { content: string };
-    return c.json(await feedService.createPost(userId, content), 201);
+    if (!content?.trim()) throw new AppError(400, 'Content is required');
+
+    const post = await feedService.createPost(userId, content);
+
+    // 🔔 REAL-TIME: Signal friends only (No fan-out of heavy content)
+    if (_io) {
+        const friendships = await prisma.friend.findMany({
+            where: {
+                OR: [
+                    { userId, status: 'ACCEPTED' },
+                    { friendId: userId, status: 'ACCEPTED' }
+                ]
+            },
+            select: { userId: true, friendId: true }
+        });
+
+        const friendIds = friendships.map((f: { userId: string; friendId: string }) => f.userId === userId ? f.friendId : f.userId);
+        
+        // Notify each friend room
+        friendIds.forEach((fid: string) => {
+            _io.to(fid).emit('new_post', { authorId: userId });
+        });
+    }
+
+    return c.json(post, 201);
 };
 
 export const deletePost = async (c: Context<Env>) => {

@@ -29,6 +29,8 @@ model User {
   blocksSent    Block[]    @relation("Blocker")
   blocksReceived Block[]   @relation("Blocked")
   sessions      Session[]
+  memories1     VibeMemory[] @relation("User1Memories")
+  memories2     VibeMemory[] @relation("User2Memories")
 
   @@index([username])
   @@index([email])
@@ -155,4 +157,18 @@ model Block {
 
   @@unique([blockerId, blockedId])
   @@index([blockerId])
+}
+
+model VibeMemory {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  transcript Json     // Array of { senderId, text, timestamp }
+  createdAt DateTime @default(now())
+
+  user1     User     @relation("User1Memories", fields: [user1Id], references: [id])
+  user2     User     @relation("User2Memories", fields: [user2Id], references: [id])
+
+  @@index([user1Id])
+  @@index([user2Id])
 }

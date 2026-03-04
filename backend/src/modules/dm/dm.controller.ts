@@ -15,19 +15,16 @@ export const sendMessage = async (c: Context<Env>) => {
 
     const result = await dmService.sendMessage(user.userId, receiverId, content);
 
-    // 🔔 Real-time push to recipient via socket
+    // 🔔 Real-time push to recipient via their dedicated user room
     if (_io) {
-        const recipientSocket = await matchmakingService.getUserSocket(receiverId);
-        if (recipientSocket) {
-            _io.to(recipientSocket).emit('dm', {
-                id: result.id,
-                senderId: user.userId,
-                receiverId,
-                content,
-                createdAt: result.createdAt,
-                isRead: false,
-            });
-        }
+        _io.to(receiverId).emit('dm', {
+            id: result.id,
+            senderId: user.userId,
+            receiverId,
+            content,
+            createdAt: result.createdAt,
+            isRead: false,
+        });
     }
 
     return c.json(result, 201);

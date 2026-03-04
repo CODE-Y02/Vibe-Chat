@@ -16,10 +16,7 @@ export const sendRequest = async (c: Context<Env>) => {
 
     // 🔔 Real-time push to recipient
     if (_io) {
-        const recipientSocket = await matchmakingService.getUserSocket(friendId);
-        if (recipientSocket) {
-            _io.to(recipientSocket).emit('friend_request', { from: user.userId });
-        }
+        _io.to(friendId).emit('friend_request', { from: user.userId });
     }
 
     return c.json(result, 201);
@@ -34,10 +31,7 @@ export const acceptRequest = async (c: Context<Env>) => {
 
     // 🔔 Real-time push to requester
     if (_io) {
-        const recipientSocket = await matchmakingService.getUserSocket(userId);
-        if (recipientSocket) {
-            _io.to(recipientSocket).emit('friend_accepted', { from: user.userId });
-        }
+        _io.to(userId).emit('friend_accepted', { from: user.userId });
     }
 
     return c.json(result);

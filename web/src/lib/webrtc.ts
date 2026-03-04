@@ -11,6 +11,7 @@ class WebRTCClient {
     private onRemoteStreamCallback: StreamCallback | null = null;
     private targetPeerId: string | null = null;
     private setupPromise: Promise<MediaStream> | null = null;
+    private signalingTimeout: ReturnType<typeof setTimeout> | null = null;
 
     // 🟢 ICE Candidate Queue to prevent race conditions
     private iceCandidatesQueue: RTCIceCandidateInit[] = [];
@@ -86,6 +87,7 @@ class WebRTCClient {
         await this.peerConnection?.setLocalDescription(offer);
 
         socket.emit('offer', { to: peerId, sdp: offer });
+        this.startSignalingTimeout();
     }
 
     async handleOffer(from: string, sdp: RTCSessionDescriptionInit) {
@@ -110,6 +112,7 @@ class WebRTCClient {
         await this.peerConnection?.setLocalDescription(answer);
 
         socket.emit('answer', { to: from, sdp: answer });
+        this.startSignalingTimeout();
     }
 
     async handleAnswer(sdp: RTCSessionDescriptionInit) {
@@ -181,8 +184,31 @@ class WebRTCClient {
 
         // Debug state changes
         this.peerConnection.onconnectionstatechange = () => {
-            console.log(`[WebRTC] Connection state: ${this.peerConnection?.connectionState}`);
+            const state = this.peerConnection?.connectionState;
+            console.log(`[WebRTC] Connection state: ${state}`);
+            if (state === 'connected') {
+                this.clearSignalingTimeout();
+            } else if (state === 'failed' || state === 'disconnected') {
+                this.resetPeerConnection();
+            }
         };
+    }
+
+    private startSignalingTimeout() {
+        this.clearSignalingTimeout();
+        this.signalingTimeout = setTimeout(() => {
+            if (this.peerConnection?.connectionState !== 'connected') {
+                console.warn("[WebRTC] Signaling timeout reached. Resetting...");
+                this.resetPeerConnection();
+            }
+        }, 15000);
+    }
+
+    private clearSignalingTimeout() {
+        if (this.signalingTimeout) {
+            clearTimeout(this.signalingTimeout);
+            this.signalingTimeout = null;
+        }
     }
 
     toggleAudio(enabled: boolean) {
@@ -204,6 +230,7 @@ class WebRTCClient {
         }
         this.targetPeerId = null;
         this.onRemoteStreamCallback = null;
+        this.clearSignalingTimeout();
         this.resetSignalingState();
     }
 

@@ -4,13 +4,15 @@ import { useEffect, useRef } from "react";
 import { socket } from "@/lib/socket";
 import { useChatStore } from "@/store/useChatStore";
 import { useSession } from "@/components/layout/SessionProvider";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { webrtc } from "@/lib/webrtc";
+import { useFeedStore } from "@/store/useFeedStore";
 
 export function SocketManager({ children }: { children: React.ReactNode }) {
     const { data: sessionData } = useSession();
     const token = sessionData?.session?.access_token;
+    const setHasNewPosts = useFeedStore((state) => state.setHasNewPosts);
 
     // ✅ FIX: useRef for router + store actions to prevent listener churn
     const routerRef = useRef(useRouter());
@@ -46,7 +48,11 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
 
         const handleCallRejected = () => {
             console.log("[SocketManager] Call rejected");
-            toast.error("Vibe Declined", { description: "User is not available right now." });
+            toast({
+                variant: "destructive",
+                title: "Vibe Declined",
+                description: "User is not available right now."
+            });
             storeRef.current.setOutgoingCall(null);
         };
 
@@ -71,6 +77,32 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
             await webrtc.handleIceCandidate(candidate);
         };
 
+        const handleTyping = ({ isTyping }: { isTyping: boolean }) => {
+            storeRef.current.setPeerTyping(isTyping);
+        };
+
+        const handleNewPost = () => {
+            console.log("[SocketManager] New post signal received");
+            setHasNewPosts(true);
+        };
+
+        const handlePeerWantsToRemember = () => {
+            toast({
+                title: "Mutual Vibe?",
+                description: "The other person wants to remember this vibe. Click the sparkles to archive!",
+                className: "bg-amber-500 text-white border-none shadow-glow",
+            });
+        };
+
+        const handleVibeArchived = () => {
+            toast({
+                title: "Vibe Archived!",
+                description: "This memory has been saved forever.",
+                className: "bg-emerald-500 text-white border-none shadow-glow",
+            });
+            storeRef.current.setVibeSaved(true);
+        };
+
         const handleConnectError = (err: any) => {
             console.error("[SocketManager] Connection error:", err.message);
         };
@@ -82,6 +114,10 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
         socket.on("offer", handleOffer);
         socket.on("answer", handleAnswer);
         socket.on("iceCandidate", handleIceCandidate);
+        socket.on("typing", handleTyping);
+        socket.on("new_post", handleNewPost);
+        socket.on("peer-wants-to-remember", handlePeerWantsToRemember);
+        socket.on("vibe-archived", handleVibeArchived);
         socket.on("connect_error", handleConnectError);
 
         return () => {
@@ -92,9 +128,13 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
             socket.off("offer", handleOffer);
             socket.off("answer", handleAnswer);
             socket.off("iceCandidate", handleIceCandidate);
+            socket.off("typing", handleTyping);
+            socket.off("new_post", handleNewPost);
+            socket.off("peer-wants-to-remember", handlePeerWantsToRemember);
+            socket.off("vibe-archived", handleVibeArchived);
             socket.off("connect_error", handleConnectError);
         };
-    }, [token]); // ✅ FIX: Only `token` as dependency — no router, no store actions
+    }, [token, setHasNewPosts]); // ✅ FIX: Only `token` as dependency — no router, no store actions
 
     return <>{children}</>;
 }

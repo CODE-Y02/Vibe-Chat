@@ -9,11 +9,13 @@ import { registerSignalingHandlers } from './signaling.handler.js';
 import { registerChatHandlers } from './chat.handler.js';
 import { setIO as setDMIO } from '../modules/dm/dm.controller.js';
 import { setFriendIO } from '../modules/friend/friend.controller.js';
+import { setFeedIO } from '../modules/feed/feed.controller.js';
 
 export const setupSockets = (io: Server) => {
     // Share io instance with REST controllers that need to push socket events
     setDMIO(io);
     setFriendIO(io);
+    setFeedIO(io);
 
     // To support 100K users horizontally, we must replicate events across instances
     const pubClient = redis.duplicate();
@@ -47,6 +49,9 @@ export const setupSockets = (io: Server) => {
         const socket = s as AuthenticatedSocket;
         const user = socket.user;
         console.log(`User connected: ${user.userId} (${socket.id})`);
+
+        // 🚀 ROOM ARCHITECTURE: User joins a room named after their ID for direct signaling
+        socket.join(user.userId);
 
         await matchmakingService.setUserSocket(user.userId, socket.id);
         await matchmakingService.updateHeartbeat(user.userId);
