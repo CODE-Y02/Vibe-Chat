@@ -50,6 +50,18 @@ export class FeedService {
         });
     }
 
+    async updatePost(authorId: string, postId: string, content: string) {
+        const post = await prisma.post.findUnique({ where: { id: postId } });
+        if (!post || post.deletedAt) throw new Error('Post not found');
+        if (post.authorId !== authorId) throw new Error('Not authorized');
+
+        return prisma.post.update({
+            where: { id: postId },
+            data: { content },
+            include: this.getPostInclude(authorId),
+        });
+    }
+
     async createReply(authorId: string, parentId: string, content: string) {
         return await prisma.$transaction(async (tx) => {
             const parent = await tx.post.findUnique({ where: { id: parentId, deletedAt: null } });

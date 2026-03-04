@@ -1,38 +1,34 @@
 import prisma from '../../lib/prisma.js';
-import redis from '../../services/redis.service.js';
 import { Message, Prisma } from '@prisma/client';
 
 export class DMService {
     async sendMessage(senderId: string, receiverId: string, content: string): Promise<Message> {
-        const message = await prisma.message.create({
+        return prisma.message.create({
             data: { senderId, receiverId, content },
             include: { sender: true, receiver: true },
         });
-
-        // Invalidate cache for new messaging on both ends
-        await redis.del(`conversations:${senderId}`);
-        await redis.del(`conversations:${receiverId}`);
-
-        return message;
     }
 
     async getMessages(userId: string, peerId: string, page = 1, limit = 50): Promise<Message[]> {
-        return prisma.message.findMany({
+        const messages = await prisma.message.findMany({
             where: {
                 OR: [
                     { senderId: userId, receiverId: peerId },
                     { senderId: peerId, receiverId: userId },
                 ],
             },
-            orderBy: { createdAt: 'asc' },   // oldest first → top-to-bottom like WA
+            orderBy: { createdAt: 'desc' }, // Get latest first for pagination
             skip: (page - 1) * limit,
             take: limit,
             include: { sender: true },
         });
+
+        // Reverse to return chronological order (oldest -> newest limit)
+        return messages.reverse();
     }
 
     async markAsRead(userId: string, peerId: string): Promise<Prisma.BatchPayload> {
-        const result = await prisma.message.updateMany({
+        return prisma.message.updateMany({
             where: {
                 senderId: peerId,
                 receiverId: userId,
@@ -40,15 +36,10 @@ export class DMService {
             },
             data: { isRead: true },
         });
-
-        // Invalidate cache reflecting unread counts correctly on Inbox Screen
-        await redis.del(`conversations:${userId}`);
-
-        return result;
     }
 
     async getUnreadCount(userId: string) {
-        const counts = await prisma.message.groupBy({
+        return prisma.message.groupBy({
             by: ['senderId'],
             where: {
                 receiverId: userId,
@@ -58,52 +49,50 @@ export class DMService {
                 senderId: true,
             },
         });
-        return counts;
     }
 
-    async getConversations(userId: string, page = 1, limit = 20) {
-        const cacheKey = `conversations:${userId}`;
-        const cached = await redis.get(cacheKey);
-        let allConversations: { peer: { id: string; username: string | null; avatar: string | null; }; lastMessage: string; createdAt: Date; isUnread: boolean; }[];
+    async getConversations(userId: string, page = 1, limit = 10) {
+        const offset = (page - 1) * limit;
 
-        if (cached) {
-            allConversations = JSON.parse(cached);
-        } else {
-            const messages = await prisma.message.findMany({
-                where: {
-                    OR: [{ senderId: userId }, { receiverId: userId }],
-                },
-                orderBy: { createdAt: 'desc' },
-                include: { sender: { select: { id: true, username: true, avatar: true } }, receiver: { select: { id: true, username: true, avatar: true } } }
-            });
+        // 🚀 SCALABILITY FIX: Instead of pulling all messages into memory to group them, 
+        // we leverage Postgres's DISTINCT ON natively WITH pagination AND JOINs!
+        const conversationsRaw: any[] = await prisma.$queryRaw`
+            WITH LatestMessages AS (
+                SELECT DISTINCT ON (
+                    CASE WHEN "senderId" < "receiverId" THEN "senderId" ELSE "receiverId" END,
+                    CASE WHEN "senderId" > "receiverId" THEN "senderId" ELSE "receiverId" END
+                )
+                "id", "senderId", "receiverId", "content", "createdAt", "isRead"
+                FROM "Message"
+                WHERE "senderId" = ${userId} OR "receiverId" = ${userId}
+                ORDER BY 
+                    CASE WHEN "senderId" < "receiverId" THEN "senderId" ELSE "receiverId" END,
+                    CASE WHEN "senderId" > "receiverId" THEN "senderId" ELSE "receiverId" END,
+                    "createdAt" DESC
+            )
+            SELECT 
+                lm."content", lm."createdAt", lm."isRead", lm."receiverId", lm."senderId",
+                u."id" as "peerId", u."username" as "peerUsername", u."avatar" as "peerAvatar"
+            FROM LatestMessages lm
+            JOIN "User" u ON u."id" = CASE WHEN lm."senderId" = ${userId} THEN lm."receiverId" ELSE lm."senderId" END
+            ORDER BY lm."createdAt" DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `;
 
-            const conversations = new Map();
-            for (const msg of messages) {
-                const peerId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-                const peer = msg.senderId === userId ? msg.receiver : msg.sender;
+        const conversations = conversationsRaw.map(msg => ({
+            peer: {
+                id: msg.peerId,
+                username: msg.peerUsername,
+                avatar: msg.peerAvatar
+            },
+            lastMessage: msg.content,
+            createdAt: msg.createdAt,
+            isUnread: msg.receiverId === userId && !msg.isRead
+        }));
 
-                if (!conversations.has(peerId)) {
-                    conversations.set(peerId, {
-                        peer,
-                        lastMessage: msg.content,
-                        createdAt: msg.createdAt,
-
-                        // Unread flags
-                        isUnread: msg.receiverId === userId && !msg.isRead
-                    });
-                }
-            }
-
-            allConversations = Array.from(conversations.values());
-            await redis.set(cacheKey, JSON.stringify(allConversations), 'EX', 3600); // Cache whole mapping for 1 hr
-        }
-
-        // Return slice mapped limit for lazy loading
-        const start = (page - 1) * limit;
-        const end = start + limit;
         return {
-            conversations: allConversations.slice(start, end),
-            total: allConversations.length,
+            conversations,
+            total: 0, // Total is omitted to save query time, infinite scroll relies on limit length
             page,
             limit
         };

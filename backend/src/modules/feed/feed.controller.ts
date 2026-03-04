@@ -37,6 +37,19 @@ export const createPost = async (c: Context<Env>) => {
     return c.json(post, 201);
 };
 
+export const updatePost = async (c: Context<Env>) => {
+    const { userId } = c.get('user');
+    const { postId } = c.req.param();
+    const { content } = (await c.req.json()) as { content: string };
+    
+    try {
+        const post = await feedService.updatePost(userId, postId, content);
+        return c.json(post);
+    } catch (err: any) {
+        return c.json({ error: err.message }, 400);
+    }
+};
+
 export const deletePost = async (c: Context<Env>) => {
     const { userId } = c.get('user');
     const { postId } = c.req.param();

@@ -10,12 +10,14 @@ import { registerChatHandlers } from './chat.handler.js';
 import { setIO as setDMIO } from '../modules/dm/dm.controller.js';
 import { setFriendIO } from '../modules/friend/friend.controller.js';
 import { setFeedIO } from '../modules/feed/feed.controller.js';
+import { setUserIO } from '../modules/user/user.controller.js';
 
 export const setupSockets = (io: Server) => {
     // Share io instance with REST controllers that need to push socket events
     setDMIO(io);
     setFriendIO(io);
     setFeedIO(io);
+    setUserIO(io);
 
     // To support 100K users horizontally, we must replicate events across instances
     const pubClient = redis.duplicate();

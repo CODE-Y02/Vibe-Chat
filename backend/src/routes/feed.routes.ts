@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { createPost, deletePost, getFeed, reactToPost, createReply, getReplies, repost, undoRepost } from '../modules/feed/feed.controller.js';
+import { createPost, updatePost, deletePost, getFeed, reactToPost, createReply, getReplies, repost, undoRepost } from '../modules/feed/feed.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import { profanityFilter } from '../middleware/profanity.middleware.js';
 import { Env } from '../types.js';
@@ -25,6 +25,17 @@ feedRoutes.openapi(
         responses: { 201: { description: 'Post created' } }
     }),
     createPost,
+);
+
+// PATCH /feed/:postId — update a post
+feedRoutes.openapi(
+    createRoute({
+        method: 'patch',
+        path: '/:postId',
+        request: { params: postIdParam, body: contentBody },
+        responses: { 200: { description: 'Post updated' }, 400: { description: 'Error' } }
+    }),
+    updatePost,
 );
 
 // DELETE /feed/:postId — delete a post

@@ -1,6 +1,10 @@
 import { Context } from 'hono';
 import { userService } from './user.service.js';
 import { Env } from '../../types.js';
+import prisma from '../../lib/prisma.js';
+
+let _io: any = null;
+export const setUserIO = (io: any) => { _io = io; };
 
 export const getMe = async (c: Context<Env>) => {
     const { userId } = c.get('user');
