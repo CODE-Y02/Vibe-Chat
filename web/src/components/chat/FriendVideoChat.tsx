@@ -22,23 +22,29 @@ export function FriendVideoChat() {
     const [videoEnabled, setVideoEnabled] = useState(true);
 
     const handleClose = useCallback(() => {
+        if (session.strangerId) {
+            socket?.emit('hang-up', { to: session.strangerId });
+        }
         disconnect();
         webrtc.cleanup();
         router.push('/dms');
-    }, [disconnect, router]);
+    }, [disconnect, router, session.strangerId, socket]);
 
     // Peer disconnect listener
     useEffect(() => {
         if (!socket) return;
 
-        const onPeerDisconnect = () => {
-            toast.info(`${session.peerName || 'Friend'} left`, { description: 'The vibe has ended.' });
+        const onHangUp = () => {
             handleClose();
         };
 
-        socket.on('peerDisconnected', onPeerDisconnect);
-        return () => { socket.off('peerDisconnected', onPeerDisconnect); };
-    }, [socket, session.peerName, handleClose]);
+        socket.on('hang-up', onHangUp);
+        socket.on('peerDisconnected', onHangUp);
+        return () => {
+            socket.off('hang-up', onHangUp);
+            socket.off('peerDisconnected', onHangUp);
+        };
+    }, [socket, handleClose]);
 
     // WebRTC handshake: initiator sends offer
     useEffect(() => {
@@ -63,34 +69,28 @@ export function FriendVideoChat() {
     return (
         <div className="h-screen w-full flex flex-col bg-[#050505] text-white selection:bg-primary/50 transition-colors duration-1000 relative overflow-hidden">
             {/* Header */}
-            <header className="absolute top-8 inset-x-0 h-20 md:h-24 z-[70] px-6 md:px-12 flex items-center justify-between pointer-events-none">
-                <div className="pointer-events-auto">
-                    <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-3xl bg-white/5 hover:bg-white/10 border border-white/5 h-14 w-14 md:h-16 md:w-16 shadow-2xl">
-                        <X className="w-6 h-6 text-white" />
-                    </Button>
-                </div>
+            <header className="absolute top-8 inset-x-0 h-20 md:h-24 z-[70] px-6 md:px-12 flex items-center justify-center pointer-events-none">
+                <div className="w-full max-w-[1700px] flex items-center justify-between">
+                    <div className="w-20 hidden md:block" /> {/* Spacing */}
 
-                <div className="pointer-events-auto">
-                    <div className="px-6 md:px-10 py-3 md:py-4 rounded-[2rem] flex items-center gap-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-white/10 backdrop-blur-3xl border border-white/5">
-                        <div className="flex items-center gap-3 pr-6 border-r border-white/10">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.8)] animate-pulse" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.4em] italic text-emerald-400">Exclusive Vibe</span>
-                        </div>
-                        <div className="flex items-center gap-5">
-                            <button onClick={() => setAudioEnabled(!audioEnabled)} className={cn("p-2 transition-all", !audioEnabled && "text-red-500")}>
-                                {audioEnabled ? <Mic className="w-5 h-5 text-emerald-400" /> : <MicOff className="w-5 h-5" />}
-                            </button>
-                            <button onClick={() => setVideoEnabled(!videoEnabled)} className={cn("p-2 transition-all", !videoEnabled && "text-red-500")}>
-                                {videoEnabled ? <VideoIcon className="w-5 h-5 text-emerald-400" /> : <VideoOff className="w-5 h-5" />}
-                            </button>
+                    <div className="pointer-events-auto">
+                        <div className="px-6 md:px-10 py-3 md:py-4 rounded-[2rem] flex items-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-white/10 backdrop-blur-3xl border border-white/5">
+                            <div className="flex items-center gap-5">
+                                <button onClick={() => setAudioEnabled(!audioEnabled)} className={cn("p-2 transition-all", !audioEnabled && "text-red-500")}>
+                                    {audioEnabled ? <Mic className="w-5 h-5 text-emerald-400" /> : <MicOff className="w-5 h-5" />}
+                                </button>
+                                <button onClick={() => setVideoEnabled(!videoEnabled)} className={cn("p-2 transition-all", !videoEnabled && "text-red-500")}>
+                                    {videoEnabled ? <VideoIcon className="w-5 h-5 text-emerald-400" /> : <VideoOff className="w-5 h-5" />}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="pointer-events-auto">
-                    <Button onClick={handleClose} className="rounded-3xl px-8 md:px-12 h-14 md:h-16 font-black uppercase tracking-widest text-[11px] shadow-[0_20px_40px_rgba(239,68,68,0.2)] bg-red-500 hover:bg-red-600 border-none transition-all hover:scale-105 active:scale-95">
-                        END VIBE
-                    </Button>
+                    <div className="pointer-events-auto">
+                        <Button onClick={handleClose} className="rounded-3xl px-8 md:px-12 h-14 md:h-16 font-black uppercase tracking-widest text-[11px] shadow-[0_20px_40px_rgba(239,68,68,0.2)] bg-red-500 hover:bg-red-600 border-none transition-all hover:scale-105 active:scale-95">
+                            END VIBE
+                        </Button>
+                    </div>
                 </div>
             </header>
 

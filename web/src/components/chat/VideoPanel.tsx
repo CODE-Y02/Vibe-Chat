@@ -88,7 +88,6 @@ export const VideoPanel = memo(({ isLocal, className, isMatched = false }: Video
                             <Radio className="w-8 h-8 text-muted-foreground/30 group-hover:text-primary transition-colors" />
                             <div className="absolute inset-0 bg-primary/20 rounded-[24px] animate-ping opacity-20" />
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 italic">Searching Vibe...</p>
                     </motion.div>
                 </div>
             ) : (
@@ -98,85 +97,45 @@ export const VideoPanel = memo(({ isLocal, className, isMatched = false }: Video
                         autoPlay
                         playsInline
                         muted={isLocal}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-all duration-700"
                         style={{ transform: isLocal ? 'scaleX(-1)' : 'none' }}
                     />
 
-                    {!isLocal && (
-                        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <div className="absolute top-6 left-6 flex items-center gap-3 z-20">
+                        <div className="glass px-4 py-2 rounded-xl flex items-center gap-2.5 border border-border/50 shadow-glow-sm">
+                            <div className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                isLocal ? "bg-primary animate-pulse" : (isMatched ? "bg-emerald-500" : "bg-white/20")
+                            )} />
+                        </div>
+
+                        {isMatched && (
                             <motion.div
-                                initial={{ translateY: "-10%" }}
-                                animate={{ translateY: "100%" }}
-                                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-                                className="absolute top-0 left-0 right-0 h-px bg-primary/20 shadow-[0_0_15px_rgba(243,75,59,0.5)] z-10"
-                            />
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
-        <div className={cn("relative w-full aspect-video bg-black rounded-3xl overflow-hidden border-2 border-border/5 shadow-2xl group", className)}>
-            <motion.video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted={isLocal}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 1 }}
-                onLoadedMetadata={(e) => {
-                    const video = e.currentTarget;
-                    video.play().catch(console.error);
-                }}
-                className={cn(
-                    "w-full h-full object-cover transition-all duration-700",
-                    isLocal && "mirror-mode"
-                )}
-            />
-            
-            <AnimatePresence>
-                {(!isMatched && !isLocal) && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-3xl z-20"
-                    >
-                        <div className="flex flex-col items-center gap-6">
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="glass px-4 py-2 rounded-xl flex items-center border border-border/50 shadow-glow-sm bg-emerald-500/10"
+                            >
+                                <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                            </motion.div>
+                        )}
+                    </div>
+
+                    {!isLocal && !isMatched && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-3xl z-30">
                             <div className="relative">
                                 <motion.div 
                                     animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }}
                                     transition={{ repeat: Infinity, duration: 3 }}
                                     className="absolute inset-0 bg-primary/20 rounded-full blur-2xl" 
                                 />
-                                <div className="w-20 h-20 rounded-full border-4 border-primary/30 flex items-center justify-center relative bg-card shadow-glow">
-                                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                                <div className="w-16 h-16 rounded-full border-4 border-primary/30 flex items-center justify-center bg-card shadow-glow">
+                                    <div className="w-2 h-2 bg-primary rounded-full animate-ping" />
                                 </div>
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/60 animate-pulse">Establishing Vibe Path</span>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <div className="absolute top-6 left-6 flex items-center gap-3">
-                <div className="glass px-4 py-2 rounded-xl flex items-center gap-2.5 border border-border/50 shadow-glow-sm">
-                    <div className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        isLocal ? "bg-primary animate-pulse" : (isMatched ? "bg-emerald-500" : "bg-white/20")
-                    )} />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/90">
-                        {isLocal ? 'Local Stream' : 'Remote Vibe'}
-                    </span>
+                    )}
                 </div>
-
-                {isMatched && (
-                    <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-border/50 shadow-glow-sm bg-emerald-500/10"
-                    >
-                        <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Live Connection</span>
-                    </motion.div>
-                )}
-            </div>
+            )}
 
             <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between pointer-events-none">
                 <div className="flex items-center gap-3">

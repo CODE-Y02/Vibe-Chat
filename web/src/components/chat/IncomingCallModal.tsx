@@ -20,14 +20,43 @@ export function IncomingCallModal() {
 
     useEffect(() => {
         if (incomingCall && !isMatched) {
-            const ring = new Audio("https://cdn.pixabay.com/audio/2022/03/15/audio_731478144b.mp3");
-            ring.loop = true;
-            audioRef.current = ring;
+            const sources = [
+                "https://cdn.pixabay.com/audio/2021/08/04/audio_c686129486.mp3",
+                "https://cdn.pixabay.com/audio/2022/03/10/audio_f9c6d691e5.mp3",
+                "https://assets.mixkit.co/active_storage/sfx/824/824-preview.mp3"
+            ];
 
-            ring.play().then(() => setAudioAllowed(true)).catch(() => {
-                console.log("[Call] Autoplay blocked");
-                setAudioAllowed(false);
-            });
+            let currentIndex = 0;
+            const playWithFallback = () => {
+                if (currentIndex >= sources.length) {
+                    console.error("[Call] All ringtone sources failed");
+                    return;
+                }
+
+                const ring = new Audio(sources[currentIndex]);
+                ring.loop = true;
+                audioRef.current = ring;
+
+                ring.play()
+                    .then(() => setAudioAllowed(true))
+                    .catch((err) => {
+                        console.warn(`[Call] Play failed for source ${currentIndex}:`, err.name);
+                        if (err.name === "NotAllowedError") {
+                            setAudioAllowed(false);
+                        } else {
+                            currentIndex++;
+                            playWithFallback();
+                        }
+                    });
+
+                ring.onerror = () => {
+                    console.warn(`[Call] Load failed for source ${currentIndex}`);
+                    currentIndex++;
+                    playWithFallback();
+                };
+            };
+
+            playWithFallback();
         }
 
         return () => {

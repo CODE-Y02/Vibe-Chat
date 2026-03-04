@@ -50,4 +50,9 @@ export const registerSignalingHandlers = (io: Server, socket: AuthenticatedSocke
     socket.on('iceCandidate', async ({ to, candidate }: { to: string; candidate: unknown }) => {
         io.to(to).emit('iceCandidate', { from: user.userId, candidate });
     });
+
+    socket.on('hang-up', async ({ to }: { to: string }) => {
+        console.log(`[Signaling] hang-up: ${user.userId} → ${to}`);
+        io.to(to).emit('hang-up', { from: user.userId });
+    });
 };

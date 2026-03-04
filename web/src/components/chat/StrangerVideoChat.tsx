@@ -150,7 +150,7 @@ export function StrangerVideoChat() {
 
                 <div className="pointer-events-auto flex items-center gap-2">
                     <div className="glass px-4 md:px-8 py-2 md:py-3.5 rounded-full flex items-center gap-4 shadow-2xl border border-border/10 bg-muted/30 backdrop-blur-xl">
-                        <div className="flex items-center gap-3 pr-4 border-r border-border/10">
+                        <div className="flex items-center pr-4 border-r border-border/10">
                             <motion.div
                                 animate={isSearching ? { opacity: [0.3, 0.8, 0.3] } : {}}
                                 transition={{ repeat: Infinity, duration: 4 }}
@@ -159,9 +159,6 @@ export function StrangerVideoChat() {
                                     isSearching ? "bg-primary" : session.isMatched ? "bg-emerald-500" : "bg-muted-foreground/20"
                                 )}
                             />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80">
-                                {isSearching ? "Scanning" : session.isMatched ? "Live" : "Standby"}
-                            </span>
                         </div>
                         <div className="flex items-center gap-4 text-muted-foreground/60">
                             <button onClick={() => setAudioEnabled(!audioEnabled)}>

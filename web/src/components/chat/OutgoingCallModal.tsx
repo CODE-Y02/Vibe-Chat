@@ -35,12 +35,36 @@ export function OutgoingCallModal() {
     useEffect(() => {
         if (!outgoingCall) return;
 
-        // Play outgoing ring sound
-        const ring = new Audio("https://cdn.pixabay.com/audio/2022/10/30/audio_b29267a57a.mp3");
-        ring.loop = true;
-        ring.volume = 0.4;
-        audioRef.current = ring;
-        ring.play().catch(() => console.log("[Call] Autoplay deferred"));
+        const sources = [
+            "https://cdn.pixabay.com/audio/2022/03/15/audio_731478144b.mp3",
+            "https://cdn.pixabay.com/audio/2022/03/10/audio_5177267f5d.mp3",
+            "https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"
+        ];
+
+        let currentIndex = 0;
+        const playWithFallback = () => {
+            if (currentIndex >= sources.length) return;
+
+            const ring = new Audio(sources[currentIndex]);
+            ring.loop = true;
+            ring.volume = 0.5;
+            audioRef.current = ring;
+
+            ring.play().catch((err) => {
+                console.log("[Call] Outgoing fallback needed:", err.name);
+                if (err.name !== "NotAllowedError") {
+                    currentIndex++;
+                    playWithFallback();
+                }
+            });
+
+            ring.onerror = () => {
+                currentIndex++;
+                playWithFallback();
+            };
+        };
+
+        playWithFallback();
 
         // ✅ FIX: Guard — only emit if socket is connected
         if (socket.connected) {
