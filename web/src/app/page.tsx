@@ -69,7 +69,7 @@ export default function Landing() {
           <div className="hidden lg:flex items-center gap-8 px-6 py-2 rounded-2xl bg-white/[0.03] border border-white/5">
             <a href="#features" className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Features</a>
             <a href="#safety" className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Safety</a>
-            <a href="#vision" className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Vision</a>
+            <Link href="/blog" className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Blog</Link>
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
@@ -80,7 +80,7 @@ export default function Landing() {
                   <p className="text-[10px] md:text-xs font-bold text-white/60 truncate max-w-[100px]">{session.user?.user_metadata?.full_name || session.user?.email}</p>
                 </div>
                 <Avatar className="h-8 w-8 md:h-10 md:w-10 border border-white/10 group-hover:border-primary/50 transition-colors shadow-glow-sm">
-                  <AvatarImage src={session.user?.user_metadata?.avatar_url || ""} />
+                  <AvatarImage src={session.user?.user_metadata?.avatar_url || ""} aria-label="Users Profile" />
                   <AvatarFallback className="bg-primary/20 text-primary uppercase text-[8px] md:text-[10px] font-black">
                     {((session.user?.user_metadata?.full_name || session.user?.email) || "U").slice(0, 2)}
                   </AvatarFallback>
@@ -100,6 +100,7 @@ export default function Landing() {
       </nav>
 
       {/* Hero Section */}
+      <main>
       <section className="relative pt-32 pb-12 md:pt-48 lg:pt-64 lg:pb-32 flex flex-col items-center z-10 px-4">
         <motion.div
           variants={containerVariants}
@@ -165,7 +166,7 @@ export default function Landing() {
         <div className="container mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {features.map((feature, idx) => (
-              <motion.div
+              <motion.article
                 key={idx}
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -178,7 +179,7 @@ export default function Landing() {
                 </div>
                 <h3 className="text-lg md:text-xl font-black uppercase tracking-tight mb-3 md:mb-4">{feature.title}</h3>
                 <p className="text-white/40 text-xs md:text-sm leading-relaxed font-medium">{feature.description}</p>
-              </motion.div>
+              </motion.article>
             ))}
           </div>
         </div>
@@ -227,7 +228,7 @@ export default function Landing() {
               className="flex-1 relative order-1 lg:order-2 w-full max-w-sm md:max-w-none mx-auto lg:mx-0"
             >
               <div className="aspect-square rounded-[2rem] md:rounded-[4rem] bg-gradient-to-br from-white/10 to-transparent border border-white/10 p-8 md:p-12 relative overflow-hidden shadow-glow-lg">
-                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2874&auto=format&fit=crop')] bg-cover opacity-20 grayscale" />
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2874&auto=format&fit=crop')] bg-cover opacity-20 grayscale" aria-hidden="true" />
                 <div className="relative h-full flex flex-col justify-center items-center text-center space-y-6 md:space-y-8">
                   <div className="w-20 h-20 md:w-32 md:h-32 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center animate-pulse">
                     <Lock className="w-8 h-8 md:w-12 md:h-12 text-emerald-400" />
@@ -248,6 +249,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* CTA Footer */}
       <footer className="py-24 md:py-48 border-t border-white/5 relative z-10 overflow-hidden px-4">
@@ -264,6 +266,7 @@ export default function Landing() {
           <div className="mt-24 md:mt-48 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
             <p className="text-center md:text-left">© 2026 CODE-Y02 / VibeChat. All rights reserved.</p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-10">
+              <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
               <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
               <a href="#" className="hover:text-white transition-colors">Discord</a>

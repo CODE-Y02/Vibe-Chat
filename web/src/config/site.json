@@ -1,0 +1,22 @@
+{
+  "name": "VibeChat",
+  "url": "https://vibe-chat-iota.vercel.app",
+  "description": "Experience the next evolution of human connection. VibeChat combines instant matchmaking with Peer-to-Peer encryption and Edge-AI moderation for a secure, fast, and anonymous social experience.",
+  "links": {
+    "twitter": "https://twitter.com/vibechat",
+    "github": "https://github.com/code-yo2/vibe-chat",
+    "discord": "https://discord.gg/vibechat"
+  },
+  "ogImage": "https://vibe-chat-iota.vercel.app/og-image.png",
+  "keywords": [
+    "random video chat",
+    "secure video chat",
+    "private chat",
+    "AI moderation",
+    "end-to-end encrypted chat",
+    "Omegle alternative",
+    "safe video chat",
+    "p2p video"
+  ],
+  "author": "CODE-Y02"
+}
