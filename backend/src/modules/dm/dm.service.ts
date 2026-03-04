@@ -24,7 +24,7 @@ export class DMService {
                     { senderId: peerId, receiverId: userId },
                 ],
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: 'asc' },   // oldest first → top-to-bottom like WA
             skip: (page - 1) * limit,
             take: limit,
             include: { sender: true },

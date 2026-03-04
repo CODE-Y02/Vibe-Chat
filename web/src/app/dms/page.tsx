@@ -95,43 +95,60 @@ export default function DMsPage() {
 
     const sendMutation = useMutation({
         mutationFn: ({ to, content }: { to: string, content: string }) => sendMessage(to, content),
-        onSuccess: () => {
+        onMutate: async ({ to, content }) => {
+            // Optimistically append my own sent message immediately
+            const tempMsg = {
+                id: `opt-${Date.now()}`,
+                senderId: 'me-optimistic', // will NOT match peer id => isMe = true
+                receiverId: to,
+                content,
+                isRead: false,
+                createdAt: new Date().toISOString(),
+            };
+            queryClient.setQueryData(
+                ['messages', to],
+                (old: any[] = []) => [...old, tempMsg]
+            );
+            return { tempMsg };
+        },
+        onSuccess: (data, { to }) => {
             setInput("");
-            queryClient.invalidateQueries({ queryKey: ['messages', activePeer?.peer.id] });
+            // Replace temp message with real one from server
+            queryClient.setQueryData(
+                ['messages', to],
+                (old: any[] = []) =>
+                    old.map(m => m.id.startsWith('opt-') ? { ...data } : m)
+            );
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        }
+        },
+        onError: (_err, { to }) => {
+            // Roll back optimistic message on failure
+            queryClient.invalidateQueries({ queryKey: ['messages', to] });
+        },
     });
 
-    // ── Real-time socket listener (global — runs even without an open chat) ──
+    // ── Real-time incoming DM listener ──────────────────────────────────────
     useEffect(() => {
         if (!socket) return;
 
-        const handleIncoming = (msg: { from: string; content: string }) => {
-            // Always refresh conversations sidebar (unread counts)
+        const handleIncoming = (msg: {
+            id: string; senderId: string; receiverId: string;
+            content: string; createdAt: string; isRead: boolean;
+        }) => {
+            // Always refresh conversations sidebar
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
 
-            // If the active chat is with this sender, append optimistically
-            if (activePeer?.peer.id === msg.from) {
+            // Append to open chat if it matches sender
+            if (activePeer?.peer.id === msg.senderId) {
                 queryClient.setQueryData(
-                    ['messages', msg.from],
-                    (old: any[] = []) => [
-                        ...old,
-                        {
-                            id: `rt-${Date.now()}`,
-                            senderId: msg.from,
-                            receiverId: session?.user?.id,
-                            content: msg.content,
-                            isRead: false,
-                            createdAt: new Date().toISOString(),
-                        },
-                    ]
+                    ['messages', msg.senderId],
+                    (old: any[] = []) => [...old, msg]
                 );
             }
         };
 
-        socket.on('message', handleIncoming);
-        return () => { socket.off('message', handleIncoming); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        socket.on('dm', handleIncoming);
+        return () => { socket.off('dm', handleIncoming); };
     }, [socket, activePeer?.peer.id, queryClient]);
 
     useEffect(() => {

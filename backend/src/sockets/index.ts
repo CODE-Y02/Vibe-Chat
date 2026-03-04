@@ -7,8 +7,12 @@ import { AuthenticatedSocket } from './types.js';
 import { registerMatchmakingHandlers } from './matchmaking.handler.js';
 import { registerSignalingHandlers } from './signaling.handler.js';
 import { registerChatHandlers } from './chat.handler.js';
+import { setIO } from '../modules/dm/dm.controller.js';
 
 export const setupSockets = (io: Server) => {
+    // Share io instance with REST controllers that need to push socket events
+    setIO(io);
+
     // To support 100K users horizontally, we must replicate events across instances
     const pubClient = redis.duplicate();
     const subClient = redis.duplicate();
