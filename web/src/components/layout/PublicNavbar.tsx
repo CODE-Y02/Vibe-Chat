@@ -6,8 +6,11 @@ import { useSession } from "@/components/layout/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Video, ArrowRight, Menu } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
+import { Sun, Moon } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const siteItems = [
     { href: "/#features", label: "Features" },
@@ -18,12 +21,24 @@ const siteItems = [
 export function PublicNavbar() {
     const pathname = usePathname();
     const { data: session } = useSession();
+    const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
     const isLanding = pathname === "/";
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const toggleTheme = () => {
+        setTheme(theme === "dark" ? "light" : "dark");
+    };
+
+    if (!mounted) return null;
 
     return (
         <nav className={cn(
             "fixed top-0 w-full z-50 border-b transition-all duration-300",
-            isLanding ? "border-white/5 bg-black/40 backdrop-blur-2xl" : "border-border bg-background/80 backdrop-blur-xl"
+            isLanding ? "border-foreground/5 bg-background/40 backdrop-blur-2xl" : "border-border bg-background/80 backdrop-blur-xl"
         )}>
             <div className="container mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
                 <div className="flex items-center gap-2 md:gap-3">
@@ -80,6 +95,19 @@ export function PublicNavbar() {
                             </Button>
                         </Link>
                     )}
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={toggleTheme}
+                        className="rounded-full w-10 h-10 border border-border/50 hover:bg-muted/50 transition-colors"
+                    >
+                        {theme === "dark" ? (
+                            <Sun className="w-4 h-4 text-orange-400" />
+                        ) : (
+                            <Moon className="w-4 h-4 text-slate-700" />
+                        )}
+                    </Button>
                 </div>
             </div>
         </nav>
