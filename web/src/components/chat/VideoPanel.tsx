@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { webrtc } from '@/lib/webrtc';
@@ -16,8 +16,7 @@ interface VideoPanelProps {
     isMatched?: boolean;
 }
 
-export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanelProps) {
-    const { data: sessionData } = useSession();
+export const VideoPanel = memo(({ isLocal, className, isMatched = false }: VideoPanelProps) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const isMounted = useRef(true);
 
@@ -38,6 +37,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                     const runInference = async () => {
                         if (!isMounted.current) return;
                         try {
+                            // Only load if needed, nsfwValidator handles the check
                             await loadNSFWModel();
                             const predictions = await classifyImage(videoRef.current!);
                             if (isNSFW(predictions)) {
@@ -45,20 +45,22 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                                 sendAutoFlag().catch(console.error);
                             }
                         } catch (e) { }
+                        
+                        // Wait 10 seconds between checks to reduce CPU load
                         if (isMounted.current) {
-                            timeoutId = setTimeout(checkModeration, 4000);
+                            timeoutId = setTimeout(checkModeration, 10000);
                         }
                     };
 
                     // Yield to browser for smooth 60fps UI
                     if ('requestIdleCallback' in window) {
-                        (window as any).requestIdleCallback(() => runInference(), { timeout: 2000 });
+                        (window as any).requestIdleCallback(() => runInference(), { timeout: 3000 });
                     } else {
-                        setTimeout(runInference, 0);
+                        setTimeout(runInference, 100);
                     }
                 } else {
                     if (isMounted.current) {
-                        timeoutId = setTimeout(checkModeration, 1000);
+                        timeoutId = setTimeout(checkModeration, 1500);
                     }
                 }
             };
@@ -80,9 +82,8 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
         return () => {
             isMounted.current = false;
             if (timeoutId) clearTimeout(timeoutId);
-            if (videoRef.current) {
-                videoRef.current.srcObject = null;
-            }
+            // Don't nullify srcObject here as it might cause flickering on re-renders 
+            // of the parent if the logic is slightly delayed.
         };
     }, [isLocal, isMatched]);
 
@@ -124,7 +125,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                                 whileInView={{ translateY: "300px" }}
                                 viewport={{ once: false }}
                                 transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-                                className="absolute top-0 left-0 right-0 h-px bg-primary/20 shadow-[0_0_15px_rgba(255,51,102,0.5)] z-10"
+                                className="absolute top-0 left-0 right-0 h-px bg-primary/20 shadow-[0_0_15px_rgba(243,75,59,0.5)] z-10"
                             />
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
                         </div>
@@ -172,5 +173,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
             </div>
         </Card>
     );
-}
+});
+
+VideoPanel.displayName = 'VideoPanel';
 

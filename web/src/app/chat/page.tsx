@@ -15,23 +15,38 @@ import { useSession } from "@/components/layout/SessionProvider";
 import { motion, AnimatePresence } from 'framer-motion';
 import { reportUser } from '@/actions/moderation.actions';
 
+const radarVariants = {
+    pulse: {
+        scale: [1, 1.5, 2],
+        opacity: [0.3, 0.1, 0],
+        transition: {
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeOut" as any
+        }
+    }
+};
+
 export default function ChatPage() {
-    const { session, isSearching, incomingCall, setSearching, disconnect, setMatched, addMessage } = useChatStore();
+    const session = useChatStore(state => state.session);
+    const isSearching = useChatStore(state => state.isSearching);
+    const setSearching = useChatStore(state => state.setSearching);
+    const disconnect = useChatStore(state => state.disconnect);
+    const setMatched = useChatStore(state => state.setMatched);
+    const addMessage = useChatStore(state => state.addMessage);
+    const incomingCall = useChatStore(state => state.incomingCall);
+    const setIncomingCall = useChatStore(state => state.setIncomingCall);
+    
     const { data: sessionData, status } = useSession();
-    const { socket, isConnected } = useSocket();
+    const { socket } = useSocket();
     const router = useRouter();
 
     const [audioEnabled, setAudioEnabled] = useState(true);
     const [videoEnabled, setVideoEnabled] = useState(true);
     const [isBlurred, setIsBlurred] = useState(true);
 
-    // Refs for intervals to prevent leaks
-    const heartbeatInterval = useRef<ReturnType<typeof setInterval> | null>(null);
     const retryInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // 1. STABLE CALLBACKS
-    // ──────────────────────────────────────────────────────────────────────────
     const handleMatch = useCallback((data: { peerId: string, peerName?: string, peerAvatar?: string }) => {
         setMatched("anonymous-room", data.peerId, "Stranger", "");
         setIsBlurred(true);
@@ -45,7 +60,7 @@ export default function ChatPage() {
     }, [setSearching, socket]);
 
     const handlePeerDisconnect = useCallback(() => {
-        toast.info(`${session.isDirectCall ? session.peerName : 'Stranger'} disconnected`, { description: 'They left the vibe.' });
+        toast.info(`${session.isDirectCall ? (session.peerName || 'Friend') : 'Stranger'} disconnected`, { description: 'They left the vibe.' });
         
         if (session.isDirectCall) {
             disconnect();
@@ -57,7 +72,7 @@ export default function ChatPage() {
             setIsBlurred(true);
             handleStart();
         }
-    }, [disconnect, toast, handleStart, session.isDirectCall, session.peerName, router]);
+    }, [disconnect, handleStart, session.isDirectCall, session.peerName, router]);
 
     const handleSkip = useCallback(() => {
         if (session.strangerId) {
@@ -91,39 +106,34 @@ export default function ChatPage() {
         }
     }, [session.strangerId, onMessage]);
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // 2. AUTH / REDIRECT LOGIC
-    // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login');
         }
     }, [status, router]);
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // 3. CONNECTION LIFECYCLE (Stable)
-    // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (status !== 'authenticated' || !sessionData?.session?.access_token || !socket) return;
+        
+        // Note: Global connection is now managed by SocketManager
+        // We just ensure it's connected here
+        if (!socket.connected) socket.connect();
 
-        console.log("[ChatPage] Lifecycle: Initializing match state...");
-        socket.auth = { token: sessionData.session.access_token };
-
-        // Reconnect if needed
-        if (!socket.connected) {
-            socket.connect();
+        // 🟢 AUTO-ANSWER (If we just accepted a call)
+        if (session.isDirectCall && incomingCall?.offer) {
+            console.log("[ChatPage] Auto-answering friend call...");
+            webrtc.handleOffer(incomingCall.from, incomingCall.offer).then(() => {
+                setIsBlurred(false);
+                setIncomingCall(null);
+            });
         }
 
         return () => {
-            console.log("[ChatPage] Lifecycle Cleanup: Clearing chat state...");
-            disconnect(); // Clear local chat store
-            webrtc.cleanup(); // Clean up media
+            disconnect(); 
+            webrtc.cleanup();
         };
     }, [status, socket, disconnect, sessionData?.session?.access_token]);
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // 4. EVENT LISTENERS (Separate to avoid connection churn)
-    // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (status !== 'authenticated') return;
 
@@ -172,19 +182,14 @@ export default function ChatPage() {
             socket.off('iceCandidate');
             socket.off('skip-cooldown');
         };
-    }, [status, handleMatch, handlePeerDisconnect, onMessage, router, toast, disconnect, socket]);
+    }, [status, handleMatch, handlePeerDisconnect, onMessage, router, disconnect, socket]);
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // 5. INTERVALS (Search Retry)
-    // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (status !== 'authenticated') return;
 
-        // Only search retry if we are actually searching and NOT matched
         if (isSearching && !session.isMatched) {
             retryInterval.current = setInterval(() => {
                 if (socket.connected) {
-                    console.log("[Search] Pinging queue...");
                     socket.emit('joinQueue');
                 }
             }, 10000);
@@ -197,9 +202,6 @@ export default function ChatPage() {
         };
     }, [status, isSearching, session.isMatched, socket]);
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // 6. UI ACTIONS
-    // ──────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         webrtc.toggleAudio(audioEnabled);
     }, [audioEnabled]);
@@ -209,7 +211,6 @@ export default function ChatPage() {
     }, [videoEnabled]);
 
     const handleClose = () => {
-        // Notify the peer that we left, so they get rematched
         if (session.strangerId) {
             socket.emit('skip', { peerId: session.strangerId });
         } else {
@@ -223,13 +224,11 @@ export default function ChatPage() {
     const handleReport = async () => {
         if (session.strangerId) {
             const reportPromise = reportUser(session.strangerId, "Inappropriate Behavior");
-            
             toast.promise(reportPromise, {
                 loading: 'Reporting...',
-                success: 'User Reported. Thank you for keeping VibeChat safe.',
+                success: 'User Reported.',
                 error: 'Failed to report user.'
             });
-            
             await reportPromise.catch(console.error);
         }
         handleSkip();
@@ -239,18 +238,6 @@ export default function ChatPage() {
         if (session.strangerId) {
             await webrtc.initiateOffer(session.strangerId);
             setIsBlurred(false);
-        }
-    };
-
-    const radarVariants = {
-        pulse: {
-            scale: [1, 1.5, 2],
-            opacity: [0.3, 0.1, 0],
-            transition: {
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeOut" as any
-            }
         }
     };
 
@@ -310,149 +297,152 @@ export default function ChatPage() {
             </header>
 
             <main className="flex-1 relative flex flex-col md:flex-row overflow-hidden">
-                {/* VIDEO ZONE */}
-                <div className="flex-1 relative bg-background overflow-hidden dark">
-                    <VideoPanel
-                        isMatched={session.isMatched}
-                        className={cn(
-                            "w-full h-full border-none rounded-none aspect-auto shadow-none bg-transparent transition-all duration-1000",
-                            isBlurred && session.isMatched && "blur-2xl scale-110 opacity-40"
-                        )}
-                    />
+                {/* 1. LAYER: MAIN REMOTE VIDEO (FOR STRANGERS) */}
+                {!session.isDirectCall && (
+                    <div className="absolute inset-0 z-10 bg-background overflow-hidden dark">
+                        <VideoPanel
+                            isMatched={session.isMatched}
+                            className={cn(
+                                "w-full h-full border-none rounded-none aspect-auto shadow-none bg-transparent transition-all duration-1000",
+                                isBlurred && session.isMatched && "blur-2xl scale-110 opacity-40"
+                            )}
+                        />
+                        
+                        {/* OVERLAYS FOR STRANGER FLOW */}
+                        <AnimatePresence mode="wait">
+                            {!session.isMatched && !isSearching && (
+                                <motion.div
+                                    key="start-state"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 1.1 }}
+                                    className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 px-4"
+                                >
+                                    <div className="pointer-events-auto flex flex-col items-center text-center">
+                                        <motion.div
+                                            whileHover={{ scale: 1.1, rotate: 10 }}
+                                            onClick={handleStart}
+                                            className="w-24 h-24 md:w-32 md:h-32 bg-primary/20 rounded-full flex items-center justify-center mb-10 border border-primary/30 shadow-glow-lg group cursor-pointer relative"
+                                        >
+                                            <Sparkles className="w-10 h-10 md:w-14 md:h-14 text-primary group-hover:scale-110 transition-transform" />
+                                        </motion.div>
+                                        <h2 className="text-4xl md:text-7xl font-black mb-6 tracking-[-0.05em] uppercase italic leading-none text-gradient">Vibe Check?</h2>
+                                        <Button size="lg" onClick={handleStart} className="rounded-full px-16 h-20 font-black text-xl shadow-glow transition-all bg-primary hover:scale-105 active:scale-95">
+                                            START VIBING
+                                        </Button>
+                                    </div>
+                                </motion.div>
+                            )}
 
-                    {/* OVERLAYS */}
-                    <AnimatePresence mode="wait">
-                        {!session.isMatched && !isSearching && (
-                            <motion.div
-                                key="start-state"
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 1.1 }}
-                                className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 px-4"
-                            >
-                                <div className="pointer-events-auto flex flex-col items-center text-center">
-                                    <motion.div
-                                        whileHover={{ scale: 1.1, rotate: 10 }}
-                                        onClick={handleStart}
-                                        className="w-24 h-24 md:w-32 md:h-32 bg-primary/20 rounded-full flex items-center justify-center mb-10 border border-primary/30 shadow-glow-lg group cursor-pointer relative"
-                                    >
-                                        <Sparkles className="w-10 h-10 md:w-14 md:h-14 text-primary group-hover:scale-110 transition-transform" />
-                                    </motion.div>
-                                    <h2 className="text-4xl md:text-7xl font-black mb-6 tracking-[-0.05em] uppercase italic leading-none text-gradient">Vibe Check?</h2>
-                                    <p className="text-muted-foreground/60 mb-12 max-w-sm text-sm md:text-base font-medium leading-relaxed uppercase tracking-widest">
-                                        Secure · Ephemeral · Global
-                                    </p>
-                                    <Button size="lg" onClick={handleStart} className="rounded-full px-16 h-20 font-black text-xl shadow-glow transition-all bg-primary hover:scale-105 active:scale-95">
-                                        START VIBING
-                                    </Button>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {isSearching && !session.isMatched && (
-                            <motion.div
-                                key="searching-state"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="absolute inset-0 flex items-center justify-center z-30"
-                            >
-                                <div className="relative">
-                                    <motion.div variants={radarVariants} animate="pulse" className="absolute inset-0 border-2 border-primary rounded-full" />
-                                    <motion.div variants={radarVariants} animate="pulse" transition={{ delay: 0.5 }} className="absolute inset-0 border-2 border-primary rounded-full" />
-                                    <motion.div variants={radarVariants} animate="pulse" transition={{ delay: 1 }} className="absolute inset-0 border-2 border-primary rounded-full" />
-
-                                    <div className="w-32 h-32 md:w-48 md:h-48 bg-primary/10 rounded-full flex items-center justify-center border border-primary/30 relative z-10 backdrop-blur-xl">
-                                        <div className="flex flex-col items-center gap-3">
-                                            <Zap className="w-8 h-8 text-primary shadow-glow-sm" />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Scanning...</span>
+                            {isSearching && !session.isMatched && (
+                                <motion.div
+                                    key="searching-state"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 flex items-center justify-center z-30"
+                                >
+                                    <div className="relative">
+                                        <motion.div variants={radarVariants} animate="pulse" className="absolute inset-0 border-2 border-primary rounded-full" />
+                                        <div className="w-32 h-32 md:w-48 md:h-48 bg-primary/10 rounded-full flex items-center justify-center border border-primary/30 relative z-10 backdrop-blur-xl">
+                                            <div className="flex flex-col items-center gap-3">
+                                                <Zap className="w-8 h-8 text-primary shadow-glow-sm" />
+                                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Scanning...</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        )}
+                                </motion.div>
+                            )}
 
-                        {session.isMatched && isBlurred && (
-                            <motion.div
-                                key="locked-state"
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                className="absolute inset-0 flex items-center justify-center z-[60] px-6 pointer-events-auto"
-                            >
-                                <div className="glass-card p-10 md:p-16 rounded-[48px] text-center w-full max-w-md shadow-glow-lg flex flex-col items-center bg-card/80 backdrop-blur-3xl border-border/10">
-                                    <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-500/20 rounded-[24px] flex items-center justify-center mb-10 rotate-12">
-                                        <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-emerald-500" />
+                            {session.isMatched && isBlurred && (
+                                <motion.div
+                                    key="locked-state"
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="absolute inset-0 flex items-center justify-center z-[60] px-6 pointer-events-auto"
+                                >
+                                    <div className="glass-card p-10 md:p-16 rounded-[48px] text-center w-full max-w-md shadow-glow-lg flex flex-col items-center bg-card/80 backdrop-blur-3xl border-border/10">
+                                        <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-500/20 rounded-[24px] flex items-center justify-center mb-10 rotate-12">
+                                            <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-emerald-500" />
+                                        </div>
+                                        <h3 className="text-3xl md:text-5xl font-black mb-4 uppercase tracking-tighter italic text-gradient">LOCKED IN</h3>
+                                        <Button onClick={initiateCall} size="lg" className="w-full rounded-2xl shadow-glow h-20 gap-4 font-black text-2xl bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all">
+                                            <Eye className="w-7 h-7" /> REVEAL
+                                        </Button>
+                                        <button onClick={handleSkip} className="mt-10 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 hover:text-foreground transition-colors">
+                                            Skip this vibe
+                                        </button>
                                     </div>
-                                    <h3 className="text-3xl md:text-5xl font-black mb-4 uppercase tracking-tighter italic text-gradient">LOCKED IN</h3>
-                                    <p className="text-xs text-muted-foreground/50 font-bold mb-10 tracking-[0.2em] uppercase">Vibe match detected</p>
-                                    <Button onClick={initiateCall} size="lg" className="w-full rounded-2xl shadow-glow h-20 gap-4 font-black text-2xl bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all">
-                                        <Eye className="w-7 h-7" /> REVEAL
-                                    </Button>
-                                    <button onClick={handleSkip} className="mt-10 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 hover:text-foreground transition-colors">
-                                        Skip this vibe
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
 
-                    {/* Report Button */}
-                    {session.isMatched && !isBlurred && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="absolute bottom-10 right-10 z-40"
-                        >
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={handleReport}
-                                className="glass hover:bg-red-500/20 text-muted-foreground/40 hover:text-red-500 rounded-2xl h-14 w-14 transition-all"
-                                title="Report User"
-                            >
-                                <Flag className="w-6 h-6" />
-                            </Button>
-                        </motion.div>
-                    )}
-                </div>
-
-                {/* PiP & CHAT */}
-                <div className="pointer-events-none absolute inset-0 z-40 flex flex-col justify-end p-6 md:p-12">
-                    <div className="flex flex-col md:flex-row items-end justify-between gap-4 md:gap-6 w-full">
-                        {/* Local Preview */}
+                {/* 2. LAYER: INTERACTIVE UI (PIP + LOUNGE + CHAT) */}
+                <div className="pointer-events-none absolute inset-0 z-40 flex flex-col justify-end p-6 md:p-12 overflow-hidden">
+                    <div className={cn(
+                        "w-full h-full flex transition-all duration-500",
+                        session.isDirectCall ? "flex-col md:flex-row gap-8 items-center justify-center pt-24" : "flex-col md:flex-row items-end justify-between gap-4 md:gap-6"
+                    )}>
+                        {/* LOCAL PANEL */}
                         <motion.div
                             initial={{ x: -20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
-                            className="pointer-events-auto w-32 sm:w-44 md:w-80 aspect-[4/3] relative group shrink-0"
+                            className={cn(
+                                "pointer-events-auto relative group shrink-0 transition-all duration-500",
+                                session.isDirectCall 
+                                    ? "w-full md:w-[45%] h-[35vh] md:h-[60vh] max-h-[80vh] shadow-glow-lg" 
+                                    : "w-32 sm:w-44 md:w-80 aspect-[4/3]"
+                            )}
                         >
                             <VideoPanel
                                 isLocal
                                 className={cn(
-                                    "w-full h-full border border-border/20 shadow-glow rounded-3xl overflow-hidden bg-background transition-all group-hover:scale-105",
+                                    "w-full h-full border border-border/20 shadow-glow overflow-hidden bg-background transition-all group-hover:scale-[1.02]",
+                                    session.isDirectCall ? "rounded-[40px]" : "rounded-3xl",
                                     !videoEnabled && "grayscale opacity-50"
                                 )}
                             />
-                            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-foreground/80">You</span>
+                            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/80">You</span>
                             </div>
                         </motion.div>
 
-                        {/* Chat Box */}
-                        <motion.div
-                            initial={{ x: 20, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            className={cn(
-                                "pointer-events-auto w-full md:w-[460px] h-[320px] md:h-[650px] transition-all",
-                                !session.isMatched && "hidden md:flex"
-                            )}
-                        >
-                            <ChatBox onReport={handleReport} />
-                        </motion.div>
+                        {/* REMOTE PANEL (FOR LOUNGE MODE ONLY) */}
+                        {session.isDirectCall && (
+                            <motion.div
+                                initial={{ x: 20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                className="pointer-events-auto relative group shrink-0 w-full md:w-[45%] h-[35vh] md:h-[60vh] max-h-[80vh] transition-all duration-500"
+                            >
+                                <VideoPanel
+                                    isMatched={session.isMatched}
+                                    className={cn(
+                                        "w-full h-full border border-border/20 shadow-glow rounded-[40px] overflow-hidden bg-background transition-all group-hover:scale-[1.02]",
+                                        isBlurred && "blur-2xl opacity-40"
+                                    )}
+                                />
+                                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{session.peerName || 'Friend'}</span>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* CHAT BOX (FOR STRANGER MODE ONLY) */}
+                        {!session.isDirectCall && session.isMatched && (
+                            <motion.div
+                                initial={{ x: 20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                className="pointer-events-auto w-full md:w-[460px] h-[320px] md:h-[650px] transition-all"
+                            >
+                                <ChatBox onReport={handleReport} />
+                            </motion.div>
+                        )}
                     </div>
                 </div>
             </main>
         </div>
     );
 }
-

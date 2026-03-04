@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { useChatStore, Message } from '@/store/useChatStore';
 import { socket } from '@/lib/socket';
 import { Input } from '@/components/ui/input';
@@ -44,11 +44,15 @@ interface ChatBoxProps {
     onReport?: () => void;
 }
 
-export function ChatBox({ onReport }: ChatBoxProps = {}) {
+export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
     const { data: sessionData } = useSession();
     const [text, setText] = useState('');
     const [isMinimized, setIsMinimized] = useState(false);
-    const { session, addMessage } = useChatStore();
+    
+    // Select specific state to minimize re-renders
+    const session = useChatStore(state => state.session);
+    const addMessage = useChatStore(state => state.addMessage);
+    
     const queryClient = useQueryClient();
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -79,7 +83,8 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
 
     useEffect(() => {
         if (!isMinimized) {
-            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+            // behavior: auto is much faster for high-frequency updates than smooth
+            bottomRef.current?.scrollIntoView({ behavior: 'auto' });
         }
     }, [session.messages, isMinimized]);
 
@@ -97,17 +102,14 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
 
         addMessage(message);
         
-        // DEDUPLICATE: For friend-to-friend calls, only use REST Pathway.
-        // REST broadcasts a 'dm' socket event, so emitting 'sendMessage' too would cause duplicate messages.
         if (session.isDirectCall) {
             try {
                 await sendMessage(session.strangerId, content);
                 queryClient.invalidateQueries({ queryKey: ["messages", session.strangerId] });
             } catch (err) {
-                console.error("Failed to persist call message to DM history", err);
+                console.error("Failed to persist call message", err);
             }
         } else {
-            // For anonymous vibes, keep using the light-weight socket event
             socket.emit('sendMessage', { to: session.strangerId, content });
         }
         
@@ -161,7 +163,6 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                         </div>
                     ) : (
                         <>
-                            {/* Chat Header */}
                             <div className="p-4 md:p-6 border-b border-border bg-muted/20 flex items-center justify-between z-10">
                                 <div className="flex items-center gap-3 md:gap-4 min-w-0">
                                     <div className="relative shrink-0">
@@ -187,47 +188,40 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 md:gap-2">
-                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                        <Button
-                                            onClick={onReport}
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl transition-all border bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
-                                            title="Report User"
-                                        >
-                                            <Flag className="w-4 h-4 md:w-5 md:h-5" />
-                                        </Button>
-                                    </motion.div>
-                                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                        <Button
-                                            onClick={handleAddFriend}
-                                            disabled={friendMutation.isPending || friendMutation.isSuccess}
-                                            variant="ghost"
-                                            size="icon"
-                                            className={cn(
-                                                "h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl transition-all border",
-                                                friendMutation.isSuccess
-                                                    ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/20"
-                                                    : "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/60 border-border"
-                                            )}
-                                            title="Add as Friend"
-                                        >
-                                            {friendMutation.isPending ? (
-                                                <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
-                                            ) : friendMutation.isSuccess ? (
-                                                <Check className="w-4 h-4 md:w-5 md:h-5" />
-                                            ) : (
-                                                <UserPlus className="w-4 h-4 md:w-5 md:h-5" />
-                                            )}
-                                        </Button>
-                                    </motion.div>
+                                    <Button
+                                        onClick={onReport}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl transition-all border bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                                    >
+                                        <Flag className="w-4 h-4 md:w-5 md:h-5" />
+                                    </Button>
+                                    <Button
+                                        onClick={handleAddFriend}
+                                        disabled={friendMutation.isPending || friendMutation.isSuccess}
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn(
+                                            "h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl transition-all border",
+                                            friendMutation.isSuccess
+                                                ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/20"
+                                                : "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/60 border-border"
+                                        )}
+                                    >
+                                        {friendMutation.isPending ? (
+                                            <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                                        ) : friendMutation.isSuccess ? (
+                                            <Check className="w-4 h-4 md:w-5 md:h-5" />
+                                        ) : (
+                                            <UserPlus className="w-4 h-4 md:w-5 md:h-5" />
+                                        )}
+                                    </Button>
                                     <Button variant="ghost" size="icon" onClick={() => setIsMinimized(true)} className="h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-all">
                                         <Minimize2 className="w-4 h-4 md:w-5 md:h-5" />
                                     </Button>
                                 </div>
                             </div>
 
-                            {/* Messages Area */}
                             <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-1 no-scrollbar bg-gradient-to-b from-transparent to-primary/[0.03]">
                                 <AnimatePresence initial={false}>
                                     {session.messages.length === 0 ? (
@@ -252,7 +246,6 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                                 <div ref={bottomRef} />
                             </div>
 
-                            {/* Input Area */}
                             <form className="p-4 md:p-6 border-t border-border bg-muted/20 flex gap-3 md:gap-4 items-center z-10" onSubmit={handleSend}>
                                 <Input
                                     value={text}
@@ -261,16 +254,14 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                                     className="flex-1 h-12 md:h-14 px-4 md:px-6 rounded-xl md:rounded-2xl bg-muted/40 border-border focus-visible:ring-primary/20 focus-visible:border-primary/50 text-xs md:text-sm placeholder:text-muted-foreground/30 transition-all font-medium text-foreground"
                                     disabled={!session.isMatched}
                                 />
-                                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                    <Button
-                                        type="submit"
-                                        size="icon"
-                                        className="rounded-xl md:rounded-2xl w-12 h-12 md:w-14 md:h-14 shrink-0 shadow-glow bg-vibe-gradient transition-all overflow-hidden relative shimmer border-none"
-                                        disabled={!text.trim() || !session.isMatched}
-                                    >
-                                        <Send className="w-5 h-5 md:w-6 md:h-6 relative z-10" />
-                                    </Button>
-                                </motion.div>
+                                <Button
+                                    type="submit"
+                                    size="icon"
+                                    className="rounded-xl md:rounded-2xl w-12 h-12 md:w-14 md:h-14 shrink-0 shadow-glow bg-vibe-gradient transition-all overflow-hidden relative"
+                                    disabled={!text.trim() || !session.isMatched}
+                                >
+                                    <Send className="w-5 h-5 md:w-6 md:h-6 relative z-10" />
+                                </Button>
                             </form>
                         </>
                     )}
@@ -278,11 +269,6 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
             )}
         </AnimatePresence>
     );
-}
+});
 
-<style jsx global>{`
-    @keyframes shimmer {
-        100% { transform: translateX(100%); }
-    }
-`}</style>
-
+ChatBox.displayName = 'ChatBox';

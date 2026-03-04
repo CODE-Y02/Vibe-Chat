@@ -8,16 +8,14 @@ import { useRouter } from "next/navigation";
 import { socket } from "@/lib/socket";
 
 export function IncomingCallModal() {
-    const { incomingCall, setIncomingCall, setMatched } = useChatStore();
+    const { incomingCall, setIncomingCall, setMatched, session } = useChatStore();
     const router = useRouter();
 
-    if (!incomingCall) return null;
+    if (!incomingCall || session.isMatched) return null;
 
     const handleAccept = () => {
-        setMatched("direct-room", incomingCall.from, incomingCall.fromName, incomingCall.fromAvatar);
-        // Emitting acceptance back to the caller is handled by the ChatPage when it mounts
-        // or we can do it here if we want immediate feedback
-        setIncomingCall(null);
+        setMatched("direct-room", incomingCall.from, incomingCall.fromName, incomingCall.fromAvatar, true);
+        // setIncomingCall(null) is now handled by ChatPage after it processes the offer
         router.push("/chat");
     };
 
