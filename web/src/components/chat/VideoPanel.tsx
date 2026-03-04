@@ -88,7 +88,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
 
     return (
         <Card className={cn(
-            "relative overflow-hidden bg-card aspect-[4/3] rounded-[32px] border border-border shadow-2xl transition-all dark",
+            "relative overflow-hidden bg-card aspect-[4/3] rounded-[32px] border border-border shadow-2xl transition-all",
             className
         )}>
             {!isLocal && !isMatched ? (
@@ -98,11 +98,11 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                         animate={{ opacity: 1, scale: 1 }}
                         className="flex flex-col items-center"
                     >
-                        <div className="w-20 h-20 rounded-[24px] bg-white/[0.03] border border-white/5 flex items-center justify-center mb-6 shadow-inner relative group">
-                            <Radio className="w-8 h-8 text-white/10 group-hover:text-primary transition-colors" />
+                        <div className="w-20 h-20 rounded-[24px] bg-muted/30 border border-border/40 flex items-center justify-center mb-6 shadow-inner relative group">
+                            <Radio className="w-8 h-8 text-muted-foreground/30 group-hover:text-primary transition-colors" />
                             <div className="absolute inset-0 bg-primary/20 rounded-[24px] animate-ping opacity-20" />
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Waiting for Vibe</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/30">Waiting for Vibe</p>
                     </motion.div>
                 </div>
             ) : (
@@ -134,12 +134,12 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
 
             {/* Premium Badges */}
             <div className="absolute top-6 left-6 flex items-center gap-3">
-                <div className="glass px-4 py-2 rounded-xl flex items-center gap-2.5 border border-white/10 shadow-glow-sm">
+                <div className="glass px-4 py-2 rounded-xl flex items-center gap-2.5 border border-border/50 shadow-glow-sm">
                     <div className={cn(
                         "w-1.5 h-1.5 rounded-full",
                         isLocal ? "bg-primary animate-pulse" : (isMatched ? "bg-emerald-500" : "bg-white/20")
                     )} />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/90">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/90">
                         {isLocal ? 'Local Stream' : 'Remote Vibe'}
                     </span>
                 </div>
@@ -148,7 +148,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                     <motion.div
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10 shadow-glow-sm bg-emerald-500/10"
+                        className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-border/50 shadow-glow-sm bg-emerald-500/10"
                     >
                         <Shield className="w-3.5 h-3.5 text-emerald-500" />
                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Encrypted</span>
@@ -161,11 +161,11 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                 <div className="flex items-center gap-3">
                     {/* Signal bars mockup */}
                     <div className="flex items-end gap-0.5 h-3 opacity-30">
-                        <div className="w-1 h-1 bg-white rounded-full" />
-                        <div className="w-1 h-2 bg-white rounded-full" />
-                        <div className="w-1 h-3 bg-white rounded-full" />
+                        <div className="w-1 h-1 bg-foreground rounded-full" />
+                        <div className="w-1 h-2 bg-foreground rounded-full" />
+                        <div className="w-1 h-3 bg-foreground rounded-full" />
                     </div>
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-white/20 italic">
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/30 italic">
                         Node: {isLocal ? "Edge-01" : "Peer-Direct"}
                     </span>
                 </div>

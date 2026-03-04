@@ -60,7 +60,7 @@ export default function FriendsPage() {
     });
 
     return (
-        <div className="min-h-screen bg-[#020202] text-white selection:bg-primary/30 overflow-x-hidden relative">
+        <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden relative">
             {/* Background Mesh */}
             <div className="fixed inset-0 z-0 pointer-events-none opacity-20">
                 <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[120px]" />
@@ -75,28 +75,28 @@ export default function FriendsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-16"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/10 mb-6 backdrop-blur-md">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/30 border border-border mb-6 backdrop-blur-md">
                         <Users className="w-4 h-4 text-primary" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 text-primary">Your Network</span>
                     </div>
                     <h1 className="text-5xl md:text-7xl font-black tracking-[-0.05em] uppercase italic mb-4">
                         Connections<span className="text-primary">.</span>
                     </h1>
-                    <p className="text-white/40 max-w-xl text-lg font-medium leading-relaxed uppercase tracking-tighter">
+                    <p className="text-muted-foreground max-w-xl text-lg font-medium leading-relaxed uppercase tracking-tighter">
                         Manage your network, accept invitations, and keep the vibe alive across the globe.
                     </p>
                 </motion.div>
 
                 <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="inline-flex h-14 items-center justify-start rounded-2xl bg-white/[0.03] p-1 border border-white/5 mb-12 backdrop-blur-xl w-full md:w-auto">
-                        <TabsTrigger value="all" className="rounded-xl px-8 h-full gap-3 data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-black uppercase tracking-widest transition-all">
+                    <TabsList className="inline-flex h-14 items-center justify-start rounded-2xl bg-muted/40 p-1 border border-border mb-12 backdrop-blur-xl w-full md:w-auto">
+                        <TabsTrigger value="all" className="rounded-xl px-8 h-full gap-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[10px] font-black uppercase tracking-widest transition-all">
                             <Users className="w-4 h-4" /> All Friends
                         </TabsTrigger>
-                        <TabsTrigger value="requests" className="rounded-xl px-8 h-full gap-3 data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-black uppercase tracking-widest relative transition-all">
+                        <TabsTrigger value="requests" className="rounded-xl px-8 h-full gap-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-[10px] font-black uppercase tracking-widest relative transition-all">
                             <UserPlus className="w-4 h-4" />
                             Requests
                             {requests && requests.length > 0 && (
-                                <span className="bg-primary text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black absolute -top-1.5 -right-1.5 shadow-glow-sm">
+                                <span className="bg-primary text-primary-foreground text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black absolute -top-1.5 -right-1.5 shadow-glow-sm">
                                     {requests.length}
                                 </span>
                             )}
@@ -112,12 +112,12 @@ export default function FriendsPage() {
                         ) : (
                             <div className="flex flex-col gap-3">
                                 {friends?.length === 0 ? (
-                                    <div className="py-40 text-center glass-card rounded-[3rem] border border-white/5">
-                                        <div className="w-20 h-20 bg-white/[0.03] rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
-                                            <Users className="w-10 h-10 text-white/10" />
+                                    <div className="py-40 text-center glass-card rounded-[3rem] border border-border">
+                                        <div className="w-20 h-20 bg-muted/40 rounded-full flex items-center justify-center mx-auto mb-8 border border-border">
+                                            <Users className="w-10 h-10 text-muted-foreground/30" />
                                         </div>
                                         <h3 className="text-2xl font-black uppercase tracking-tight mb-2 opacity-40 italic">Ghost Town</h3>
-                                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Start matching to find your first vibe buddy.</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">Start matching to find your first vibe buddy.</p>
                                     </div>
                                 ) : (
                                     friends?.map((friend: any) => (
@@ -142,12 +142,12 @@ export default function FriendsPage() {
                         ) : (
                             <div className="flex flex-col gap-3">
                                 {requests?.length === 0 ? (
-                                    <div className="py-40 text-center glass-card rounded-[3rem] border border-white/5">
-                                        <div className="w-20 h-20 bg-white/[0.03] rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
-                                            <UserPlus className="w-10 h-10 text-white/10" />
+                                    <div className="py-40 text-center glass-card rounded-[3rem] border border-border">
+                                        <div className="w-20 h-20 bg-muted/40 rounded-full flex items-center justify-center mx-auto mb-8 border border-border">
+                                            <UserPlus className="w-10 h-10 text-muted-foreground/30" />
                                         </div>
                                         <h3 className="text-2xl font-black uppercase tracking-tight mb-2 opacity-40 italic">In-box empty</h3>
-                                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">No pending friend requests at the moment.</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">No pending friend requests at the moment.</p>
                                     </div>
                                 ) : (
                                     requests?.map((req: any) => (

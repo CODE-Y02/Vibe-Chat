@@ -232,16 +232,7 @@ export default function Landing() {
         </div>
       </footer>
 
-      <style jsx global>{`
-        @keyframes shimmer {
-          100% { transform: translateX(100%); }
-        }
-        .text-gradient {
-          background: linear-gradient(to right, #ffffff, #ff3366, #ff8a00);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-      `}</style>
+
     </div>
   );
 }

@@ -103,7 +103,7 @@ export function Sidebar({ conversations, activePeerId, onSelectConversation, cla
                                 </p>
                             </div>
                             {activePeerId === conv.peer.id && (
-                                <div className="absolute left-1 w-1 h-8 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+                                <div className="absolute left-1 w-1 h-8 bg-primary rounded-full shadow-[0_0_10px_hsla(var(--primary)/0.5)]" />
                             )}
                         </button>
                     ))

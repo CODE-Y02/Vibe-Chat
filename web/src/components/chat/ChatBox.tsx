@@ -30,8 +30,8 @@ function MessageBubble({ message, isOwn }: MessageBubbleProps) {
             <div className={cn(
                 "max-w-[85%] px-5 py-3 rounded-[24px] shadow-xl text-sm transition-all relative overflow-hidden",
                 isOwn
-                    ? "bg-vibe-gradient text-white rounded-tr-sm"
-                    : "bg-white/[0.05] text-white/90 rounded-tl-sm border border-white/10 backdrop-blur-md"
+                    ? "bg-vibe-gradient text-primary-foreground rounded-tr-sm"
+                    : "bg-muted/40 text-foreground rounded-tl-sm border border-border backdrop-blur-md"
             )}>
                 {message.text}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
@@ -126,10 +126,10 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                 >
                     <Button
                         onClick={() => setIsMinimized(false)}
-                        className="w-full h-14 md:h-16 rounded-2xl md:rounded-[2rem] shadow-glow glass border-white/10 flex items-center justify-between px-6 md:px-8 bg-primary text-white hover:scale-[1.02] transition-all"
+                        className="w-full h-14 md:h-16 rounded-2xl md:rounded-[2rem] shadow-glow glass border-border/50 flex items-center justify-between px-6 md:px-8 bg-primary text-primary-foreground hover:scale-[1.02] transition-all"
                     >
                         <div className="flex items-center gap-3">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-glow-sm" />
                             <span className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em]">Live Chat ({session.messages.length})</span>
                         </div>
                         <Maximize2 className="w-4 h-4" />
@@ -141,20 +141,20 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                     initial={{ opacity: 0, y: 30, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 30, scale: 0.95 }}
-                    className="flex flex-col h-full rounded-t-[2.5rem] md:rounded-[3rem] overflow-hidden glass-card border border-white/5 relative bg-[#0a0a0a]/60 backdrop-blur-3xl"
+                    className="flex flex-col h-full rounded-t-[2.5rem] md:rounded-[3rem] overflow-hidden glass-card border border-border/20 relative bg-card/60 backdrop-blur-3xl"
                 >
                     {!session.isMatched ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-8 md:p-12 space-y-6 md:space-y-8">
                             <motion.div
                                 animate={{ opacity: [0.3, 0.6, 0.3] }}
                                 transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                                className="w-16 h-16 md:w-24 md:h-24 bg-white/5 rounded-full flex items-center justify-center relative border border-white/5"
+                                className="w-16 h-16 md:w-24 md:h-24 bg-muted/40 rounded-full flex items-center justify-center relative border border-border"
                             >
-                                <Shield className="w-8 h-8 md:w-10 md:h-10 text-white/20" />
+                                <Shield className="w-8 h-8 md:w-10 md:h-10 text-muted-foreground/30" />
                             </motion.div>
                             <div>
                                 <h3 className="text-lg md:text-xl font-black tracking-tight uppercase mb-2 md:mb-3 italic text-gradient px-4">Private Vibe</h3>
-                                <p className="text-[9px] md:text-[10px] text-white/30 font-bold tracking-[0.2em] max-w-[200px] md:max-w-[220px] mx-auto leading-relaxed uppercase">
+                                <p className="text-[9px] md:text-[10px] text-muted-foreground font-bold tracking-[0.2em] max-w-[200px] md:max-w-[220px] mx-auto leading-relaxed uppercase">
                                     End-to-end encryption active. Messages are ephemeral.
                                 </p>
                             </div>
@@ -162,7 +162,7 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                     ) : (
                         <>
                             {/* Chat Header */}
-                            <div className="p-4 md:p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between z-10">
+                            <div className="p-4 md:p-6 border-b border-border bg-muted/20 flex items-center justify-between z-10">
                                 <div className="flex items-center gap-3 md:gap-4 min-w-0">
                                     <div className="relative shrink-0">
                                         <motion.div
@@ -170,15 +170,15 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                                             animate={{ scale: 1 }}
                                             className="relative"
                                         >
-                                            <Avatar className="w-10 h-10 md:w-12 md:h-12 border border-white/10 shadow-lg">
+                                            <Avatar className="w-10 h-10 md:w-12 md:h-12 border border-border shadow-lg">
                                                 <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${session.strangerId}`} />
                                                 <AvatarFallback className="bg-primary/20 text-primary font-bold">S</AvatarFallback>
                                             </Avatar>
-                                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 md:w-3.5 md:h-3.5 bg-emerald-500 border-2 md:border-[3px] border-[#0a0a0a] rounded-full"></span>
+                                            <span className="absolute bottom-0.5 right-0.5 w-3 h-3 md:w-3.5 md:h-3.5 bg-emerald-500 border-2 md:border-[3px] border-card rounded-full"></span>
                                         </motion.div>
                                     </div>
                                     <div>
-                                        <h3 className="font-black text-[9px] md:text-[10px] tracking-[0.2em] uppercase text-white/80 truncate">
+                                        <h3 className="font-black text-[9px] md:text-[10px] tracking-[0.2em] uppercase text-foreground/80 truncate">
                                             {session.isDirectCall ? (session.peerName || 'Friend') : 'Stranger'}
                                         </h3>
                                         <div className="flex items-center gap-2 mt-0.5">
@@ -208,7 +208,7 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                                                 "h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl transition-all border",
                                                 friendMutation.isSuccess
                                                     ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/20"
-                                                    : "bg-white/5 text-white/40 hover:text-white hover:bg-white/10 border-white/5"
+                                                    : "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/60 border-border"
                                             )}
                                             title="Add as Friend"
                                         >
@@ -221,7 +221,7 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                                             )}
                                         </Button>
                                     </motion.div>
-                                    <Button variant="ghost" size="icon" onClick={() => setIsMinimized(true)} className="h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-white/5 text-white/20 hover:text-white transition-all">
+                                    <Button variant="ghost" size="icon" onClick={() => setIsMinimized(true)} className="h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl hover:bg-muted text-muted-foreground/40 hover:text-foreground transition-all">
                                         <Minimize2 className="w-4 h-4 md:w-5 md:h-5" />
                                     </Button>
                                 </div>
@@ -253,12 +253,12 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                             </div>
 
                             {/* Input Area */}
-                            <form className="p-4 md:p-6 border-t border-white/5 bg-white/[0.02] flex gap-3 md:gap-4 items-center z-10" onSubmit={handleSend}>
+                            <form className="p-4 md:p-6 border-t border-border bg-muted/20 flex gap-3 md:gap-4 items-center z-10" onSubmit={handleSend}>
                                 <Input
                                     value={text}
                                     onChange={(e) => setText(e.target.value)}
                                     placeholder="Drop a vibe..."
-                                    className="flex-1 h-12 md:h-14 px-4 md:px-6 rounded-xl md:rounded-2xl bg-white/[0.05] border-white/10 focus-visible:ring-primary/20 focus-visible:border-primary/50 text-xs md:text-sm placeholder:text-white/20 transition-all font-medium"
+                                    className="flex-1 h-12 md:h-14 px-4 md:px-6 rounded-xl md:rounded-2xl bg-muted/40 border-border focus-visible:ring-primary/20 focus-visible:border-primary/50 text-xs md:text-sm placeholder:text-muted-foreground/30 transition-all font-medium text-foreground"
                                     disabled={!session.isMatched}
                                 />
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
