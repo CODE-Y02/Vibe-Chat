@@ -51,8 +51,8 @@ export default function Landing() {
       <PublicNavbar />
       {/* Background Mesh */}
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-3xl opacity-50" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-3xl opacity-50" />
       </div>
 
 
@@ -144,7 +144,7 @@ export default function Landing() {
 
       {/* Safety Section */}
       <section id="safety" className="py-24 md:py-48 relative overflow-hidden px-4">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[800px] aspect-square bg-primary/5 rounded-full blur-[100px] md:blur-[200px] -z-10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[800px] aspect-square bg-primary/5 rounded-full blur-3xl opacity-50 -z-10" />
         <div className="container mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-16 md:gap-24">
             <motion.div
@@ -197,9 +197,9 @@ export default function Landing() {
                 </div>
                 {/* Decorative scanner line */}
                 <motion.div
-                  animate={{ top: ['0%', '100%', '0%'] }}
+                  animate={{ translateY: ['0%', '400px', '0%'] }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-                  className="absolute left-0 right-0 h-1 bg-emerald-500/40 blur-sm z-20"
+                  className="absolute top-0 left-0 right-0 h-1 bg-emerald-500/40 blur-sm z-20"
                 />
               </div>
             </motion.div>

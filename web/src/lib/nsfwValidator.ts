@@ -8,38 +8,28 @@ let isLoading = false;
 
 const CACHE_PATH = 'indexeddb://vibe-nsfw-v1';
 
+let modelInitPromise: Promise<void> | null = null;
+
 export const loadNSFWModel = async () => {
-    if (model || isLoading) return;
+    if (model) return;
+    if (modelInitPromise) return modelInitPromise;
+    
     isLoading = true;
-
-    try {
-        await tf.ready();
-        logger.info("Checking NSFWJS model cache...");
-
+    modelInitPromise = (async () => {
         try {
-            // Attempt to load the model architecture and weights from local IndexedDB
-            const loadedTFModel = await tf.loadLayersModel(CACHE_PATH);
-            // Construct the nsfwjs wrapper using the cached model
-            // @ts-ignore - constructors might vary in types but exist in runtime
-            model = new nsfwjs.NSFWJS(loadedTFModel, { size: 224 });
-            logger.info("NSFWJS: Successfully loaded from IndexedDB cache.");
-        } catch (e) {
-            logger.info("NSFWJS: Cache miss, downloading default model...");
-            // Specify default model source explicitly to avoid console usage warnings
-            // 'https://nsfwjs.com/model/' is the default endpoint for MobileNetV2
-            model = await (nsfwjs as any).load('https://nsfwjs.com/model/', { size: 224 });
-
-            // Persist the underlying TF model to IndexedDB for future instant loads
-            if (model && (model as any).model) {
-                await (model as any).model.save(CACHE_PATH);
-                logger.info("NSFWJS: Model downloaded and persisted to IndexedDB.");
-            }
+            await tf.ready();
+            logger.info("Downloading/Loading NSFWJS model (browser will cache this network request)...");
+            // MobileNetV2 is fast and lightweight for client-side
+            model = await nsfwjs.load('MobileNetV2Mid', { size: 224 });
+            logger.info("NSFWJS: Successfully loaded and initialized.");
+        } catch (err) {
+            logger.error("Failed to manage NSFWJS model:", err);
+        } finally {
+            isLoading = false;
         }
-    } catch (err) {
-        logger.error("Failed to manage NSFWJS model:", err);
-    } finally {
-        isLoading = false;
-    }
+    })();
+    
+    return modelInitPromise;
 };
 
 export const classifyImage = async (videoElement: HTMLVideoElement) => {

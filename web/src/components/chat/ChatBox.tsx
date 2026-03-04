@@ -129,7 +129,7 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                         className="w-full h-14 md:h-16 rounded-2xl md:rounded-[2rem] shadow-glow glass border-white/10 flex items-center justify-between px-6 md:px-8 bg-primary text-white hover:scale-[1.02] transition-all"
                     >
                         <div className="flex items-center gap-3">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
                             <span className="font-black text-[10px] md:text-xs uppercase tracking-[0.2em]">Live Chat ({session.messages.length})</span>
                         </div>
                         <Maximize2 className="w-4 h-4" />
@@ -146,12 +146,11 @@ export function ChatBox({ onReport }: ChatBoxProps = {}) {
                     {!session.isMatched ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-8 md:p-12 space-y-6 md:space-y-8">
                             <motion.div
-                                animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-                                transition={{ repeat: Infinity, duration: 3 }}
+                                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
                                 className="w-16 h-16 md:w-24 md:h-24 bg-white/5 rounded-full flex items-center justify-center relative border border-white/5"
                             >
                                 <Shield className="w-8 h-8 md:w-10 md:h-10 text-white/20" />
-                                <div className="absolute inset-0 border border-primary/20 rounded-full animate-ping" />
                             </motion.div>
                             <div>
                                 <h3 className="text-lg md:text-xl font-black tracking-tight uppercase mb-2 md:mb-3 italic text-gradient px-4">Private Vibe</h3>

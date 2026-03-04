@@ -66,16 +66,18 @@ export default function AuthPage() {
         <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 relative overflow-hidden">
             {/* Background decoration */}
             <div className="absolute top-0 inset-x-0 h-full -z-10 pointer-events-none">
+            <div className="absolute top-0 inset-x-0 h-full -z-10 pointer-events-none">
                 <motion.div
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-                    transition={{ duration: 8, repeat: Infinity }}
-                    className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/20 rounded-full blur-[140px]"
+                    animate={{ opacity: [0.08, 0.12, 0.08] }}
+                    transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/10 rounded-full blur-[140px]"
                 />
                 <motion.div
-                    animate={{ scale: [1, 1.1, 1], opacity: [0.05, 0.1, 0.05] }}
-                    transition={{ duration: 10, repeat: Infinity, delay: 1 }}
-                    className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/20 rounded-full blur-[120px]"
+                    animate={{ opacity: [0.04, 0.07, 0.04] }}
+                    transition={{ duration: 20, repeat: Infinity, delay: 2, ease: "easeInOut" }}
+                    className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px]"
                 />
+            </div>
             </div>
 
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="absolute top-8 left-8 z-50">

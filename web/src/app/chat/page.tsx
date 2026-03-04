@@ -242,9 +242,9 @@ export default function ChatPage() {
     const radarVariants = {
         pulse: {
             scale: [1, 1.5, 2],
-            opacity: [0.5, 0.2, 0],
+            opacity: [0.3, 0.1, 0],
             transition: {
-                duration: 2,
+                duration: 4,
                 repeat: Infinity,
                 ease: "easeOut" as any
             }
@@ -270,11 +270,11 @@ export default function ChatPage() {
                     <div className="glass px-4 md:px-8 py-2 md:py-3.5 rounded-full flex items-center gap-4 shadow-2xl transition-all">
                         <div className="flex items-center gap-3 pr-4 border-r border-white/10">
                             <motion.div
-                                animate={isSearching ? { scale: [1, 1.2, 1] } : {}}
-                                transition={{ repeat: Infinity, duration: 2 }}
+                                animate={isSearching ? { opacity: [0.3, 0.8, 0.3] } : {}}
+                                transition={{ repeat: Infinity, duration: 4 }}
                                 className={cn(
                                     "w-2.5 h-2.5 rounded-full",
-                                    isSearching ? "bg-primary glow-sm" : session.isMatched ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-white/20"
+                                    isSearching ? "bg-primary shadow-[0_0_10px_rgba(255,51,102,0.3)]" : session.isMatched ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-white/20"
                                 )}
                             />
                             <span className="text-[10px] font-black uppercase tracking-widest opacity-80">
@@ -312,7 +312,7 @@ export default function ChatPage() {
                         isMatched={session.isMatched}
                         className={cn(
                             "w-full h-full border-none rounded-none aspect-auto shadow-none bg-transparent transition-all duration-1000",
-                            isBlurred && session.isMatched && "blur-[80px] scale-110 opacity-40 animate-pulse"
+                            isBlurred && session.isMatched && "blur-2xl scale-110 opacity-40"
                         )}
                     />
 
@@ -333,7 +333,6 @@ export default function ChatPage() {
                                         className="w-24 h-24 md:w-32 md:h-32 bg-primary/20 rounded-full flex items-center justify-center mb-10 border border-primary/30 shadow-glow-lg group cursor-pointer relative"
                                     >
                                         <Sparkles className="w-10 h-10 md:w-14 md:h-14 text-primary group-hover:scale-110 transition-transform" />
-                                        <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
                                     </motion.div>
                                     <h2 className="text-4xl md:text-7xl font-black mb-6 tracking-[-0.05em] uppercase italic leading-none text-gradient">Vibe Check?</h2>
                                     <p className="text-white/40 mb-12 max-w-sm text-sm md:text-base font-medium leading-relaxed uppercase tracking-widest">
@@ -361,7 +360,7 @@ export default function ChatPage() {
 
                                     <div className="w-32 h-32 md:w-48 md:h-48 bg-primary/10 rounded-full flex items-center justify-center border border-primary/30 relative z-10 backdrop-blur-xl">
                                         <div className="flex flex-col items-center gap-3">
-                                            <Zap className="w-8 h-8 text-primary animate-pulse" />
+                                            <Zap className="w-8 h-8 text-primary shadow-glow-sm" />
                                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Scanning...</span>
                                         </div>
                                     </div>

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { webrtc } from '@/lib/webrtc';
 import { VideoOff, MicOff, Shield, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { classifyImage, isNSFW } from '@/lib/nsfwValidator';
+import { classifyImage, isNSFW, loadNSFWModel } from '@/lib/nsfwValidator';
 import { sendAutoFlag } from '@/actions/moderation.actions';
 import { useSession } from "@/components/layout/SessionProvider";
 
@@ -38,6 +38,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                     const runInference = async () => {
                         if (!isMounted.current) return;
                         try {
+                            await loadNSFWModel();
                             const predictions = await classifyImage(videoRef.current!);
                             if (isNSFW(predictions)) {
                                 console.warn("[Moderation] Content flagged locally.");
@@ -119,10 +120,11 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                     {!isLocal && (
                         <div className="absolute inset-0 pointer-events-none overflow-hidden">
                             <motion.div
-                                initial={{ top: "-10%" }}
-                                animate={{ top: "110%" }}
-                                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                                className="absolute left-0 right-0 h-px bg-primary/20 shadow-[0_0_15px_rgba(255,51,102,0.5)] z-10"
+                                initial={{ translateY: "-10%" }}
+                                whileInView={{ translateY: "300px" }}
+                                viewport={{ once: false }}
+                                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                                className="absolute top-0 left-0 right-0 h-px bg-primary/20 shadow-[0_0_15px_rgba(255,51,102,0.5)] z-10"
                             />
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
                         </div>

@@ -43,5 +43,5 @@ COPY prisma ./prisma
 # Expose server port
 EXPOSE 3000
 
-# Bun runs TypeScript natively — no build step required
-CMD ["bun", "run", "src/index.ts"]
+# Ensure database schema is pushed before starting the server
+CMD ["sh", "-c", "bunx prisma db push && bun run src/index.ts"]

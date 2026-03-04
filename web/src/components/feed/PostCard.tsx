@@ -338,11 +338,15 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="glass-card border-border shadow-2xl">
-                                    {canDelete && (
+                                    {canDelete ? (
                                         <>
                                             <DropdownMenuItem onClick={() => setEditing(true)} className="gap-2 cursor-pointer focus:bg-primary/10 font-bold"><Edit3 className="w-4 h-4" /> Edit</DropdownMenuItem>
                                             <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>
                                         </>
+                                    ) : (
+                                        <DropdownMenuItem onClick={() => toast({ title: "User reported", description: "Thanks for keeping VibeChat safe." })} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold">
+                                            <Trash2 className="w-4 h-4" /> Report Vibe
+                                        </DropdownMenuItem>
                                     )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
