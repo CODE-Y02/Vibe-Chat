@@ -91,7 +91,7 @@ export function Sidebar({ conversations, activePeerId, onSelectConversation, cla
                                     )}>
                                         {conv.peer.username}
                                     </p>
-                                    <span className="text-[10px] text-muted-foreground/50 font-black uppercase tracking-tighter">
+                                    <span className="text-[9px] text-muted-foreground/40 font-black uppercase tracking-widest bg-muted rounded-full px-2 py-0.5 whitespace-nowrap">
                                         {formatTime(conv.createdAt)}
                                     </span>
                                 </div>
