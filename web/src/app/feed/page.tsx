@@ -6,7 +6,7 @@ import { FeedList } from '@/components/feed/FeedList';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Image as ImageIcon, Send, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, Send, Loader2, Share2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
@@ -55,9 +55,28 @@ export default function FeedPage() {
             <Navbar />
 
             <main className="container mx-auto px-4 py-8 max-w-2xl">
-                <div className="mb-8 p-4">
-                    <h1 className="text-5xl font-black tracking-tighter mb-2 bg-gradient-to-br from-foreground to-foreground/40 bg-clip-text text-transparent">Vibe Feed</h1>
-                    <p className="text-muted-foreground font-semibold tracking-wide border-l-4 border-primary pl-4">Catch the latest energy from the community</p>
+                <div className="mb-8 p-4 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-5xl font-black tracking-tighter mb-2 bg-gradient-to-br from-foreground to-foreground/40 bg-clip-text text-transparent">Vibe Feed</h1>
+                        <p className="text-muted-foreground font-semibold tracking-wide border-l-4 border-primary pl-4">Catch the latest energy from the community</p>
+                    </div>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                            const url = `${window.location.origin}/profile/${user?.id || ''}`;
+                            if (navigator.share) {
+                                navigator.share({ title: 'Add me on VibeChat', text: 'Catch my vibe!', url }).catch(() => {});
+                            } else {
+                                navigator.clipboard.writeText(url);
+                                toast({ title: 'Profile link copied!' });
+                            }
+                        }}
+                        className="hidden md:flex items-center gap-2 rounded-full border-primary/20 hover:bg-primary/10 transition-colors shadow-sm"
+                    >
+                        <Share2 className="w-4 h-4 text-primary" />
+                        <span className="font-bold text-sm">Share Profile</span>
+                    </Button>
                 </div>
 
                 <Card className="p-4 sm:p-6 md:p-8 mb-12 glass-card border border-border shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] bg-card/50 backdrop-blur-xl">

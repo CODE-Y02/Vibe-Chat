@@ -19,7 +19,7 @@ export class ModerationService {
         const reportCount = await redis.incr(reportKey);
 
         if (reportCount === 1) {
-            await redis.expire(reportKey, 86400); // Reset reports window every 24h
+            await redis.expire(reportKey, 600); // 10-minute Peer-Consensus Engine window
         }
 
         if (reportCount >= 3) {

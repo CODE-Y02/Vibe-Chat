@@ -79,3 +79,23 @@ const io = new Server(httpServer as unknown as import('node:http').Server, {
 });
 
 setupSockets(io);
+
+// ── Graceful Shutdown ────────────────────────────────────────────────────────
+const shutdown = () => {
+    console.log(JSON.stringify({ level: 'info', message: 'SIGTERM received. Starting graceful shutdown...' }));
+    
+    // Close HTTP Server (Stops accepting new connections)
+    httpServer.close(() => {
+        console.log(JSON.stringify({ level: 'info', message: 'HTTP server closed.' }));
+        process.exit(0);
+    });
+    
+    // Force close after 10s
+    setTimeout(() => {
+        console.error(JSON.stringify({ level: 'error', message: 'Force closing after 10s timeout.' }));
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
