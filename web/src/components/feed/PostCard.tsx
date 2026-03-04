@@ -6,12 +6,12 @@ import { toast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Loader2, Repeat2, Bookmark, Trash2, Edit3, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Loader2, Repeat2, Trash2, Edit3, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useSession } from "@/components/layout/SessionProvider";
 import { useQueryClient } from '@tanstack/react-query';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { bookmarkPost, undoBookmark, updatePost } from '@/actions/feed.actions';
+import { updatePost } from '@/actions/feed.actions';
 
 // --- Types ---
 export interface PostAuthor {
@@ -94,7 +94,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const [dislikeCount, setDislikeCount] = useState(displayPost.dislikesCount ?? 0);
     const [repostCount, setRepostCount] = useState(displayPost.repostsCount ?? 0);
     const [reposted, setReposted] = useState(false);
-    const [bookmarked, setBookmarked] = useState(false);
+
 
     const [editing, setEditing] = useState(false);
     const [editContent, setEditContent] = useState(displayPost.content || '');
@@ -229,18 +229,6 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
         });
     };
 
-    const handleBookmark = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const wasBookmarked = bookmarked;
-        setBookmarked(!wasBookmarked);
-        const res = wasBookmarked ? await undoBookmark(displayPost.id) : await bookmarkPost(displayPost.id);
-        if (res.error) {
-            setBookmarked(wasBookmarked);
-            toast({ title: res.error, variant: "destructive" });
-        } else {
-            toast({ title: wasBookmarked ? "Removed from bookmarks" : "Saved to bookmarks" });
-        }
-    };
 
     const handleSaveEdit = async () => {
         if (!editContent.trim()) return;
@@ -356,9 +344,6 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                                             <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>
                                         </>
                                     )}
-                                    <DropdownMenuItem onClick={handleBookmark} className={`gap-2 cursor-pointer focus:bg-primary/10 font-bold ${bookmarked ? 'text-primary' : ''}`}>
-                                        <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} /> {bookmarked ? 'Unbookmark' : 'Bookmark'}
-                                    </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </header>
