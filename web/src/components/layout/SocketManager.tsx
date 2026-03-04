@@ -10,58 +10,62 @@ import { webrtc } from "@/lib/webrtc";
 
 export function SocketManager({ children }: { children: React.ReactNode }) {
     const { data: sessionData } = useSession();
-    const { setIncomingCall, setOutgoingCall, outgoingCall, setMatched, disconnect } = useChatStore();
+    const { setIncomingCall, setOutgoingCall, setMatched, disconnect } = useChatStore();
     const router = useRouter();
+    const token = sessionData?.session?.access_token;
 
     useEffect(() => {
-        if (sessionData?.session?.access_token) {
-            socket.auth = { token: sessionData.session.access_token };
-            if (!socket.connected) socket.connect();
-
-            const handleCallMade = (data: any) => {
-                setIncomingCall(data);
-            };
-
-            const handleCallAccepted = () => {
-                console.log("[SocketManager] Call Accepted by peer");
-                setOutgoingCall(null);
-                router.push("/chat");
-            };
-
-            const handleCallRejected = () => {
-                toast.error("Call Rejected", { description: "User declined your vibe call." });
-                setOutgoingCall(null);
-            };
-
-            const handleAnswer = async ({ sdp }: { sdp: any }) => {
-                // If we are currently calling someone, handle their answer
-                if (outgoingCall) {
-                    console.log("[SocketManager] Receiving answer for outgoing call...");
-                    await webrtc.handleAnswer(sdp);
-                }
-            };
-
-            const handleConnectError = (err: any) => {
-                console.error("[SocketManager] Connection Error:", err.message);
-            };
-
-            socket.on("call-made", handleCallMade);
-            socket.on("call-accepted", handleCallAccepted);
-            socket.on("call-rejected", handleCallRejected);
-            socket.on("answer", handleAnswer);
-            socket.on("connect_error", handleConnectError);
-
-            return () => {
-                socket.off("call-made", handleCallMade);
-                socket.off("call-accepted", handleCallAccepted);
-                socket.off("call-rejected", handleCallRejected);
-                socket.off("answer", handleAnswer);
-                socket.off("connect_error", handleConnectError);
-            };
-        } else {
+        if (!token) {
             if (socket.connected) socket.disconnect();
+            return;
         }
-    }, [sessionData?.session?.access_token, setIncomingCall, setOutgoingCall, outgoingCall, router]);
+
+        socket.auth = { token };
+        if (!socket.connected) socket.connect();
+
+        // 📞 CALL SIGNALING
+        const handleCallMade = (data: any) => setIncomingCall(data);
+        const handleCallAccepted = () => {
+            setOutgoingCall(null);
+            router.push("/chat");
+        };
+        const handleCallRejected = () => {
+             toast.error("Vibe Declined", { description: "User is not active right now." });
+             setOutgoingCall(null);
+        };
+        const handleCallCancelled = () => setIncomingCall(null);
+
+        // 📡 WEBRTC SIGNALING (GLOBAL)
+        const handleOffer = async ({ from, sdp }: { from: string, sdp: any }) => {
+            console.log("[SocketManager] Receiving Offer from:", from);
+            await webrtc.handleOffer(from, sdp);
+        };
+        const handleAnswer = async ({ sdp }: { sdp: any }) => {
+            console.log("[SocketManager] Receiving Answer...");
+            await webrtc.handleAnswer(sdp);
+        };
+        const handleIceCandidate = async ({ candidate }: { candidate: any }) => {
+            await webrtc.handleIceCandidate(candidate);
+        };
+
+        socket.on("call-made", handleCallMade);
+        socket.on("call-accepted", handleCallAccepted);
+        socket.on("call-rejected", handleCallRejected);
+        socket.on("call-cancelled", handleCallCancelled);
+        socket.on("offer", handleOffer);
+        socket.on("answer", handleAnswer);
+        socket.on("ice-candidate", handleIceCandidate);
+
+        return () => {
+            socket.off("call-made", handleCallMade);
+            socket.off("call-accepted", handleCallAccepted);
+            socket.off("call-rejected", handleCallRejected);
+            socket.off("call-cancelled", handleCallCancelled);
+            socket.off("offer", handleOffer);
+            socket.off("answer", handleAnswer);
+            socket.off("ice-candidate", handleIceCandidate);
+        };
+    }, [token, setIncomingCall, setOutgoingCall, router]);
 
     return <>{children}</>;
 }

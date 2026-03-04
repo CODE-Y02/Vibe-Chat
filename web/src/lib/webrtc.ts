@@ -65,6 +65,9 @@ class WebRTCClient {
 
     onRemoteStream(callback: StreamCallback) {
         this.onRemoteStreamCallback = callback;
+        if (this.remoteStream) {
+            callback(this.remoteStream);
+        }
     }
 
     async initiateOffer(peerId: string) {
