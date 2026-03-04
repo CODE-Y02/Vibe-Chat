@@ -44,4 +44,4 @@ COPY prisma ./prisma
 EXPOSE 3000
 
 # Ensure database schema is pushed before starting the server
-CMD ["sh", "-c", "bunx prisma db push && bun run src/index.ts"]
+CMD ["bun", "run", "src/index.ts"]
