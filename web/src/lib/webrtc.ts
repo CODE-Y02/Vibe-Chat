@@ -190,6 +190,20 @@ class WebRTCClient {
         this.localStream?.getVideoTracks().forEach(t => t.enabled = enabled);
     }
 
+    async resetPeerConnection() {
+        if (this.remoteStream) {
+            this.remoteStream.getTracks().forEach(track => track.stop());
+            this.remoteStream = null;
+        }
+        if (this.peerConnection) {
+            this.peerConnection.close();
+            this.peerConnection = null;
+        }
+        this.targetPeerId = null;
+        this.onRemoteStreamCallback = null;
+        this.resetSignalingState();
+    }
+
     async cleanup() {
         if (this.setupPromise) {
             try {
@@ -203,17 +217,8 @@ class WebRTCClient {
             this.localStream.getTracks().forEach(track => track.stop());
             this.localStream = null;
         }
-        if (this.remoteStream) {
-            this.remoteStream.getTracks().forEach(track => track.stop());
-            this.remoteStream = null;
-        }
-        if (this.peerConnection) {
-            this.peerConnection.close();
-            this.peerConnection = null;
-        }
-        this.targetPeerId = null;
-        this.onRemoteStreamCallback = null;
-        this.resetSignalingState();
+        
+        await this.resetPeerConnection();
     }
 }
 

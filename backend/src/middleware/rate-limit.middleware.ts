@@ -1,10 +1,12 @@
 import { Context, Next } from 'hono';
 import redis, { RATE_LIMIT_PREFIX } from '../services/redis.service.js';
 import { AppError } from '../lib/utils.js';
+import { getConnInfo } from '@hono/node-server/conninfo';
 
 export const rateLimiter = (limit: number, windowSeconds: number) => {
     return async (c: Context, next: Next) => {
-        const ip = c.req.header('x-forwarded-for') || 'anonymous';
+        const info = getConnInfo(c);
+        const ip = c.req.header('x-forwarded-for') || info.remote.address || 'anonymous';
         const key = `${RATE_LIMIT_PREFIX}${ip}`;
 
         const replies = await redis.multi()

@@ -54,7 +54,7 @@ export default function ChatPage() {
             router.push('/dms');
         } else {
             disconnect();
-            webrtc.cleanup();
+            webrtc.resetPeerConnection();
             setIsBlurred(true);
             handleStart();
         }
@@ -71,11 +71,11 @@ export default function ChatPage() {
             router.push('/dms');
         } else {
             disconnect();
-            webrtc.cleanup();
+            webrtc.resetPeerConnection();
             setIsBlurred(true);
-            handleStart();
+            setSearching(true);
         }
-    }, [session.strangerId, session.isDirectCall, socket, disconnect, handleStart, router]);
+    }, [session.strangerId, session.isDirectCall, socket, disconnect, setSearching, router]);
 
     const onMessage = useCallback(({ from, content }: { from: string, content: string }) => {
         addMessage({
@@ -307,7 +307,7 @@ export default function ChatPage() {
 
             <main className="flex-1 relative flex flex-col md:flex-row overflow-hidden">
                 {/* VIDEO ZONE */}
-                <div className="flex-1 relative bg-[#050505] overflow-hidden">
+                <div className="flex-1 relative bg-background overflow-hidden dark">
                     <VideoPanel
                         isMatched={session.isMatched}
                         className={cn(

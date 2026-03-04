@@ -14,9 +14,9 @@ export async function authenticatedFetch(endpoint: string, options: RequestInit 
         }
     }
 
-    // 8-second timeout — prevents infinite loading when backend is unreachable
+    // 60-second timeout — wait for Render free tier cold starts
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
         return await fetch(`${baseUrl}${endpoint}`, {

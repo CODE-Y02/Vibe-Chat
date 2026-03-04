@@ -19,8 +19,10 @@ interface VideoPanelProps {
 export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanelProps) {
     const { data: sessionData } = useSession();
     const videoRef = useRef<HTMLVideoElement>(null);
+    const isMounted = useRef(true);
 
     useEffect(() => {
+        isMounted.current = true;
         let timeoutId: NodeJS.Timeout;
 
         if (isLocal) {
@@ -30,8 +32,11 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
 
             // Optimized Moderation Loop (Non-blocking)
             const checkModeration = async () => {
+                if (!isMounted.current) return;
+                
                 if (videoRef.current && videoRef.current.readyState === 4) {
                     const runInference = async () => {
+                        if (!isMounted.current) return;
                         try {
                             const predictions = await classifyImage(videoRef.current!);
                             if (isNSFW(predictions)) {
@@ -39,7 +44,9 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                                 sendAutoFlag().catch(console.error);
                             }
                         } catch (e) { }
-                        timeoutId = setTimeout(checkModeration, 4000);
+                        if (isMounted.current) {
+                            timeoutId = setTimeout(checkModeration, 4000);
+                        }
                     };
 
                     // Yield to browser for smooth 60fps UI
@@ -49,7 +56,9 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
                         setTimeout(runInference, 0);
                     }
                 } else {
-                    timeoutId = setTimeout(checkModeration, 1000); // Retry sooner if video not ready
+                    if (isMounted.current) {
+                        timeoutId = setTimeout(checkModeration, 1000);
+                    }
                 }
             };
             checkModeration();
@@ -68,6 +77,7 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
         }
 
         return () => {
+            isMounted.current = false;
             if (timeoutId) clearTimeout(timeoutId);
             if (videoRef.current) {
                 videoRef.current.srcObject = null;
@@ -77,11 +87,11 @@ export function VideoPanel({ isLocal, className, isMatched = false }: VideoPanel
 
     return (
         <Card className={cn(
-            "relative overflow-hidden bg-[#050505] aspect-[4/3] rounded-[32px] border border-white/5 shadow-2xl transition-all",
+            "relative overflow-hidden bg-card aspect-[4/3] rounded-[32px] border border-border shadow-2xl transition-all dark",
             className
         )}>
             {!isLocal && !isMatched ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#020202] mesh-gradient">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-background mesh-gradient dark">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}

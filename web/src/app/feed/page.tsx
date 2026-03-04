@@ -60,9 +60,9 @@ export default function FeedPage() {
                     <p className="text-muted-foreground font-semibold tracking-wide border-l-4 border-primary pl-4">Catch the latest energy from the community</p>
                 </div>
 
-                <Card className="p-8 mb-12 glass-card border border-border shadow-2xl rounded-[2.5rem] bg-card/50 backdrop-blur-xl">
-                    <div className="flex gap-5">
-                        <Avatar className="w-14 h-14 border-2 border-primary/20 shadow-2xl">
+                <Card className="p-4 sm:p-6 md:p-8 mb-12 glass-card border border-border shadow-2xl rounded-[1.5rem] md:rounded-[2.5rem] bg-card/50 backdrop-blur-xl">
+                    <div className="flex gap-3 sm:gap-5">
+                        <Avatar className="w-10 h-10 sm:w-14 sm:h-14 border-2 border-primary/20 shadow-2xl">
                             <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
                             <AvatarFallback className="bg-primary/10 text-primary font-black text-lg">{((user?.user_metadata?.full_name || user?.email) || "U").slice(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>

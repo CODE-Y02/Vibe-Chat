@@ -16,7 +16,7 @@ export class FeedService {
         return {
             author: { select: safeAuthorSelect },
             reactions: {
-                where: { userId: currentUserId, post: { deletedAt: null } },
+                where: { userId: currentUserId },
                 select: { type: true, userId: true },
             },
             replies: {
@@ -32,7 +32,6 @@ export class FeedService {
                 },
             },
             repostOf: {
-                where: { deletedAt: null },
                 include: {
                     author: { select: safeAuthorSelect },
                 },
