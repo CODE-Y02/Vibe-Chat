@@ -73,6 +73,9 @@ const io = new Server(httpServer as unknown as import('node:http').Server, {
         origin: '*',
         methods: ['GET', 'POST'],
     },
+    // Force WebSocket-only — prevents long-polling from consuming browser connection slots
+    transports: ['websocket'],
+    allowEIO3: true,
 });
 
 setupSockets(io);

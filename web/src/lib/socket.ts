@@ -9,8 +9,17 @@ const socketUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 // For authenticated DMs, we might use a separate hook or this one if token is provided
 export const socket: Socket = io(socketUrl, {
     autoConnect: false,
+    // 🔑 CRITICAL: Force WebSocket only.
+    // Default ['polling','websocket'] starts with HTTP long-polling which
+    // consumes all 6 browser connections per domain — blocking every REST call.
+    transports: ['websocket'],
     reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 10000,
 });
+
 
 socket.on("connect", () => {
     useSocketStore.getState().setStatus("connected");

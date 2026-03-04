@@ -44,9 +44,12 @@ export default function DMsPage() {
         router.push("/chat");
     };
 
-    const { data: convData, isLoading: isLoadingConvs } = useQuery({
+    const { data: convData, isLoading: isLoadingConvs, isError: isConvsError } = useQuery({
         queryKey: ['conversations'],
-        queryFn: () => getConversations()
+        queryFn: () => getConversations(),
+        retry: 1,
+        staleTime: 30_000,
+        refetchOnWindowFocus: true,
     });
 
     const { data: friendsData } = useQuery({
@@ -89,17 +92,21 @@ export default function DMsPage() {
 
     const { data: messages, isLoading: isLoadingMessages } = useQuery({
         queryKey: ['messages', activePeer?.peer.id],
-        queryFn: () => activePeer ? getMessages(activePeer.peer.id) : [],
-        enabled: !!activePeer
+        queryFn: () => activePeer ? getMessages(activePeer.peer.id) : Promise.resolve([]),
+        enabled: !!activePeer,
+        retry: false,
+        staleTime: 10_000,
     });
 
     const sendMutation = useMutation({
         mutationFn: ({ to, content }: { to: string, content: string }) => sendMessage(to, content),
         onMutate: async ({ to, content }) => {
-            // Optimistically append my own sent message immediately
+            // Cancel in-flight refetches so they don't overwrite our optimistic update
+            await queryClient.cancelQueries({ queryKey: ['messages', to] });
+
             const tempMsg = {
                 id: `opt-${Date.now()}`,
-                senderId: 'me-optimistic', // will NOT match peer id => isMe = true
+                senderId: 'me-optimistic', // != peer id → isMe = true
                 receiverId: to,
                 content,
                 isRead: false,
@@ -109,20 +116,15 @@ export default function DMsPage() {
                 ['messages', to],
                 (old: any[] = []) => [...old, tempMsg]
             );
-            return { tempMsg };
+            return { to };
         },
-        onSuccess: (data, { to }) => {
+        onSuccess: (_data, { to }) => {
             setInput("");
-            // Replace temp message with real one from server
-            queryClient.setQueryData(
-                ['messages', to],
-                (old: any[] = []) =>
-                    old.map(m => m.id.startsWith('opt-') ? { ...data } : m)
-            );
+            // Refetch with real data from DB (clears the opt- temp message)
+            queryClient.invalidateQueries({ queryKey: ['messages', to] });
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
         },
         onError: (_err, { to }) => {
-            // Roll back optimistic message on failure
             queryClient.invalidateQueries({ queryKey: ['messages', to] });
         },
     });
