@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { updateProfile } from "@/actions/auth.actions";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface ProfileModalProps {
     user: any;
@@ -25,19 +25,21 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
 
     const handleSave = async () => {
         setLoading(true);
-        try {
-            const res = await updateProfile(formData);
-            if (res.success) {
-                toast({ title: "Profile updated successfully" });
-                onClose();
-            } else {
-                toast({ title: "Failed to update profile", variant: "destructive" });
-            }
-        } catch (error) {
-            toast({ title: "An error occurred", variant: "destructive" });
-        } finally {
+        const savePromise = updateProfile(formData).then(res => {
             setLoading(false);
-        }
+            if (!res.success) throw new Error("Failed to update profile");
+            onClose();
+            return res;
+        }).catch(err => {
+            setLoading(false);
+            throw err;
+        });
+
+        toast.promise(savePromise, {
+            loading: "Updating profile...",
+            success: "Profile updated successfully",
+            error: (err) => err.message || "An error occurred"
+        });
     };
 
     return (

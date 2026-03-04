@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { reactToPost, createReply, getReplies, repostPost, undoRepost, deletePost } from '@/actions/feed.actions';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -146,7 +146,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                 setDisliked(true);
                 setDislikeCount(c => c + 1);
             }
-            toast({ title: res.error, variant: 'destructive' });
+            toast.error(res.error);
         }
     };
 
@@ -171,7 +171,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                 setLiked(true);
                 setLikeCount(c => c + 1);
             }
-            toast({ title: res.error, variant: 'destructive' });
+            toast.error(res.error);
         }
     };
 
@@ -188,9 +188,9 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
              if (res.error) {
                  setReposted(true);
                  setRepostCount(c => c + 1);
-                 toast({ title: res.error, variant: 'destructive' });
+                 toast.error(res.error);
              } else {
-                 toast({ title: "Repost undone" });
+                 toast.success("Repost undone");
                  queryClient.invalidateQueries({ queryKey: ['feed'] });
              }
              return;
@@ -200,35 +200,37 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
         if (res.error) {
             setReposted(false);
             setRepostCount(c => c - 1);
-            toast({ title: res.error, variant: 'destructive' });
+            toast.error(res.error);
         } else if (!res.toggled) {
-            // Handled by backend toggle if already existed
             setReposted(false);
-            setRepostCount(c => Math.max(0, c - 2)); // Subtract the optimistic one + original one? No, just -1 from original.
-            // Actually, let's just let it be.
+            setRepostCount(c => Math.max(0, c - 2)); 
             queryClient.invalidateQueries({ queryKey: ['feed'] });
         } else {
-            toast({ title: "Reposted!" });
+            toast.success("Reposted!");
             queryClient.invalidateQueries({ queryKey: ['feed'] });
         }
     };
 
     const handleDelete = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        toast({
-            title: "Delete this vibe?",
+        toast("Delete this vibe?", {
             description: "You can't undo this action from the feed.",
-            action: (
-                <Button variant="destructive" size="sm" onClick={async () => {
-                    const res = await deletePost(post.id);
-                    if (res.error) {
-                        toast({ title: res.error, variant: 'destructive' });
-                    } else {
-                        toast({ title: "Vibe deleted" });
+            action: {
+                label: "Confirm Delete",
+                onClick: async () => {
+                    const deletePromise = deletePost(post.id).then(res => {
+                        if (res.error) throw new Error(res.error);
                         queryClient.invalidateQueries({ queryKey: ['feed'] });
-                    }
-                }}>Confirm Delete</Button>
-            )
+                        return res;
+                    });
+
+                    toast.promise(deletePromise, {
+                        loading: 'Deleting vibe...',
+                        success: 'Vibe deleted',
+                        error: (err) => err.message || 'Failed to delete'
+                    });
+                }
+            }
         });
     };
 
@@ -236,15 +238,22 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
     const handleSaveEdit = async () => {
         if (!editContent.trim()) return;
         setSubmitting(true);
-        const res = await updatePost(post.id, editContent.trim());
-        setSubmitting(false);
-        if (res.error) {
-            toast({ title: res.error, variant: 'destructive' });
-        } else {
-            toast({ title: "Vibe updated" });
+        const updatePromise = updatePost(post.id, editContent.trim()).then(res => {
+            setSubmitting(false);
+            if (res.error) throw new Error(res.error);
             setEditing(false);
             queryClient.invalidateQueries({ queryKey: ['feed'] });
-        }
+            return res;
+        }).catch(err => {
+            setSubmitting(false);
+            throw err;
+        });
+
+        toast.promise(updatePromise, {
+            loading: 'Updating vibe...',
+            success: 'Vibe updated',
+            error: (err) => err.message || 'Failed to update'
+        });
     };
 
     const handleShare = async (e: React.MouseEvent) => {
@@ -253,7 +262,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
         if (navigator.share) {
             try { await navigator.share({ title: `Vibe from ${authorName}`, text: displayPost.content || 'Check out this vibe!', url }); } catch (err) { }
         } else {
-            try { await navigator.clipboard.writeText(url); toast({ title: "Link copied!" }); } catch (err) { toast({ title: "Failed to copy", variant: "destructive" }); }
+            try { await navigator.clipboard.writeText(url); toast.success("Link copied!"); } catch (err) { toast.error("Failed to copy"); }
         }
     };
 
@@ -284,22 +293,36 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
         if (!content.trim()) return;
         setSubmitting(true);
 
-        if (type === 'reply') {
-            const res = await createReply(displayPost.id, content.trim());
-            setSubmitting(false);
-            if (res.error) { toast({ title: res.error, variant: 'destructive' }); return; }
-            if (res.post) setAllReplies(prev => [res.post as Post, ...prev]);
-            setReplyContent('');
-            setReplying(false);
-            setShowReplies(true);
-        } else {
-            const res = await repostPost(displayPost.id, content.trim());
-            setSubmitting(false);
-            if (res.error) { toast({ title: res.error, variant: 'destructive' }); return; }
-            setQuoteContent('');
-            setQuoting(false);
-        }
-        queryClient.invalidateQueries({ queryKey: ['feed'] });
+        const actionPromise = (async () => {
+            if (type === 'reply') {
+                const res = await createReply(displayPost.id, content.trim());
+                if (res.error) throw new Error(res.error);
+                if (res.post) setAllReplies(prev => [res.post as Post, ...prev]);
+                setReplyContent('');
+                setReplying(false);
+                setShowReplies(true);
+                return res;
+            } else {
+                const res = await repostPost(displayPost.id, content.trim());
+                if (res.error) throw new Error(res.error);
+                setQuoteContent('');
+                setQuoting(false);
+                return res;
+            }
+        })();
+
+        toast.promise(actionPromise, {
+            loading: type === 'reply' ? 'Sending reply...' : 'Posting quote...',
+            success: () => {
+                setSubmitting(false);
+                queryClient.invalidateQueries({ queryKey: ['feed'] });
+                return type === 'reply' ? 'Reply posted!' : 'Quote posted!';
+            },
+            error: (err) => {
+                setSubmitting(false);
+                return err.message || 'Failed to post';
+            }
+        });
     };
 
     if (post.deletedAt) return null;
@@ -347,7 +370,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                                             <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>
                                         </>
                                     ) : (
-                                        <DropdownMenuItem onClick={() => toast({ title: "User reported", description: "Thanks for keeping VibeChat safe." })} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold">
+                                        <DropdownMenuItem onClick={() => toast.success("User reported", { description: "Thanks for keeping VibeChat safe." })} className="text-red-500 focus:bg-red-500/10 focus:text-red-500 gap-2 cursor-pointer font-bold">
                                             <Trash2 className="w-4 h-4" /> Report Vibe
                                         </DropdownMenuItem>
                                     )}

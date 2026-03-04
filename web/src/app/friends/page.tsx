@@ -4,7 +4,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getFriends, getFriendRequests, acceptFriendRequest, rejectFriendRequest } from '@/actions/friend.actions';
 import { FriendCard } from '@/components/dms/FriendCard';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, UserPlus, Loader2 } from 'lucide-react';
 import { useSession } from "@/components/layout/SessionProvider";
@@ -38,11 +38,11 @@ export default function FriendsPage() {
         mutationFn: acceptFriendRequest,
         onSuccess: (data) => {
             if (data.success) {
-                toast({ title: 'Friend Added!', description: 'You are now friends.', className: 'bg-green-500 text-white' });
+                toast.success('Friend Added!', { description: 'You are now friends.' });
                 queryClient.invalidateQueries({ queryKey: ['friends'] });
                 queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
             } else {
-                toast({ title: data.error, variant: 'destructive' });
+                toast.error(data.error);
             }
         }
     });
@@ -51,10 +51,10 @@ export default function FriendsPage() {
         mutationFn: rejectFriendRequest,
         onSuccess: (data) => {
             if (data.success) {
-                toast({ title: 'Request Rejected' });
+                toast.success('Request Rejected');
                 queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
             } else {
-                toast({ title: data.error, variant: 'destructive' });
+                toast.error(data.error);
             }
         }
     });

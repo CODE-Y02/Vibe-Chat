@@ -7,7 +7,7 @@ import { VideoPanel } from '@/components/chat/VideoPanel';
 import { ChatBox } from '@/components/chat/ChatBox';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Video as VideoIcon, VideoOff, Flag, Eye, Sparkles, X, Loader2, Zap } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { webrtc } from '@/lib/webrtc';
 import { useRouter } from 'next/navigation';
@@ -19,7 +19,6 @@ export default function ChatPage() {
     const { session, isSearching, incomingCall, setSearching, disconnect, setMatched, addMessage } = useChatStore();
     const { data: sessionData, status } = useSession();
     const { socket, isConnected } = useSocket();
-    const { toast } = useToast();
     const router = useRouter();
 
     const [audioEnabled, setAudioEnabled] = useState(true);
@@ -36,17 +35,17 @@ export default function ChatPage() {
     const handleMatch = useCallback((data: { peerId: string, peerName?: string, peerAvatar?: string }) => {
         setMatched("anonymous-room", data.peerId, "Stranger", "");
         setIsBlurred(true);
-        toast({ title: 'Matched!', description: 'Say hello to your new vibe buddy.' });
-    }, [setMatched, toast]);
+        toast.success('Matched!', { description: 'Say hello to your new vibe buddy.' });
+    }, [setMatched]);
 
     const handleStart = useCallback(() => {
         setSearching(true);
         socket.emit('joinQueue');
-        toast({ title: 'Searching...', description: 'Finding a vibe for you.' });
-    }, [setSearching, socket, toast]);
+        toast.info('Searching...', { description: 'Finding a vibe for you.' });
+    }, [setSearching, socket]);
 
     const handlePeerDisconnect = useCallback(() => {
-        toast({ title: `${session.isDirectCall ? session.peerName : 'Stranger'} disconnected`, description: 'They left the vibe.' });
+        toast.info(`${session.isDirectCall ? session.peerName : 'Stranger'} disconnected`, { description: 'They left the vibe.' });
         
         if (session.isDirectCall) {
             disconnect();
@@ -134,7 +133,7 @@ export default function ChatPage() {
         socket.on('dm', handleIncomingDM);
 
         socket.on('call-rejected', () => {
-            toast({ title: 'Call rejected', variant: 'destructive' });
+            toast.error('Call rejected');
             disconnect();
             router.push('/dms');
         });
@@ -156,10 +155,8 @@ export default function ChatPage() {
         });
 
         socket.on('skip-cooldown', ({ remaining }: { remaining: number }) => {
-            toast({ 
-                title: 'Skip Cooldown', 
+            toast.error('Skip Cooldown', { 
                 description: `You're skipping too fast. Wait ${remaining}s.`,
-                variant: 'destructive'
             });
         });
 
@@ -225,9 +222,15 @@ export default function ChatPage() {
 
     const handleReport = async () => {
         if (session.strangerId) {
-            toast({ title: 'Reporting...', description: 'Please wait.' });
-            await reportUser(session.strangerId, "Inappropriate Behavior").catch(console.error);
-            toast({ title: 'User Reported', description: 'Thank you for keeping VibeChat safe.', variant: 'destructive' });
+            const reportPromise = reportUser(session.strangerId, "Inappropriate Behavior");
+            
+            toast.promise(reportPromise, {
+                loading: 'Reporting...',
+                success: 'User Reported. Thank you for keeping VibeChat safe.',
+                error: 'Failed to report user.'
+            });
+            
+            await reportPromise.catch(console.error);
         }
         handleSkip();
     };
@@ -260,32 +263,32 @@ export default function ChatPage() {
                         variant="ghost"
                         size="icon"
                         onClick={handleClose}
-                        className="rounded-2xl glass hover:bg-white/10 h-12 w-12 md:h-14 md:w-14 transition-all"
+                        className="rounded-2xl glass hover:bg-muted/50 h-12 w-12 md:h-14 md:w-14 transition-all"
                     >
-                        <X className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                        <X className="w-5 h-5 md:w-6 md:h-6 text-foreground" />
                     </Button>
                 </div>
 
                 <div className="pointer-events-auto flex items-center gap-2">
-                    <div className="glass px-4 md:px-8 py-2 md:py-3.5 rounded-full flex items-center gap-4 shadow-2xl transition-all">
-                        <div className="flex items-center gap-3 pr-4 border-r border-white/10">
+                    <div className="glass px-4 md:px-8 py-2 md:py-3.5 rounded-full flex items-center gap-4 shadow-2xl transition-all border border-border/10 bg-muted/30 backdrop-blur-xl">
+                        <div className="flex items-center gap-3 pr-4 border-r border-border/10">
                             <motion.div
                                 animate={isSearching ? { opacity: [0.3, 0.8, 0.3] } : {}}
                                 transition={{ repeat: Infinity, duration: 4 }}
                                 className={cn(
                                     "w-2.5 h-2.5 rounded-full",
-                                    isSearching ? "bg-primary shadow-[0_0_10px_rgba(255,51,102,0.3)]" : session.isMatched ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-white/20"
+                                    isSearching ? "bg-primary shadow-[0_0_10px_hsla(var(--primary)/0.3)]" : session.isMatched ? "bg-emerald-500 shadow-[0_0_10px_hsla(142,71%,45%,0.5)]" : "bg-muted-foreground/20"
                                 )}
                             />
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-foreground/80">
                                 {isSearching ? "Searching" : session.isMatched ? "Live" : "Standby"}
                             </span>
                         </div>
-                        <div className="flex items-center gap-4 text-white/40">
-                            <button onClick={() => setAudioEnabled(!audioEnabled)} className={cn("transition-colors hover:text-white", !audioEnabled && "text-red-500")}>
+                        <div className="flex items-center gap-4 text-muted-foreground/60">
+                            <button onClick={() => setAudioEnabled(!audioEnabled)} className={cn("transition-colors hover:text-foreground", !audioEnabled && "text-red-500")}>
                                 {audioEnabled ? <Mic className="w-4 h-4 md:w-5 md:h-5" /> : <MicOff className="w-4 h-4 md:w-5 md:h-5" />}
                             </button>
-                            <button onClick={() => setVideoEnabled(!videoEnabled)} className={cn("transition-colors hover:text-white", !videoEnabled && "text-red-500")}>
+                            <button onClick={() => setVideoEnabled(!videoEnabled)} className={cn("transition-colors hover:text-foreground", !videoEnabled && "text-red-500")}>
                                 {videoEnabled ? <VideoIcon className="w-4 h-4 md:w-5 md:h-5" /> : <VideoOff className="w-4 h-4 md:w-5 md:h-5" />}
                             </button>
                         </div>
@@ -295,9 +298,10 @@ export default function ChatPage() {
                 <div className="pointer-events-auto">
                     <Button
                         onClick={session.isDirectCall ? handleClose : (isSearching ? () => { socket.emit('leaveQueue'); disconnect(); } : handleSkip)}
+                        disabled={isSearching && !session.isDirectCall}
                         className={cn(
                             "rounded-2xl px-6 md:px-10 h-12 md:h-14 font-black uppercase tracking-widest text-xs transition-all shadow-glow-lg",
-                            session.isDirectCall ? "bg-red-500 text-white hover:bg-red-600" : "bg-white text-black hover:scale-105 active:scale-95"
+                            session.isDirectCall ? "bg-red-500 text-white hover:bg-red-600" : "bg-primary text-primary-foreground hover:scale-105 active:scale-95"
                         )}
                     >
                         {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : (session.isDirectCall ? "End Call" : "Skip")}
@@ -335,7 +339,7 @@ export default function ChatPage() {
                                         <Sparkles className="w-10 h-10 md:w-14 md:h-14 text-primary group-hover:scale-110 transition-transform" />
                                     </motion.div>
                                     <h2 className="text-4xl md:text-7xl font-black mb-6 tracking-[-0.05em] uppercase italic leading-none text-gradient">Vibe Check?</h2>
-                                    <p className="text-white/40 mb-12 max-w-sm text-sm md:text-base font-medium leading-relaxed uppercase tracking-widest">
+                                    <p className="text-muted-foreground/60 mb-12 max-w-sm text-sm md:text-base font-medium leading-relaxed uppercase tracking-widest">
                                         Secure · Ephemeral · Global
                                     </p>
                                     <Button size="lg" onClick={handleStart} className="rounded-full px-16 h-20 font-black text-xl shadow-glow transition-all bg-primary hover:scale-105 active:scale-95">
@@ -376,16 +380,16 @@ export default function ChatPage() {
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 className="absolute inset-0 flex items-center justify-center z-[60] px-6 pointer-events-auto"
                             >
-                                <div className="glass-card p-10 md:p-16 rounded-[48px] text-center w-full max-w-md shadow-glow-lg flex flex-col items-center">
+                                <div className="glass-card p-10 md:p-16 rounded-[48px] text-center w-full max-w-md shadow-glow-lg flex flex-col items-center bg-card/80 backdrop-blur-3xl border-border/10">
                                     <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-500/20 rounded-[24px] flex items-center justify-center mb-10 rotate-12">
                                         <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-emerald-500" />
                                     </div>
                                     <h3 className="text-3xl md:text-5xl font-black mb-4 uppercase tracking-tighter italic text-gradient">LOCKED IN</h3>
-                                    <p className="text-xs text-white/40 font-bold mb-10 tracking-[0.2em] uppercase">Vibe match detected</p>
-                                    <Button onClick={initiateCall} size="lg" className="w-full rounded-2xl shadow-glow h-20 gap-4 font-black text-2xl bg-primary hover:scale-[1.02] active:scale-95 transition-all">
+                                    <p className="text-xs text-muted-foreground/50 font-bold mb-10 tracking-[0.2em] uppercase">Vibe match detected</p>
+                                    <Button onClick={initiateCall} size="lg" className="w-full rounded-2xl shadow-glow h-20 gap-4 font-black text-2xl bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all">
                                         <Eye className="w-7 h-7" /> REVEAL
                                     </Button>
-                                    <button onClick={handleSkip} className="mt-10 text-[10px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white transition-colors">
+                                    <button onClick={handleSkip} className="mt-10 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 hover:text-foreground transition-colors">
                                         Skip this vibe
                                     </button>
                                 </div>
@@ -404,7 +408,7 @@ export default function ChatPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={handleReport}
-                                className="glass hover:bg-red-500/20 text-white/40 hover:text-red-500 rounded-2xl h-14 w-14 transition-all"
+                                className="glass hover:bg-red-500/20 text-muted-foreground/40 hover:text-red-500 rounded-2xl h-14 w-14 transition-all"
                                 title="Report User"
                             >
                                 <Flag className="w-6 h-6" />
@@ -425,12 +429,12 @@ export default function ChatPage() {
                             <VideoPanel
                                 isLocal
                                 className={cn(
-                                    "w-full h-full border border-white/20 shadow-glow rounded-3xl overflow-hidden bg-black transition-all group-hover:scale-105",
+                                    "w-full h-full border border-border/20 shadow-glow rounded-3xl overflow-hidden bg-background transition-all group-hover:scale-105",
                                     !videoEnabled && "grayscale opacity-50"
                                 )}
                             />
-                            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-white/80">You</span>
+                            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-foreground/80">You</span>
                             </div>
                         </motion.div>
 

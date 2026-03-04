@@ -5,6 +5,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { type ThemeProviderProps } from "next-themes";
 import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { SessionProvider } from "@/components/layout/SessionProvider";
 import { SocketManager } from "./SocketManager";
 import { IncomingCallModal } from "../chat/IncomingCallModal";
@@ -34,6 +35,7 @@ export function Providers({ children, ...props }: ThemeProviderProps) {
                     </SocketManager>
                 </SessionProvider>
                 <Toaster />
+                <Sonner position="top-center" />
             </QueryClientProvider>
         </NextThemesProvider>
     );

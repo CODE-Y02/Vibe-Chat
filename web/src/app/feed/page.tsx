@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Image as ImageIcon, Send, Loader2, Share2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { createPost } from '@/actions/feed.actions';
 import { useSession } from "@/components/layout/SessionProvider";
 import { useRouter } from 'next/navigation';
@@ -27,25 +27,21 @@ export default function FeedPage() {
     const [content, setContent] = useState('');
     const queryClient = useQueryClient();
 
-    const postMutation = useMutation({
-        mutationFn: (text: string) => createPost(text),
-        onSuccess: (res) => {
-            if (res.error) {
-                toast({ variant: 'destructive', description: res.error });
-            } else {
-                setContent('');
-                toast({ description: 'Posted successfully' });
-                queryClient.invalidateQueries({ queryKey: ['feed'] });
-            }
-        },
-        onError: () => {
-            toast({ variant: 'destructive', description: 'Failed to post' });
-        }
-    });
-
     const handlePost = () => {
         if (!content.trim()) return;
-        postMutation.mutate(content.trim());
+        
+        const postPromise = createPost(content.trim()).then(res => {
+            if (res.error) throw new Error(res.error);
+            setContent('');
+            queryClient.invalidateQueries({ queryKey: ['feed'] });
+            return res;
+        });
+
+        toast.promise(postPromise, {
+            loading: 'Vibing...',
+            success: 'Vibe posted successfully!',
+            error: (err) => err.message || 'Failed to post'
+        });
     };
 
     const user = session?.user;
@@ -69,7 +65,7 @@ export default function FeedPage() {
                                 navigator.share({ title: 'Add me on VibeChat', text: 'Catch my vibe!', url }).catch(() => {});
                             } else {
                                 navigator.clipboard.writeText(url);
-                                toast({ title: 'Profile link copied!' });
+                                toast.success('Profile link copied!');
                             }
                         }}
                         className="hidden md:flex items-center gap-2 rounded-full border-primary/20 hover:bg-primary/10 transition-colors shadow-sm"
@@ -98,10 +94,10 @@ export default function FeedPage() {
                                 </Button>
                                 <Button
                                     onClick={handlePost}
-                                    disabled={!content.trim() || postMutation.isPending}
-                                    className="rounded-[1.25rem] shadow-xl shadow-primary/25 font-black px-10 py-7 gap-3 hover:-translate-y-1 active:scale-95 transition-all bg-primary text-white"
+                                    disabled={!content.trim()}
+                                    className="rounded-[1.25rem] shadow-xl shadow-primary/25 font-black px-10 py-7 gap-3 hover:-translate-y-1 active:scale-95 transition-all bg-primary text-primary-foreground"
                                 >
-                                    {postMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "VIBE IT"} <Send className="w-4 h-4 ml-1" />
+                                    VIBE IT <Send className="w-4 h-4 ml-1" />
                                 </Button>
                             </div>
                         </div>
