@@ -4,11 +4,10 @@ import { useEffect, useRef, memo } from 'react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { webrtc } from '@/lib/webrtc';
-import { VideoOff, MicOff, Shield, Radio } from 'lucide-react';
+import { Shield, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { classifyImage, isNSFW, loadNSFWModel } from '@/lib/nsfwValidator';
 import { sendAutoFlag } from '@/actions/moderation.actions';
-import { useSession } from "@/components/layout/SessionProvider";
 
 interface VideoPanelProps {
     isLocal?: boolean;
@@ -22,68 +21,54 @@ export const VideoPanel = memo(({ isLocal, className, isMatched = false }: Video
 
     useEffect(() => {
         isMounted.current = true;
-        let timeoutId: NodeJS.Timeout;
+        let timeoutId: any;
 
-        if (isLocal) {
-            if (videoRef.current) {
-                webrtc.setupLocalStream(videoRef.current);
-            }
+        const setup = async () => {
+            if (!videoRef.current || !isMounted.current) return;
 
-            // Optimized Moderation Loop (Non-blocking)
-            const checkModeration = async () => {
-                if (!isMounted.current) return;
+            if (isLocal) {
+                // For local stream, always setup if mounted
+                await webrtc.setupLocalStream(videoRef.current);
                 
-                if (videoRef.current && videoRef.current.readyState === 4) {
-                    const runInference = async () => {
-                        if (!isMounted.current) return;
-                        try {
-                            // Only load if needed, nsfwValidator handles the check
+                // Moderation loop
+                const checkModeration = async () => {
+                    if (!isMounted.current || !videoRef.current) return;
+                    
+                    try {
+                        if (videoRef.current.readyState === 4) {
                             await loadNSFWModel();
-                            const predictions = await classifyImage(videoRef.current!);
+                            const predictions = await classifyImage(videoRef.current);
                             if (isNSFW(predictions)) {
                                 console.warn("[Moderation] Content flagged locally.");
                                 sendAutoFlag().catch(console.error);
                             }
-                        } catch (e) { }
-                        
-                        // Wait 10 seconds between checks to reduce CPU load
-                        if (isMounted.current) {
-                            timeoutId = setTimeout(checkModeration, 10000);
                         }
-                    };
+                    } catch (e) {}
 
-                    // Yield to browser for smooth 60fps UI
-                    if ('requestIdleCallback' in window) {
-                        (window as any).requestIdleCallback(() => runInference(), { timeout: 3000 });
-                    } else {
-                        setTimeout(runInference, 100);
-                    }
-                } else {
                     if (isMounted.current) {
-                        timeoutId = setTimeout(checkModeration, 1500);
+                        timeoutId = setTimeout(checkModeration, 15000); // Check every 15s to save CPU
                     }
-                }
-            };
-            checkModeration();
-        } else {
-            if (isMatched) {
-                webrtc.onRemoteStream((stream) => {
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                    }
-                });
+                };
+                checkModeration();
             } else {
-                if (videoRef.current) {
+                // For remote stream, only setup if matched
+                if (isMatched) {
+                    webrtc.onRemoteStream((stream) => {
+                        if (videoRef.current && isMounted.current) {
+                            videoRef.current.srcObject = stream;
+                        }
+                    });
+                } else {
                     videoRef.current.srcObject = null;
                 }
             }
-        }
+        };
+
+        setup();
 
         return () => {
             isMounted.current = false;
             if (timeoutId) clearTimeout(timeoutId);
-            // Don't nullify srcObject here as it might cause flickering on re-renders 
-            // of the parent if the logic is slightly delayed.
         };
     }, [isLocal, isMatched]);
 
@@ -103,11 +88,11 @@ export const VideoPanel = memo(({ isLocal, className, isMatched = false }: Video
                             <Radio className="w-8 h-8 text-muted-foreground/30 group-hover:text-primary transition-colors" />
                             <div className="absolute inset-0 bg-primary/20 rounded-[24px] animate-ping opacity-20" />
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/30">Waiting for Vibe</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 italic">Searching Vibe...</p>
                     </motion.div>
                 </div>
             ) : (
-                <div className="w-full h-full relative">
+                <div className="w-full h-full relative bg-black">
                     <video
                         ref={videoRef}
                         autoPlay
@@ -117,13 +102,11 @@ export const VideoPanel = memo(({ isLocal, className, isMatched = false }: Video
                         style={{ transform: isLocal ? 'scaleX(-1)' : 'none' }}
                     />
 
-                    {/* Scanner Line Overlay */}
                     {!isLocal && (
                         <div className="absolute inset-0 pointer-events-none overflow-hidden">
                             <motion.div
                                 initial={{ translateY: "-10%" }}
-                                whileInView={{ translateY: "300px" }}
-                                viewport={{ once: false }}
+                                animate={{ translateY: "100%" }}
                                 transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
                                 className="absolute top-0 left-0 right-0 h-px bg-primary/20 shadow-[0_0_15px_rgba(243,75,59,0.5)] z-10"
                             />
@@ -133,7 +116,6 @@ export const VideoPanel = memo(({ isLocal, className, isMatched = false }: Video
                 </div>
             )}
 
-            {/* Premium Badges */}
             <div className="absolute top-6 left-6 flex items-center gap-3">
                 <div className="glass px-4 py-2 rounded-xl flex items-center gap-2.5 border border-border/50 shadow-glow-sm">
                     <div className={cn(
@@ -152,23 +134,18 @@ export const VideoPanel = memo(({ isLocal, className, isMatched = false }: Video
                         className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-border/50 shadow-glow-sm bg-emerald-500/10"
                     >
                         <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Encrypted</span>
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500">Live Connection</span>
                     </motion.div>
                 )}
             </div>
 
-            {/* Bottom Controls Indicator */}
             <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between pointer-events-none">
                 <div className="flex items-center gap-3">
-                    {/* Signal bars mockup */}
                     <div className="flex items-end gap-0.5 h-3 opacity-30">
                         <div className="w-1 h-1 bg-foreground rounded-full" />
                         <div className="w-1 h-2 bg-foreground rounded-full" />
                         <div className="w-1 h-3 bg-foreground rounded-full" />
                     </div>
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/30 italic">
-                        Node: {isLocal ? "Edge-01" : "Peer-Direct"}
-                    </span>
                 </div>
             </div>
         </Card>
@@ -176,4 +153,3 @@ export const VideoPanel = memo(({ isLocal, className, isMatched = false }: Video
 });
 
 VideoPanel.displayName = 'VideoPanel';
-

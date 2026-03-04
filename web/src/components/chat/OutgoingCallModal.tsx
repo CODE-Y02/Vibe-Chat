@@ -6,43 +6,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PhoneOff, Loader2 } from "lucide-react";
 import { socket } from "@/lib/socket";
 import { useEffect, useState } from "react";
-import { webrtc } from "@/lib/webrtc";
 import { toast } from "sonner";
 
 export function OutgoingCallModal() {
     const { outgoingCall, setOutgoingCall } = useChatStore();
-    const [isPreparing, setIsPreparing] = useState(true);
 
     useEffect(() => {
         if (!outgoingCall) return;
 
-        const startCall = async () => {
-            setIsPreparing(true);
-            try {
-                // Prepare offer using the centralized webrtc instance
-                const offer = await webrtc.prepareCall(outgoingCall.to);
-                
-                socket.emit("make-call", {
-                    to: outgoingCall.to,
-                    offer: offer
-                });
+        console.log("[OutgoingCall] Requesting call to:", outgoingCall.to);
+        socket.emit("make-call", {
+            to: outgoingCall.to
+            // No offer yet, wait for user to accept before opening camera
+        });
 
-                // Auto-cancel if no response after 30 seconds
-                const timer = setTimeout(() => {
-                    toast.error("No Answer", { description: "Your friend might be busy." });
-                    handleCancel();
-                }, 30000);
+        const timer = setTimeout(() => {
+            toast.error("No Answer", { description: "User might be busy." });
+            handleCancel();
+        }, 30000);
 
-                return () => clearTimeout(timer);
-            } catch (err) {
-                console.error("Failed to start call", err);
-                setOutgoingCall(null);
-            } finally {
-                setIsPreparing(false);
-            }
-        };
-
-        startCall();
+        return () => clearTimeout(timer);
     }, [outgoingCall, setOutgoingCall]);
 
     if (!outgoingCall) return null;
@@ -67,7 +50,7 @@ export function OutgoingCallModal() {
 
                 <h3 className="text-2xl font-black text-white mb-1 uppercase tracking-tight">{outgoingCall.toName}</h3>
                 <p className="text-white/40 text-sm font-bold uppercase tracking-[0.2em] mb-8">
-                    {isPreparing ? "Initializing..." : "Waiting for friend..."}
+                    Vibe Calling...
                 </p>
 
                 <div className="mb-8 h-12 flex items-center justify-center">
@@ -77,9 +60,9 @@ export function OutgoingCallModal() {
                 <Button
                     onClick={handleCancel}
                     variant="destructive"
-                    className="w-full h-16 rounded-2xl gap-3 font-black text-sm uppercase shadow-lg shadow-red-500/20"
+                    className="w-full h-16 rounded-2xl gap-3 font-black text-sm uppercase shadow-lg shadow-red-500/20 transition-all hover:scale-95"
                 >
-                    <PhoneOff className="w-5 h-5" /> Cancel Call
+                    <PhoneOff className="w-5 h-5" /> Canceling
                 </Button>
             </div>
         </div>

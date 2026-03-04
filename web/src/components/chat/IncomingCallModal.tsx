@@ -14,7 +14,8 @@ export function IncomingCallModal() {
     if (!incomingCall || session.isMatched) return null;
 
     const handleAccept = () => {
-        setMatched("direct-room", incomingCall.from, incomingCall.fromName, incomingCall.fromAvatar, true);
+        socket.emit("call-accepted", { to: incomingCall.from });
+        setMatched("direct-room", incomingCall.from, incomingCall.fromName, incomingCall.fromAvatar, true, false);
         // setIncomingCall(null) is now handled by ChatPage after it processes the offer
         router.push("/chat");
     };

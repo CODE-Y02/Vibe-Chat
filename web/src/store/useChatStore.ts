@@ -15,6 +15,7 @@ interface ChatSession {
     peerName?: string;
     peerAvatar?: string;
     isDirectCall?: boolean;
+    isInitiator?: boolean;
 }
 
 interface IncomingCall {
@@ -35,7 +36,7 @@ interface ChatState {
     isSearching: boolean;
     incomingCall: IncomingCall | null;
     outgoingCall: OutgoingCall | null;
-    setMatched: (roomId: string, strangerId: string, peerName?: string, peerAvatar?: string, isDirectCall?: boolean) => void;
+    setMatched: (roomId: string, strangerId: string, peerName?: string, peerAvatar?: string, isDirectCall?: boolean, isInitiator?: boolean) => void;
     setSearching: (searching: boolean) => void;
     addMessage: (message: Message) => void;
     setIncomingCall: (call: IncomingCall | null) => void;
@@ -53,8 +54,8 @@ export const useChatStore = create<ChatState>((set) => ({
     isSearching: false,
     incomingCall: null,
     outgoingCall: null,
-    setMatched: (roomId, strangerId, peerName, peerAvatar, isDirectCall) => set((state) => ({
-        session: { ...state.session, roomId, strangerId, isMatched: true, peerName, peerAvatar, isDirectCall },
+    setMatched: (roomId, strangerId, peerName, peerAvatar, isDirectCall, isInitiator) => set((state) => ({
+        session: { ...state.session, roomId, strangerId, isMatched: true, peerName, peerAvatar, isDirectCall, isInitiator },
         isSearching: false
     })),
     setSearching: (searching) => set({ isSearching: searching }),

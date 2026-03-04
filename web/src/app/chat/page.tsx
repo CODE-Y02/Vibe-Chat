@@ -116,18 +116,16 @@ export default function ChatPage() {
         if (status !== 'authenticated' || !sessionData?.session?.access_token || !socket) return;
         
         // Note: Global connection is now managed by SocketManager
-        // We just ensure it's connected here
         if (!socket.connected) socket.connect();
 
-        // 🟢 AUTO-ANSWER (If we just accepted a call)
-        if (session.isDirectCall && incomingCall?.offer) {
-            console.log("[ChatPage] Auto-answering friend call...");
-            webrtc.handleOffer(incomingCall.from, incomingCall.offer).then(() => {
-                // Also emit call-accepted so caller's modal knows to close
-                socket.emit('call-accepted', { to: incomingCall.from });
-                setIsBlurred(false);
-                setIncomingCall(null);
-            });
+        // 🟢 INITIATE CALL (If we are the one who started the call)
+        if (session.isDirectCall && session.isMatched && session.isInitiator && session.strangerId) {
+            console.log("[ChatPage] Initiating friend call handshake...");
+            // Small delay to ensure both peers are on the chat page and ready
+            const timer = setTimeout(() => {
+                webrtc.initiateOffer(session.strangerId!);
+            }, 1000);
+            return () => clearTimeout(timer);
         }
 
         return () => {

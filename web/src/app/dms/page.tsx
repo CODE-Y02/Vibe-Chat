@@ -40,7 +40,7 @@ export default function DMsPage() {
 
     const handleCall = () => {
         if (!activePeer || !session?.user) return;
-        setMatched("direct-room", activePeer.peer.id, activePeer.peer.username, activePeer.peer.avatar, true);
+        setMatched("direct-room", activePeer.peer.id, activePeer.peer.username, activePeer.peer.avatar, true, true);
         setOutgoingCall({
             to: activePeer.peer.id,
             toName: activePeer.peer.username,

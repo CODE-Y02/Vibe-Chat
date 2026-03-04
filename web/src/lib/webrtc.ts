@@ -67,16 +67,10 @@ class WebRTCClient {
         this.onRemoteStreamCallback = callback;
     }
 
-    async prepareCall(peerId: string) {
-        console.log(`[WebRTC] Preparing call for: ${peerId}`);
+    async initiateOffer(peerId: string) {
+        console.log(`[WebRTC] Initiating offer to: ${peerId}`);
         this.targetPeerId = peerId;
         this.resetSignalingState();
-        
-        // Ensure local stream is ready (use temporary video element if needed)
-        if (!this.localStream) {
-            await this.setupLocalStream(document.createElement('video'));
-        }
-
         this.createPeerConnection(peerId);
 
         if (this.localStream) {
@@ -87,11 +81,7 @@ class WebRTCClient {
 
         const offer = await this.peerConnection?.createOffer();
         await this.peerConnection?.setLocalDescription(offer);
-        return offer;
-    }
 
-    async initiateOffer(peerId: string) {
-        const offer = await this.prepareCall(peerId);
         socket.emit('offer', { to: peerId, sdp: offer });
     }
 

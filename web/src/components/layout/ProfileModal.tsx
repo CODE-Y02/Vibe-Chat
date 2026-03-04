@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { updateProfile } from "@/actions/auth.actions";
 import { toast } from "sonner";
+import { LogOut } from "lucide-react";
+import { signOut } from "@/components/layout/SessionProvider";
 
 interface ProfileModalProps {
     user: any;
@@ -80,11 +82,20 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                         />
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={onClose} disabled={loading}>Cancel</Button>
-                    <Button onClick={handleSave} disabled={loading} className="bg-primary hover:bg-primary/90">
-                        {loading ? "Saving..." : "Save Changes"}
+                <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                    <Button 
+                        variant="destructive" 
+                        onClick={() => signOut()} 
+                        className="sm:mr-auto gap-2 font-bold uppercase tracking-widest text-[10px] h-11"
+                    >
+                        <LogOut className="w-4 h-4" /> Log Out
                     </Button>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={onClose} disabled={loading} className="font-bold uppercase tracking-widest text-[10px] h-11">Cancel</Button>
+                        <Button onClick={handleSave} disabled={loading} className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-[10px] h-11">
+                            {loading ? "Saving..." : "Save Changes"}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
