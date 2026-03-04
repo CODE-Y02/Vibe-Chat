@@ -206,13 +206,16 @@ export class FeedService {
             const post = await tx.post.findUnique({ where: { id: postId, deletedAt: null } });
             if (!post) throw new Error('Post not found');
 
+            const oppositeType = type === 'like' ? 'dislike' : 'like';
+
+            // 1. Check if the SAME reaction exists (Toggle off)
             const existing = await tx.reaction.findUnique({
                 where: { postId_userId_type: { postId, userId, type } },
             });
 
             if (existing) {
                 await tx.reaction.delete({ where: { id: existing.id } });
-                const counterField = type.toLowerCase().includes('like') ? 'likesCount' : 'dislikesCount';
+                const counterField = type === 'like' ? 'likesCount' : 'dislikesCount';
                 await tx.post.update({ 
                     where: { id: postId }, 
                     data: { [counterField]: { decrement: 1 } } 
@@ -220,12 +223,28 @@ export class FeedService {
                 return { toggled: false };
             }
 
+            // 2. Check and remove OPPOSITE reaction (Mutual Exclusivity)
+            const opposite = await tx.reaction.findUnique({
+                where: { postId_userId_type: { postId, userId, type: oppositeType } },
+            });
+
+            if (opposite) {
+                await tx.reaction.delete({ where: { id: opposite.id } });
+                const oppositeCounter = oppositeType === 'like' ? 'likesCount' : 'dislikesCount';
+                await tx.post.update({
+                    where: { id: postId },
+                    data: { [oppositeCounter]: { decrement: 1 } }
+                });
+            }
+
+            // 3. Add the new reaction
             const reaction = await tx.reaction.create({ data: { userId, postId, type } });
-            const counterField = type.toLowerCase().includes('like') ? 'likesCount' : 'dislikesCount';
+            const counterField = type === 'like' ? 'likesCount' : 'dislikesCount';
             await tx.post.update({ 
                 where: { id: postId }, 
                 data: { [counterField]: { increment: 1 } } 
             });
+            
             return { toggled: true, reaction };
         });
     }
