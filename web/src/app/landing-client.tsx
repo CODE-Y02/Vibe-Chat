@@ -112,6 +112,9 @@ export function LandingClient({ initialSession }: { initialSession: any }) {
             variants={itemVariants}
             className="text-base sm:text-xl md:text-3xl text-muted-foreground/60 max-w-sm sm:max-w-xl md:max-w-4xl mx-auto mb-12 md:mb-20 leading-tight font-medium tracking-tight"
           >
+            <span className="block text-foreground font-bold mb-4 text-xl md:text-2xl uppercase tracking-widest opacity-80">
+              The AI-Secured P2P Omegle Alternative
+            </span>
             Experience instant human connection in a privacy-first ecosystem.{" "}
             <span className="text-foreground">
               Encrypted, AI-moderated, and Borderless.

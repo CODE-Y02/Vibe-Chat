@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { useSession } from "@/components/layout/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Video, ArrowRight, Menu } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Video, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
@@ -40,8 +40,11 @@ export function PublicNavbar() {
             "fixed top-0 w-full z-50 border-b transition-all duration-300",
             isLanding ? "border-foreground/5 bg-background/40 backdrop-blur-2xl" : "border-border bg-background/80 backdrop-blur-xl"
         )}>
-            <div className="container mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
-                <div className="flex items-center gap-2 md:gap-3">
+            {/* 3-column grid: logo | nav links | cta — center column is always truly centered */}
+            <div className="container mx-auto px-4 md:px-6 h-16 md:h-20 grid grid-cols-3 items-center">
+
+                {/* Col 1 — Logo (left) */}
+                <div className="flex items-center">
                     <Link href="/" className="flex items-center gap-2 md:gap-3">
                         <motion.div
                             whileHover={{ scale: 1.1, rotate: 5 }}
@@ -55,22 +58,26 @@ export function PublicNavbar() {
                     </Link>
                 </div>
 
-                <div className="hidden lg:flex items-center gap-8 px-6 py-2 rounded-2xl bg-muted/30 border border-border">
-                    {siteItems.map((item) => (
-                        <Link 
-                            key={item.href} 
-                            href={item.href} 
-                            className={cn(
-                                "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
-                                pathname === item.href ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
+                {/* Col 2 — Nav links (center) */}
+                <div className="hidden lg:flex items-center justify-center">
+                    <div className="flex items-center gap-8 px-6 py-2 rounded-2xl bg-muted/30 border border-border">
+                        {siteItems.map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className={cn(
+                                    "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
+                                    pathname === item.href ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-3 md:gap-6">
+                {/* Col 3 — CTA + theme toggle (right) */}
+                <div className="flex items-center justify-end gap-3 md:gap-4">
                     {session ? (
                         <Link href="/feed" className="flex items-center gap-2 md:gap-3 group">
                             <div className="text-right hidden sm:block">
@@ -109,6 +116,7 @@ export function PublicNavbar() {
                         )}
                     </Button>
                 </div>
+
             </div>
         </nav>
     );

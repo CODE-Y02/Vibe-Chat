@@ -8,9 +8,34 @@ import siteConfig from '@/config/site.json';
 export default async function LandingPage() {
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
+  
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "VibeChat",
+    "url": siteConfig.url,
+    "description": siteConfig.description,
+    "applicationCategory": "SocialNetworkingApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "P2P Encrypted Video",
+      "On-device AI Moderation",
+      "Anonymous Chat",
+      "Friend System"
+    ]
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PublicNavbar />
       
       <LandingClient initialSession={session} />
