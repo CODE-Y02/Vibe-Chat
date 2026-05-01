@@ -11,6 +11,19 @@ import { setIO as setDMIO } from "../modules/dm/dm.controller.js";
 import { setFriendIO } from "../modules/friend/friend.controller.js";
 import { setFeedIO } from "../modules/feed/feed.controller.js";
 import { setUserIO } from "../modules/user/user.controller.js";
+import { friendService } from "../modules/friend/friend.service.js";
+
+/** Fan-out a presence event to all accepted friends of userId */
+async function broadcastPresence(io: Server, userId: string, status: 'online' | 'offline') {
+    try {
+        const friendIds = await friendService.getAcceptedFriendIds(userId);
+        for (const friendId of friendIds) {
+            io.to(friendId).emit('presence', { userId, status });
+        }
+    } catch {
+        // Non-critical — presence fan-out failure should never crash the connection
+    }
+}
 
 export const setupSockets = (io: Server) => {
     // Share io instance with REST controllers that push socket events
@@ -63,8 +76,18 @@ export const setupSockets = (io: Server) => {
             .set(`mm:heartbeat:${userId}`, '1', 'EX', 35)
             .exec();
 
+        // Fan-out presence:online to all friends (non-blocking)
+        setImmediate(() => broadcastPresence(io, userId, 'online'));
+
         registerMatchmakingHandlers(io, socket);
         registerSignalingHandlers(io, socket);
         registerChatHandlers(io, socket);
+
+        socket.on('disconnect', () => {
+            console.log(`[Socket] Disconnected: ${userId} (${socket.id})`);
+            // Fan-out presence:offline to all friends (non-blocking)
+            setImmediate(() => broadcastPresence(io, userId, 'offline'));
+        });
     });
 };
+

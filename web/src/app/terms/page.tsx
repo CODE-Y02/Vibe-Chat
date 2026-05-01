@@ -1,5 +1,23 @@
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { Scale, AlertTriangle, UserX } from "lucide-react";
+import type { Metadata } from "next";
+import siteConfig from "@/config/site.json";
+
+export const metadata: Metadata = {
+    title: "Terms of Service",
+    description: "VibeChat Terms of Service. By using VibeChat you agree to our acceptable use policy, AI moderation enforcement, and P2P data policies.",
+    alternates: { canonical: `${siteConfig.url}/terms` },
+    openGraph: {
+        title: "Terms of Service | VibeChat",
+        description: "Read VibeChat's Terms of Service, acceptable use policy, and enforcement rules.",
+        url: `${siteConfig.url}/terms`,
+    },
+    twitter: {
+        card: "summary",
+        title: "Terms of Service | VibeChat",
+        description: "Read VibeChat's Terms of Service and acceptable use policy.",
+    },
+};
 
 export default function TermsOfService() {
     return (

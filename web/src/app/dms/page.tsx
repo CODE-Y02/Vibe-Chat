@@ -34,6 +34,7 @@ export default function DMsPage() {
     }, [status, router]);
     const { socket } = useSocket();
     const [activePeer, setActivePeer] = useState<Conversation | null>(null);
+    const [peerStatus, setPeerStatus] = useState<'online' | 'offline'>('offline');
     const [input, setInput] = useState("");
     const { setMatched, setOutgoingCall } = useChatStore();
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -157,6 +158,23 @@ export default function DMsPage() {
             queryClient.invalidateQueries({ queryKey: ['messages', to] });
         },
     });
+
+    // ── Live presence tracking for active peer ──────────────────────────────
+    useEffect(() => {
+        // Seed from the stale conversation data immediately
+        setPeerStatus(activePeer?.peer.status ?? 'offline');
+
+        if (!socket || !activePeer) return;
+
+        const handlePresence = ({ userId, status }: { userId: string; status: 'online' | 'offline' }) => {
+            if (userId === activePeer.peer.id) {
+                setPeerStatus(status);
+            }
+        };
+
+        socket.on('presence', handlePresence);
+        return () => { socket.off('presence', handlePresence); };
+    }, [socket, activePeer?.peer.id]);
 
     // ── Real-time incoming DM listener ──────────────────────────────────────
     useEffect(() => {
@@ -303,10 +321,10 @@ export default function DMsPage() {
                                         <div className="flex items-center gap-1.5 mt-0.5">
                                             <span className={cn(
                                                 "w-1.5 h-1.5 rounded-full transition-all",
-                                                activePeer.peer.status === 'online' ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
+                                                peerStatus === 'online' ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
                                             )}></span>
                                             <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">
-                                                {activePeer.peer.status === 'online' ? 'Online' : 'Offline'}
+                                                {peerStatus === 'online' ? 'Online' : 'Offline'}
                                             </span>
                                         </div>
                                     </div>

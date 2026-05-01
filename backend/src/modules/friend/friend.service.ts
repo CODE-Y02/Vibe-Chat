@@ -103,6 +103,20 @@ export class FriendService {
         });
         return requests.map(r => r.user);
     }
+
+    /** Returns just the IDs of accepted friends — used for presence fan-out on connect/disconnect */
+    async getAcceptedFriendIds(userId: string): Promise<string[]> {
+        const friendships = await prisma.friend.findMany({
+            where: {
+                OR: [
+                    { userId, status: 'ACCEPTED' },
+                    { friendId: userId, status: 'ACCEPTED' },
+                ],
+            },
+            select: { userId: true, friendId: true },
+        });
+        return friendships.map(f => (f.userId === userId ? f.friendId : f.userId));
+    }
 }
 
 export const friendService = new FriendService();

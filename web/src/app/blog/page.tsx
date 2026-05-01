@@ -7,11 +7,19 @@ import siteConfig from "@/config/site.json";
 export const metadata: Metadata = {
   title: "Social Insights | The Vibe Dispatch",
   description: "Thoughts on security, the future of human discovery, and our mission to rebuild random social from the ground up.",
+  alternates: { canonical: `${siteConfig.url}/blog` },
   openGraph: {
     title: "VibeChat Blog | Social Insights",
     description: "Insights into the future of private, AI-moderated social connection.",
     url: `${siteConfig.url}/blog`,
-  }
+    images: [{ url: siteConfig.ogImage, width: 1200, height: 630, alt: "VibeChat Blog" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "VibeChat Blog | Social Insights",
+    description: "Insights into the future of private, AI-moderated social connection.",
+    images: [{ url: siteConfig.twitterImage ?? siteConfig.ogImage, width: 1200, height: 600, alt: "VibeChat Blog" }],
+  },
 };
 
 export default function BlogIndex() {

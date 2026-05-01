@@ -1,5 +1,23 @@
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { Shield, Lock, FileText, CheckCircle } from "lucide-react";
+import type { Metadata } from "next";
+import siteConfig from "@/config/site.json";
+
+export const metadata: Metadata = {
+    title: "Privacy Policy",
+    description: "VibeChat's privacy-first architecture: P2P video, on-device AI moderation, zero data retention. Read our full privacy policy.",
+    alternates: { canonical: `${siteConfig.url}/privacy` },
+    openGraph: {
+        title: "Privacy Policy | VibeChat",
+        description: "VibeChat is built on a privacy-first WebRTC architecture. We don't proxy, record, or view your video feeds.",
+        url: `${siteConfig.url}/privacy`,
+    },
+    twitter: {
+        card: "summary",
+        title: "Privacy Policy | VibeChat",
+        description: "VibeChat is built on a privacy-first WebRTC architecture.",
+    },
+};
 
 export default function PrivacyPolicy() {
     return (
