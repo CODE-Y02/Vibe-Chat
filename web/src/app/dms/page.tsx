@@ -134,7 +134,7 @@ export default function DMsPage() {
                 createdAt: new Date().toISOString(),
             };
             
-            // Append to the first page (latest messages)
+            // Append to the LAST page (newest messages — page[0] is oldest in infinite query)
             queryClient.setQueryData(
                 ['messages', to],
                 (old: any) => {
@@ -142,7 +142,7 @@ export default function DMsPage() {
                         return { pages: [[tempMsg]], pageParams: [1] };
                     }
                     const newPages = [...old.pages];
-                    newPages[0] = [...newPages[0], tempMsg];
+                    newPages[newPages.length - 1] = [...newPages[newPages.length - 1], tempMsg];
                     return { ...old, pages: newPages };
                 }
             );
@@ -193,7 +193,7 @@ export default function DMsPage() {
         if (!isFetchingMoreMessages) {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages.length === 0, messages[messages.length - 1]?.id]);
+    }, [messages.length, messages[messages.length - 1]?.id]);
 
     // Handle mobile hardware back button to close chat instead of leaving page
     useEffect(() => {
@@ -247,7 +247,9 @@ export default function DMsPage() {
                                         decrementUnread();
                                     }
                                     setActivePeer(conv);
-                                    markAsRead(conv.peer.id);
+                                    markAsRead(conv.peer.id).catch(() => {
+                                        // Swallow — unread count may briefly desync but re-syncs on next load
+                                    });
                                 }}
                                 onEndReached={() => {
                                     if (hasNextConvs && !isFetchingNextConvs) {
@@ -299,8 +301,13 @@ export default function DMsPage() {
                                     <div className="min-w-0">
                                         <h3 className="font-bold text-sm tracking-tight truncate uppercase tracking-widest text-[10px]">{activePeer.peer.username}</h3>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Online</span>
+                                            <span className={cn(
+                                                "w-1.5 h-1.5 rounded-full transition-all",
+                                                activePeer.peer.status === 'online' ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
+                                            )}></span>
+                                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">
+                                                {activePeer.peer.status === 'online' ? 'Online' : 'Offline'}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>

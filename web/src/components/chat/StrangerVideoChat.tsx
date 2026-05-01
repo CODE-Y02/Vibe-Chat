@@ -68,35 +68,35 @@ export function StrangerVideoChat() {
         setSearching(true);
     }, [session.strangerId, socket, disconnect, setSearching]);
 
-    const onMessage = useCallback(({ from, content }: { from: string; content: string }) => {
-        addMessage({ id: Date.now().toString(), senderId: from, text: content, timestamp: Date.now() });
-    }, [addMessage]);
-
     // Socket event listeners
     useEffect(() => {
         if (!socket) return;
 
         socket.on('matched', handleMatch);
         socket.on('peerDisconnected', handlePeerDisconnect);
-        socket.on('message', onMessage);
         socket.on('skip-cooldown', ({ remaining }: { remaining: number }) => {
             toast.error('Skip Cooldown', { description: `Wait ${remaining}s.` });
+        });
+        socket.on('match-failed', () => {
+            // Backend confirmed a match but the peer's socket was already gone.
+            // Stay in searching state — the retry interval will re-emit joinQueue.
+            toast.info('Still searching...', { description: 'Vibe buddy bounced, finding another.' });
         });
 
         return () => {
             socket.off('matched');
             socket.off('peerDisconnected');
-            socket.off('message');
             socket.off('skip-cooldown');
+            socket.off('match-failed');
         };
-    }, [socket, handleMatch, handlePeerDisconnect, onMessage]);
+    }, [socket, handleMatch, handlePeerDisconnect]);
 
     // Queue retry interval
     useEffect(() => {
         if (isSearching && !session.isMatched) {
             retryInterval.current = setInterval(() => {
                 if (socket.connected) socket.emit('joinQueue');
-            }, 10000);
+            }, 5000);
         } else {
             if (retryInterval.current) clearInterval(retryInterval.current);
         }

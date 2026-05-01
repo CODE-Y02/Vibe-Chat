@@ -45,6 +45,9 @@ export const metadata: Metadata = {
     images: [siteConfig.ogImage],
     creator: "@vibechat",
   },
+  alternates: {
+    canonical: siteConfig.url,
+  },
 };
 
 export default function RootLayout({

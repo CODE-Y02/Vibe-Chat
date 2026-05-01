@@ -14,23 +14,31 @@ export const createPost = async (c: Context<Env>) => {
 
     const post = await feedService.createPost(userId, content);
 
-    // 🔔 REAL-TIME: Signal friends only (No fan-out of heavy content)
+    // 🔔 REAL-TIME: Notify friends — fire-and-forget, don't block the response
     if (_io) {
-        const friendships = await prisma.friend.findMany({
-            where: {
-                OR: [
-                    { userId, status: 'ACCEPTED' },
-                    { friendId: userId, status: 'ACCEPTED' }
-                ]
-            },
-            select: { userId: true, friendId: true }
-        });
+        // Fetch friend IDs asynchronously after responding
+        setImmediate(async () => {
+            try {
+                const friendships = await prisma.friend.findMany({
+                    where: {
+                        OR: [
+                            { userId, status: 'ACCEPTED' },
+                            { friendId: userId, status: 'ACCEPTED' },
+                        ],
+                    },
+                    select: { userId: true, friendId: true },
+                });
 
-        const friendIds = friendships.map((f: { userId: string; friendId: string }) => f.userId === userId ? f.friendId : f.userId);
-        
-        // Notify each friend room
-        friendIds.forEach((fid: string) => {
-            _io.to(fid).emit('new_post', { authorId: userId });
+                const friendIds = friendships.map((f: { userId: string; friendId: string }) =>
+                    f.userId === userId ? f.friendId : f.userId
+                );
+
+                for (const fid of friendIds) {
+                    _io.to(fid).emit('new_post', { authorId: userId });
+                }
+            } catch (err) {
+                console.error('[Feed] Failed to fan-out new_post notification:', err);
+            }
         });
     }
 
@@ -41,24 +49,16 @@ export const updatePost = async (c: Context<Env>) => {
     const { userId } = c.get('user');
     const { postId } = c.req.param();
     const { content } = (await c.req.json()) as { content: string };
-    
-    try {
-        const post = await feedService.updatePost(userId, postId, content);
-        return c.json(post);
-    } catch (err: any) {
-        return c.json({ error: err.message }, 400);
-    }
+    // Let errors bubble to the central error handler
+    const post = await feedService.updatePost(userId, postId, content);
+    return c.json(post);
 };
 
 export const deletePost = async (c: Context<Env>) => {
     const { userId } = c.get('user');
     const { postId } = c.req.param();
-    try {
-        await feedService.deletePost(userId, postId);
-        return c.json({ success: true });
-    } catch (err: any) {
-        return c.json({ error: err.message }, 400);
-    }
+    await feedService.deletePost(userId, postId);
+    return c.json({ success: true });
 };
 
 export const getFeed = async (c: Context<Env>) => {
@@ -68,7 +68,7 @@ export const getFeed = async (c: Context<Env>) => {
 
     const posts = await feedService.getFeed(userId, cursor, limit);
 
-    let nextCursor: string | undefined = undefined;
+    let nextCursor: string | undefined;
     if (posts.length > limit) {
         const nextItem = posts.pop();
         nextCursor = nextItem?.id;
@@ -98,7 +98,7 @@ export const getReplies = async (c: Context<Env>) => {
 
     const replies = await feedService.getReplies(parentId, userId, cursor, limit);
 
-    let nextCursor: string | undefined = undefined;
+    let nextCursor: string | undefined;
     if (replies.length > limit) {
         const nextItem = replies.pop();
         nextCursor = nextItem?.id;

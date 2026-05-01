@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { AppError } from '../../lib/utils.js';
 import { User, Friend } from '@prisma/client';
+import { matchmakingService } from '../../services/matchmaking.service.js';
 
 export class FriendService {
     async sendRequest(userId: string, friendId: string): Promise<Friend> {
@@ -70,8 +71,8 @@ export class FriendService {
         });
     }
 
-    async listFriends(userId: string): Promise<User[]> {
-        const friends = await prisma.friend.findMany({
+    async listFriends(userId: string): Promise<(User & { status: 'online' | 'offline' })[]> {
+        const friendships = await prisma.friend.findMany({
             where: {
                 OR: [
                     { userId, status: 'ACCEPTED' },
@@ -84,7 +85,15 @@ export class FriendService {
             },
         });
 
-        return friends.map(f => (f.userId === userId ? f.friend : f.user));
+        const friends = friendships.map(f => (f.userId === userId ? f.friend : f.user));
+        const friendIds = friends.map(f => f.id);
+        
+        const presence = await matchmakingService.getBulkPresence(friendIds);
+
+        return friends.map(f => ({
+            ...f,
+            status: presence[f.id] || 'offline'
+        }));
     }
 
     async listRequests(userId: string): Promise<User[]> {

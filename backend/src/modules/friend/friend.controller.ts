@@ -4,8 +4,10 @@ import { Env } from '../../types.js';
 import { AppError } from '../../lib/utils.js';
 import { matchmakingService } from '../../services/matchmaking.service.js';
 
-let _io: any = null;
-export const setFriendIO = (io: any) => { _io = io; };
+import { Server } from 'socket.io';
+
+let _io: Server | null = null;
+export const setFriendIO = (io: Server) => { _io = io; };
 
 export const sendRequest = async (c: Context<Env>) => {
     const user = c.get('user');

@@ -4,9 +4,11 @@ import { Env } from '../../types.js';
 import { matchmakingService } from '../../services/matchmaking.service.js';
 import { AppError } from '../../lib/utils.js';
 
+import { Server } from 'socket.io';
+
 // io injected at socket setup time via setIO()
-let _io: any = null;
-export const setIO = (io: any) => { _io = io; };
+let _io: Server | null = null;
+export const setIO = (io: Server) => { _io = io; };
 
 export const sendMessage = async (c: Context<Env>) => {
     const user = c.get('user');

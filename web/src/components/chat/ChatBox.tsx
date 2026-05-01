@@ -119,14 +119,21 @@ export const ChatBox = memo(({ onReport }: ChatBoxProps = {}) => {
         setText('');
     };
 
-    // 🟢 PREMIUM: Typing Indicator Logic
+    // 🟢 PREMIUM: Optimized Typing Indicator Logic
     useEffect(() => {
         if (!session.strangerId || !session.isMatched) return;
 
         const isTyping = text.length > 0;
+        
+        // Immediate emit for starting to type
+        if (isTyping) {
+            socket.emit('typing', { to: session.strangerId, isTyping: true });
+        }
+
+        // Debounced "stopped typing" signal
         const timeout = setTimeout(() => {
-            socket.emit('typing', { to: session.strangerId, isTyping });
-        }, 300); // Debounce typing trigger
+            socket.emit('typing', { to: session.strangerId, isTyping: false });
+        }, 2000); 
 
         return () => clearTimeout(timeout);
     }, [text, session.strangerId, session.isMatched]);

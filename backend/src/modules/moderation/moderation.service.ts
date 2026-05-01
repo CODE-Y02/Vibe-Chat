@@ -42,7 +42,7 @@ export class ModerationService {
 
         let shadowbanned = false;
         if (strikes >= 3) {
-            await redis.set(`${USER_SHADOWBANNED_PREFIX}${userId}`, 'true');
+            await redis.set(`${USER_SHADOWBANNED_PREFIX}${userId}`, 'true', 'EX', 86400);
             shadowbanned = true;
             console.log(`[ModerationService] User ${userId} shadowbanned due to AI moderation flags.`);
         }

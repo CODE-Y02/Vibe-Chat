@@ -1,111 +1,139 @@
 import { Server } from 'socket.io';
 import { AuthenticatedSocket } from './types.js';
 import { matchmakingService } from '../services/matchmaking.service.js';
-import redis, { RATE_LIMIT_PREFIX, SESSION_PREFIX } from '../services/redis.service.js';
+import redis, { RATE_LIMIT_PREFIX } from '../services/redis.service.js';
+import { logger } from '../lib/logger.js';
 
-/**
- * Robust Matchmaking Handler with Detailed Tracing.
- */
 export const registerMatchmakingHandlers = (io: Server, socket: AuthenticatedSocket) => {
-    const user = socket.user;
+    const { userId } = socket.user;
 
-    const handleMatch = async (match: { u1: string, u2: string }) => {
+    // ─── Internal: signal both sides of a confirmed match ────────────────────
+    const handleMatch = async (match: { u1: string; u2: string }): Promise<boolean> => {
         const { u1, u2 } = match;
-        const s1 = await matchmakingService.getUserSocket(u1);
-        const s2 = await matchmakingService.getUserSocket(u2);
+        const [s1, s2] = await Promise.all([
+            matchmakingService.getUserSocket(u1),
+            matchmakingService.getUserSocket(u2),
+        ]);
 
         if (s1 && s2) {
-            console.log(`[Socket Handler] SIGNALING: ${u1} <-> ${u2}`);
-            io.to(s1).emit('matched', { peerId: u2 });
-            io.to(s2).emit('matched', { peerId: u1 });
-
-            // Atomic Session Setup
-            await redis.pipeline()
-                .set(`${SESSION_PREFIX}${u1}`, u2, 'EX', 3600)
-                .set(`${SESSION_PREFIX}${u2}`, u1, 'EX', 3600)
-                .exec();
+            // Persist session and signal both users atomically
+            await matchmakingService.setSession(u1, u2);
+            io.to(u1).emit('matched', { peerId: u2 });
+            io.to(u2).emit('matched', { peerId: u1 });
+            logger.info(`[Matchmaking] MATCHED: ${u1} <-> ${u2}`);
             return true;
-        } else {
-            console.error(`[Socket Handler] SOCKET MISSING for match: s1:${!!s1}, s2:${!!s2}. Re-queueing.`);
-            if (s1) await matchmakingService.addBackToQueue(u1);
-            if (s2) await matchmakingService.addBackToQueue(u2);
-            return false;
         }
+
+        // One or both sides disconnected between match and signal
+        logger.warn(`[Matchmaking] Socket missing for match ${u1}<->${u2} (s1=${!!s1}, s2=${!!s2}). Re-queuing live side.`);
+        if (s1) {
+            await matchmakingService.addBackToQueue(u1);
+            io.to(u1).emit('match-failed', { reason: 'peer_disconnected' });
+        }
+        if (s2) {
+            await matchmakingService.addBackToQueue(u2);
+            io.to(u2).emit('match-failed', { reason: 'peer_disconnected' });
+        }
+        return false;
     };
 
+    // ─── Heartbeat ────────────────────────────────────────────────────────────
     socket.on('heartbeat', async () => {
-        await matchmakingService.updateHeartbeat(user.userId);
+        await matchmakingService.updateHeartbeat(userId);
     });
 
+    // ─── Join Queue ───────────────────────────────────────────────────────────
     socket.on('joinQueue', async () => {
-        console.log(`[Socket Handler] ${user.userId} requested joinQueue via ${socket.id}`);
-        await matchmakingService.setUserSocket(user.userId, socket.id);
+        logger.info(`[Matchmaking] ${userId} requested joinQueue`);
+
+        // Refresh socket mapping in case it changed since connection
+        await matchmakingService.setUserSocket(userId, socket.id);
+
+        // Guard: if this socket has been superseded by a newer connection for
+        // the same user, abort silently.
+        if (!socket.connected) return;
 
         try {
-            const match = await matchmakingService.joinQueue(user.userId);
+            const match = await matchmakingService.joinQueue(userId);
             if (match) {
                 await handleMatch(match);
             } else {
-                console.log(`[Socket Handler] ${user.userId} is now waiting in the pool.`);
+                logger.info(`[Matchmaking] ${userId} waiting in pool`);
             }
         } catch (err) {
-            console.error(`[Socket Handler] MATCH ERROR:`, err);
+            logger.error(`[Matchmaking] joinQueue error for ${userId}:`, err);
+            socket.emit('match-error', { message: 'Matchmaking failed, please retry' });
         }
     });
 
+    // ─── Leave Queue ──────────────────────────────────────────────────────────
     socket.on('leaveQueue', async () => {
-        console.log(`[Socket Handler] ${user.userId} leaving queue.`);
-        await matchmakingService.leaveQueue(user.userId);
+        logger.info(`[Matchmaking] ${userId} leaving queue`);
+        await matchmakingService.leaveQueue(userId);
     });
 
+    // ─── Skip ─────────────────────────────────────────────────────────────────
     socket.on('skip', async ({ peerId }: { peerId: string }) => {
-        const rateLimitKey = `${RATE_LIMIT_PREFIX}skip:${user.userId}`;
+        const rateLimitKey = `${RATE_LIMIT_PREFIX}skip:${userId}`;
         const isRateLimited = await redis.exists(rateLimitKey);
 
         if (isRateLimited) {
-            console.log(`[Socket Handler] Skip rate limited for ${user.userId}.`);
             socket.emit('skip-cooldown', { remaining: 5 });
             return;
         }
 
-        console.log(`[Socket Handler] ${user.userId} skipping ${peerId}.`);
+        logger.info(`[Matchmaking] ${userId} skipping ${peerId}`);
         await redis.set(rateLimitKey, '1', 'EX', 5);
-        
-        // 1. Mark as skipped & Notify peer
-        await matchmakingService.skipPeer(user.userId, peerId);
-        const peerSocket = await matchmakingService.getUserSocket(peerId);
+
+        // Persist skip, clear session, and notify peer — all concurrently
+        const [, , peerSocket] = await Promise.all([
+            matchmakingService.skipPeer(userId, peerId),
+            matchmakingService.clearSession(userId, peerId),
+            matchmakingService.getUserSocket(peerId),
+        ]);
+
         if (peerSocket) {
             io.to(peerSocket).emit('peerDisconnected');
         }
-        
-        // 2. Clear sessions
-        await redis.pipeline()
-            .del(`${SESSION_PREFIX}${user.userId}`)
-            .del(`${SESSION_PREFIX}${peerId}`)
-            .exec();
 
-        // 3. Immediate proactive rematch
-        const match = await matchmakingService.joinQueue(user.userId);
+        // Re-queue the skipped peer server-side so they don't get stuck
+        await matchmakingService.addBackToQueue(peerId);
+
+        // Immediately try to find a new match for the skipper
+        const match = await matchmakingService.joinQueue(userId);
         if (match) {
             await handleMatch(match);
         }
     });
 
+    // ─── Disconnect ───────────────────────────────────────────────────────────
     socket.on('disconnect', async () => {
-        console.log(`[Socket Handler] ${user.userId} disconnected.`);
-        await matchmakingService.leaveQueue(user.userId);
-        await matchmakingService.removeUserSocket(user.userId);
+        logger.info(`[Matchmaking] ${userId} disconnected (socket ${socket.id})`);
 
-        const peerId = await redis.get(`${SESSION_PREFIX}${user.userId}`);
-        if (peerId) {
-            const peerSocket = await matchmakingService.getUserSocket(peerId);
-            if (peerSocket) {
-                io.to(peerSocket).emit('peerDisconnected');
-            }
-            await redis.pipeline()
-                .del(`${SESSION_PREFIX}${user.userId}`)
-                .del(`${SESSION_PREFIX}${peerId}`)
-                .exec();
+        // 1. Remove from queues + heartbeat atomically before anything else
+        const [, peerId] = await Promise.all([
+            redis.pipeline()
+                .srem('mm:queue', userId)
+                .srem('mm:shadowban_queue', userId)
+                .del(`mm:heartbeat:${userId}`)
+                .del(`mm:socket:${userId}`)
+                .exec(),
+            matchmakingService.getSession(userId),
+        ]);
+
+        if (!peerId) return;
+
+        // 2. Clear session and notify peer
+        const [, peerSocket] = await Promise.all([
+            matchmakingService.clearSession(userId, peerId),
+            matchmakingService.getUserSocket(peerId),
+        ]);
+
+        if (peerSocket) {
+            io.to(peerSocket).emit('peerDisconnected');
         }
+
+        // 3. Re-queue the peer so they don't get stuck
+        await matchmakingService.addBackToQueue(peerId);
     });
 };

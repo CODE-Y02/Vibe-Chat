@@ -81,6 +81,16 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
             storeRef.current.setPeerTyping(isTyping);
         };
 
+        const handleMessage = (data: { from: string; content: string }) => {
+            console.log("[SocketManager] New message from:", data.from);
+            storeRef.current.addMessage({
+                id: Date.now().toString(),
+                senderId: data.from,
+                text: data.content,
+                timestamp: Date.now()
+            });
+        };
+
         const handleNewPost = () => {
             console.log("[SocketManager] New post signal received");
             setHasNewPosts(true);
@@ -98,6 +108,7 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
         socket.on("answer", handleAnswer);
         socket.on("iceCandidate", handleIceCandidate);
         socket.on("typing", handleTyping);
+        socket.on("message", handleMessage);
         socket.on("new_post", handleNewPost);
         socket.on("connect_error", handleConnectError);
 
@@ -110,6 +121,7 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
             socket.off("answer", handleAnswer);
             socket.off("iceCandidate", handleIceCandidate);
             socket.off("typing", handleTyping);
+            socket.off("message", handleMessage);
             socket.off("new_post", handleNewPost);
             socket.off("connect_error", handleConnectError);
         };

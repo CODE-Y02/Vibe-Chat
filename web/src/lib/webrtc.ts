@@ -48,8 +48,15 @@ class WebRTCClient {
         }
 
         this.setupPromise = navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                frameRate: { ideal: 24 }
+            },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true
+            }
         });
 
         try {
@@ -223,6 +230,11 @@ class WebRTCClient {
         if (this.remoteStream) {
             this.remoteStream.getTracks().forEach(track => track.stop());
             this.remoteStream = null;
+        }
+        // Stop local camera tracks so the browser indicator turns off
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => track.stop());
+            this.localStream = null;
         }
         if (this.peerConnection) {
             this.peerConnection.close();

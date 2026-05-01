@@ -1,14 +1,43 @@
-"use client";
-
 import posts from "@/config/blog-posts.json";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
-import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Calendar, User, Tag } from "lucide-react";
-import { useParams, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
+import { Metadata } from "next";
+import siteConfig from "@/config/site.json";
+import { BlogClientAnimations } from "./blog-client";
 
-export default function BlogPost() {
-  const { slug } = useParams();
+interface Props {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const post = posts.find((p) => p.slug === slug);
+
+  if (!post) return { title: 'Post Not Found' };
+
+  return {
+    title: post.title,
+    description: post.description,
+    openGraph: {
+      title: post.title,
+      description: post.description,
+      type: "article",
+      url: `${siteConfig.url}/blog/${post.slug}`,
+      images: [{ url: post.image, width: 1200, height: 630, alt: post.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.description,
+      images: [post.image],
+    },
+  };
+}
+
+export default async function BlogPost({ params }: Props) {
+  const { slug } = await params;
   const post = posts.find((p) => p.slug === slug);
 
   if (!post) {
@@ -25,36 +54,7 @@ export default function BlogPost() {
           BACK TO ALL POSTS
         </Link>
         
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-16 md:mb-24"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 md:mb-12">
-            <Tag className="w-3 h-3 text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">{post.category}</span>
-          </div>
-          <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-black tracking-tight uppercase leading-[0.9] md:leading-none mb-10 md:mb-16">
-            {post.title}
-          </h1>
-          
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-12 opacity-40 text-[10px] sm:text-xs font-black uppercase tracking-widest border-l-2 border-border pl-8 md:pl-12 py-2 text-muted-foreground">
-            <span className="flex items-center gap-3"><Calendar className="w-4 h-4" /> {post.date}</span>
-            <span className="flex items-center gap-3"><User className="w-4 h-4" /> {post.author}</span>
-          </div>
-        </motion.div>
-
-        <motion.div
-           initial={{ opacity: 0, scale: 0.95 }}
-           animate={{ opacity: 1, scale: 1 }}
-           className="aspect-video rounded-[2.5rem] md:rounded-[4rem] overflow-hidden mb-20 md:mb-32 shadow-glow-lg border border-white/5"
-        >
-          <img 
-            src={post.image} 
-            alt={post.title}
-            className="w-full h-full object-cover grayscale-[0.3]"
-          />
-        </motion.div>
+        <BlogClientAnimations post={post} />
 
         <article className="prose prose-invert max-w-none space-y-12 md:space-y-16">
           <p className="text-xl md:text-3xl font-medium leading-relaxed text-foreground/80 italic border-l-4 border-primary pl-8 md:pl-12">
@@ -78,11 +78,9 @@ export default function BlogPost() {
           </div>
           
           <Link href="/login">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-               <button className="h-16 md:h-24 px-12 md:px-20 rounded-[1.5rem] md:rounded-[2.5rem] bg-vibe-gradient text-white font-black text-xs md:text-lg uppercase tracking-widest shadow-glow flex items-center justify-center gap-4 md:gap-8 group">
-                  UPGRADE YOUR SOCIAL <ArrowRight className="w-5 h-5 md:w-8 md:h-8 group-hover:translate-x-4 transition-transform duration-500" />
-               </button>
-            </motion.div>
+            <button className="h-16 md:h-24 px-12 md:px-20 rounded-[1.5rem] md:rounded-[2.5rem] bg-vibe-gradient text-white font-black text-xs md:text-lg uppercase tracking-widest shadow-glow flex items-center justify-center gap-4 md:gap-8 group transition-transform hover:scale-105 active:scale-95">
+                UPGRADE YOUR SOCIAL <ArrowRight className="w-5 h-5 md:w-8 md:h-8 group-hover:translate-x-4 transition-transform duration-500" />
+            </button>
           </Link>
         </div>
       </main>

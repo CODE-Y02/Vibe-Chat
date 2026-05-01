@@ -8,6 +8,7 @@ export interface Conversation {
         id: string;
         username: string;
         avatar?: string;
+        status?: 'online' | 'offline';
     };
     lastMessage: string;
     createdAt: string;
@@ -91,6 +92,10 @@ export function Sidebar({ conversations, activePeerId, onSelectConversation, cla
                                     {conv.isUnread && (
                                         <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary border-2 border-background rounded-full shadow-lg shadow-primary/20"></span>
                                     )}
+                                    <span className={cn(
+                                        "absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-background rounded-full",
+                                        conv.peer?.status === 'online' ? "bg-emerald-500 shadow-glow-sm" : "bg-muted-foreground/30"
+                                    )} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center mb-1">

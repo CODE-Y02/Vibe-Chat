@@ -13,27 +13,26 @@ import { Env } from './types.js';
 
 dotenv.config();
 
-import { rateLimiter } from './middleware/rate-limit.middleware.js';
 import { swaggerUI } from '@hono/swagger-ui';
 import { apiReference } from '@scalar/hono-api-reference';
 import { Server } from 'socket.io';
 import { setupSockets } from './sockets/index.js';
+import { quitRedis } from './services/redis.service.js';
+import prisma from './lib/prisma.js';
 
 // ── App ──────────────────────────────────────────────────────────────────────
 
 const app = new OpenAPIHono<Env>();
 
-// OpenAPI documentation setup
 app.doc('/openapi.json', {
     openapi: '3.1.0',
     info: {
-        title: 'Project 2 API',
+        title: 'VibeChat API',
         version: '1.0.0',
-        description: 'High-Scale Backend API',
+        description: 'High-Scale Real-Time Backend API',
     },
 });
 
-// Mount UIs
 app.get('/docs/swagger', swaggerUI({ url: '/openapi.json' }));
 // @ts-expect-error - Scalar types might be slightly misaligned with Hono Env types
 app.get('/docs/scalar', apiReference({ spec: { url: '/openapi.json' } }));
@@ -48,17 +47,11 @@ app.route('/messages', dmRoutes);
 app.route('/moderation', moderationRoutes);
 app.route('/users', userRoutes);
 
-// Health check
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// Error handling
 app.onError(errorHandler);
 
 // ── Server ───────────────────────────────────────────────────────────────────
-// We use @hono/node-server's `serve()` which returns a plain node:http.Server.
-// Socket.IO attaches to that same server instance.
-// IMPORTANT: No `export default app` — Bun auto-calls Bun.serve() on any
-// default export that has a `fetch` handler, which would cause EADDRINUSE.
 
 const port = Number(process.env.PORT) || 3000;
 
@@ -67,13 +60,8 @@ const httpServer = serve(
     (info) => console.log(`🚀 Server running on http://localhost:${info.port}`),
 );
 
-// Attach Socket.IO to the same underlying http.Server
 const io = new Server(httpServer as unknown as import('node:http').Server, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST'],
-    },
-    // Force WebSocket-only — prevents long-polling from consuming browser connection slots
+    cors: { origin: '*', methods: ['GET', 'POST'] },
     transports: ['websocket'],
     allowEIO3: true,
 });
@@ -81,21 +69,46 @@ const io = new Server(httpServer as unknown as import('node:http').Server, {
 setupSockets(io);
 
 // ── Graceful Shutdown ────────────────────────────────────────────────────────
-const shutdown = () => {
-    console.log(JSON.stringify({ level: 'info', message: 'SIGTERM received. Starting graceful shutdown...' }));
-    
-    // Close HTTP Server (Stops accepting new connections)
-    httpServer.close(() => {
-        console.log(JSON.stringify({ level: 'info', message: 'HTTP server closed.' }));
-        process.exit(0);
-    });
-    
-    // Force close after 10s
-    setTimeout(() => {
-        console.error(JSON.stringify({ level: 'error', message: 'Force closing after 10s timeout.' }));
+// Order matters:
+//   1. Stop accepting new HTTP connections
+//   2. Close Socket.IO (drains existing connections)
+//   3. Quit Redis (sends QUIT commands, waits for ACK)
+//   4. Disconnect Prisma
+//   5. Exit
+const shutdown = async (signal: string) => {
+    console.log(`[Shutdown] ${signal} received — starting graceful shutdown...`);
+
+    // Hard timeout: force exit after 15s no matter what
+    const forceExit = setTimeout(() => {
+        console.error('[Shutdown] Force exit after 15s timeout');
         process.exit(1);
-    }, 10000);
+    }, 15000);
+    forceExit.unref(); // Don't prevent natural exit if everything closes cleanly
+
+    try {
+        // 1. Stop HTTP server
+        await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+        console.log('[Shutdown] HTTP server closed');
+
+        // 2. Close Socket.IO
+        await new Promise<void>((resolve) => io.close(() => resolve()));
+        console.log('[Shutdown] Socket.IO closed');
+
+        // 3. Quit Redis connections
+        await quitRedis();
+        console.log('[Shutdown] Redis disconnected');
+
+        // 4. Disconnect Prisma
+        await prisma.$disconnect();
+        console.log('[Shutdown] Prisma disconnected');
+
+        clearTimeout(forceExit);
+        process.exit(0);
+    } catch (err) {
+        console.error('[Shutdown] Error during shutdown:', err);
+        process.exit(1);
+    }
 };
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
