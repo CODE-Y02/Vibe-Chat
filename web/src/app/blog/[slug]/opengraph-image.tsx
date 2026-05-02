@@ -1,8 +1,6 @@
 import { ImageResponse } from 'next/og';
 import posts from '@/config/blog-posts.json';
 
-export const runtime = 'edge';
-
 export const alt = 'VibeChat Blog';
 export const size = {
   width: 1200,
@@ -52,32 +50,32 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
             </svg>
           </div>
-          <span tw="text-[32px] font-[900] tracking-tighter color-white uppercase">
+          <span tw="text-4xl font-black tracking-tighter text-white uppercase">
             VIBE<span tw="text-[#8B5CF6]">.</span>
           </span>
         </div>
 
         {/* Category Badge */}
         <div tw="flex px-[16px] py-[8px] bg-white/10 border border-white/10 rounded-full mb-[32px]">
-          <span tw="text-[14px] font-[900] tracking-[0.2em] text-[#8B5CF6] uppercase">
+          <span tw="text-sm font-black tracking-widest text-[#8B5CF6] uppercase">
             {post.category || 'Insights'}
           </span>
         </div>
 
         {/* Title */}
-        <h1 tw="text-[72px] font-[900] leading-[1.1] text-white m-0 tracking-tighter max-w-[900px] uppercase">
+        <h1 tw="text-7xl font-black leading-[1.1] text-white m-0 tracking-tighter max-w-[900px] uppercase">
           {post.title}
         </h1>
 
         {/* Footer info */}
         <div tw="flex mt-auto items-center w-full">
           <div tw="flex flex-col">
-            <span tw="text-[18px] text-white/50 font-[700] uppercase tracking-[0.1em]">
+            <span tw="text-lg text-white/50 font-bold uppercase tracking-wide">
               {post.date}
             </span>
           </div>
           <div tw="ml-auto flex items-center">
-            <span tw="text-[18px] text-white font-[900] uppercase tracking-[0.1em]">
+            <span tw="text-lg text-white font-black uppercase tracking-wide">
               vibechat.app
             </span>
           </div>
