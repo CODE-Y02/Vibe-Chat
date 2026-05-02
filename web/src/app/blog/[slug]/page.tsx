@@ -1,11 +1,12 @@
 import posts from "@/config/blog-posts.json";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Calendar, User, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import siteConfig from "@/config/site.json";
 import { BlogClientAnimations } from "./blog-client";
+import { createClient } from "@/utils/supabase/server";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -50,6 +51,9 @@ export default async function BlogPost({ params }: Props) {
     notFound();
   }
 
+  const supabase = await createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -59,7 +63,7 @@ export default async function BlogPost({ params }: Props) {
     "datePublished": new Date(post.date).toISOString(),
     "author": {
       "@type": "Organization",
-      "name": "The Vibe Collective"
+      "name": post.author
     },
     "publisher": {
       "@type": "Organization",
@@ -100,17 +104,17 @@ export default async function BlogPost({ params }: Props) {
         <div className="mt-32 pt-20 border-t border-border flex flex-col md:flex-row items-center justify-between gap-12">
           <div className="flex items-center gap-4 group cursor-pointer">
             <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-muted overflow-hidden transition-all group-hover:bg-primary/20">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=codeyo2" alt="Author" className="w-full h-full object-cover" />
+              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author}`} alt="Author" className="w-full h-full object-cover" />
             </div>
             <div>
               <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-muted-foreground/40 mb-1">Written By</p>
-              <p className="text-xl md:text-3xl font-black uppercase tracking-tighter">THE VIBE COLLECTIVE</p>
+              <p className="text-xl md:text-3xl font-black uppercase tracking-tighter">{post.author}</p>
             </div>
           </div>
           
-          <Link href="/login">
+          <Link href={session ? "/chat" : "/login"}>
             <button className="h-16 md:h-24 px-12 md:px-20 rounded-[1.5rem] md:rounded-[2.5rem] bg-vibe-gradient text-white font-black text-xs md:text-lg uppercase tracking-widest shadow-glow flex items-center justify-center gap-4 md:gap-8 group transition-transform hover:scale-105 active:scale-95">
-                UPGRADE YOUR SOCIAL <ArrowRight className="w-5 h-5 md:w-8 md:h-8 group-hover:translate-x-4 transition-transform duration-500" />
+                {session ? "CONTINUE THE VIBE" : "UPGRADE YOUR SOCIAL"} <ArrowRight className="w-5 h-5 md:w-8 md:h-8 group-hover:translate-x-4 transition-transform duration-500" />
             </button>
           </Link>
         </div>
