@@ -93,6 +93,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": siteConfig.name,
+    "url": siteConfig.url,
+    "logo": `${siteConfig.url}/og-image.png`,
+    "sameAs": [
+      siteConfig.links.twitter,
+      siteConfig.links.github,
+      siteConfig.links.discord
+    ],
+    "description": siteConfig.description
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -111,6 +125,10 @@ export default function RootLayout({
           outfit.variable
         )}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
         <Providers>
           {children}
           <MobileNav />
