@@ -29,6 +29,7 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  --shadow-glow-sm: 0 0 15px hsla(var(--primary) / 0.2);
   --shadow-glow: 0 0 30px hsla(var(--primary) / 0.3);
   --shadow-glow-lg: 0 0 60px hsla(var(--primary) / 0.4);
 }

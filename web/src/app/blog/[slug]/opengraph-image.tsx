@@ -11,8 +11,15 @@ export const size = {
 
 export const contentType = 'image/png';
 
-export default async function Image({ params }: { params: { slug: string } }) {
-  const post = posts.find((p) => p.slug === params.slug);
+export async function generateStaticParams() {
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
+}
+
+export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = posts.find((p) => p.slug === slug);
 
   if (!post) {
     return new Response('Not Found', { status: 404 });
@@ -20,168 +27,57 @@ export default async function Image({ params }: { params: { slug: string } }) {
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          backgroundColor: '#000',
-          padding: '80px',
-          fontFamily: 'sans-serif',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Background gradient */}
+      <div tw="h-full w-full flex flex-col items-start justify-center bg-black p-[80px] relative overflow-hidden">
+        {/* Background gradient shapes */}
         <div
+          tw="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full opacity-50"
           style={{
-            position: 'absolute',
-            top: '-20%',
-            right: '-10%',
-            width: '600px',
-            height: '600px',
             background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
-            borderRadius: '100%',
             filter: 'blur(60px)',
           }}
         />
         <div
+          tw="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full opacity-50"
           style={{
-            position: 'absolute',
-            bottom: '-10%',
-            left: '-10%',
-            width: '400px',
-            height: '400px',
             background: 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%)',
-            borderRadius: '100%',
             filter: 'blur(60px)',
           }}
         />
 
         {/* Header / Brand */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginBottom: '40px',
-          }}
-        >
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              backgroundColor: '#8B5CF6',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: '20px',
-            }}
-          >
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m22 8-6 4 6 4V8Z" />
-                <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
-              </svg>
+        <div tw="flex items-center mb-[40px]">
+          <div tw="w-[48px] h-[48px] bg-[#8B5CF6] rounded-[12px] flex items-center justify-center mr-[20px]">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m22 8-6 4 6 4V8Z" />
+              <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
+            </svg>
           </div>
-          <span
-            style={{
-              fontSize: '32px',
-              fontWeight: 900,
-              letterSpacing: '-0.05em',
-              color: 'white',
-              textTransform: 'uppercase',
-            }}
-          >
-            VIBE<span style={{ color: '#8B5CF6' }}>.</span>
+          <span tw="text-[32px] font-[900] tracking-tighter color-white uppercase">
+            VIBE<span tw="text-[#8B5CF6]">.</span>
           </span>
         </div>
 
         {/* Category Badge */}
-        <div
-          style={{
-            display: 'flex',
-            padding: '8px 16px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '100px',
-            marginBottom: '32px',
-          }}
-        >
-          <span
-            style={{
-              fontSize: '14px',
-              fontWeight: 900,
-              letterSpacing: '0.2em',
-              color: '#8B5CF6',
-              textTransform: 'uppercase',
-            }}
-          >
+        <div tw="flex px-[16px] py-[8px] bg-white/10 border border-white/10 rounded-full mb-[32px]">
+          <span tw="text-[14px] font-[900] tracking-[0.2em] text-[#8B5CF6] uppercase">
             {post.category || 'Insights'}
           </span>
         </div>
 
         {/* Title */}
-        <h1
-          style={{
-            fontSize: '72px',
-            fontWeight: 900,
-            lineHeight: 1.1,
-            color: 'white',
-            margin: 0,
-            letterSpacing: '-0.04em',
-            maxWidth: '900px',
-            textTransform: 'uppercase',
-          }}
-        >
+        <h1 tw="text-[72px] font-[900] leading-[1.1] text-white m-0 tracking-tighter max-w-[900px] uppercase">
           {post.title}
         </h1>
 
         {/* Footer info */}
-        <div
-          style={{
-            display: 'flex',
-            marginTop: 'auto',
-            alignItems: 'center',
-            width: '100%',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '18px',
-                color: 'rgba(255, 255, 255, 0.5)',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-              }}
-            >
+        <div tw="flex mt-auto items-center w-full">
+          <div tw="flex flex-col">
+            <span tw="text-[18px] text-white/50 font-[700] uppercase tracking-[0.1em]">
               {post.date}
             </span>
           </div>
-          <div
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-             <span
-              style={{
-                fontSize: '18px',
-                color: 'white',
-                fontWeight: 900,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-              }}
-            >
+          <div tw="ml-auto flex items-center">
+            <span tw="text-[18px] text-white font-[900] uppercase tracking-[0.1em]">
               vibechat.app
             </span>
           </div>

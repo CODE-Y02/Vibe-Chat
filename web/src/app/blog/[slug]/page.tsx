@@ -36,6 +36,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+export async function generateStaticParams() {
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
+}
+
 export default async function BlogPost({ params }: Props) {
   const { slug } = await params;
   const post = posts.find((p) => p.slug === slug);
@@ -44,8 +50,33 @@ export default async function BlogPost({ params }: Props) {
     notFound();
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": post.title,
+    "description": post.description,
+    "image": post.image,
+    "datePublished": new Date(post.date).toISOString(),
+    "author": {
+      "@type": "Organization",
+      "name": "The Vibe Collective"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "VibeChat",
+      "logo": {
+        "@type": "ImageObject",
+        "url": `${siteConfig.url}/og-image.png`
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PublicNavbar />
 
       <main className="container mx-auto px-4 max-w-4xl py-24 md:py-48 relative z-10">
