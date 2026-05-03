@@ -53,9 +53,25 @@ export default function FeedPage() {
             <main className="container mx-auto px-4 py-8 max-w-2xl">
                 <div className="mb-8 p-4 flex items-center justify-between">
                     <div>
-                        <h1 className="text-5xl font-black tracking-tighter mb-2 bg-gradient-to-br from-foreground to-foreground/40 bg-clip-text text-transparent">Vibe Feed</h1>
-                        <p className="text-muted-foreground font-semibold tracking-wide border-l-4 border-primary pl-4">Catch the latest energy from the community</p>
+                        <h1 className="text-3xl md:text-5xl font-black tracking-tighter mb-2 bg-gradient-to-br from-foreground to-foreground/40 bg-clip-text text-transparent uppercase italic">Vibe Feed</h1>
+                        <p className="text-[10px] md:text-sm text-muted-foreground font-black uppercase tracking-widest border-l-4 border-primary pl-4 opacity-60">Catch the latest energy</p>
                     </div>
+                    <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => {
+                            const url = `${window.location.origin}/profile/${user?.id || ''}`;
+                            if (navigator.share) {
+                                navigator.share({ title: 'Add me on VibeChat', text: 'Catch my vibe!', url }).catch(() => {});
+                            } else {
+                                navigator.clipboard.writeText(url);
+                                toast.success('Profile link copied!');
+                            }
+                        }}
+                        className="flex md:hidden items-center justify-center rounded-2xl border-primary/20 bg-muted/30 h-12 w-12"
+                    >
+                        <Share2 className="w-5 h-5 text-primary" />
+                    </Button>
                     <Button 
                         variant="outline" 
                         size="sm" 

@@ -240,16 +240,36 @@ export function StrangerVideoChat() {
                 </div>
 
                 {/* PIP + ChatBox overlay */}
-                <div className="absolute inset-0 z-40 flex flex-col justify-end p-6 md:p-12 overflow-hidden pointer-events-none">
-                    <div className="w-full h-full flex flex-col md:flex-row items-end justify-between gap-6">
-                        {/* Local PIP */}
-                        <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="pointer-events-auto w-32 md:w-80 aspect-[4/3] shrink-0">
-                            <VideoPanel isLocal className={cn("w-full h-full border border-white/5 rounded-3xl", !videoEnabled && "grayscale opacity-50")} />
+                <div className="absolute inset-0 z-40 flex flex-col justify-end p-4 md:p-12 overflow-hidden pointer-events-none">
+                    <div className="w-full h-full flex flex-col md:flex-row items-end justify-between gap-4 md:gap-6 relative">
+                        {/* Local PIP - Floating on mobile, side-by-side on desktop */}
+                        <motion.div 
+                            initial={{ scale: 0.8, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }} 
+                            className={cn(
+                                "pointer-events-auto shrink-0 z-50",
+                                // Mobile: Floating small box
+                                "absolute bottom-[340px] right-2 w-28 aspect-[3/4] md:relative md:bottom-auto md:right-auto md:w-80 md:aspect-[4/3]",
+                                // Adjust position if chat is not shown
+                                (!session.isMatched || isBlurred) && "bottom-4"
+                            )}
+                        >
+                            <VideoPanel 
+                                isLocal 
+                                className={cn(
+                                    "w-full h-full border border-white/10 rounded-[2rem] shadow-glow-sm md:rounded-[3rem]", 
+                                    !videoEnabled && "grayscale opacity-50"
+                                )} 
+                            />
                         </motion.div>
-
-                        {/* Chat */}
+ 
+                        {/* Chat - Bottom-aligned and full width on mobile */}
                         {session.isMatched && !isBlurred && (
-                            <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="pointer-events-auto w-full md:w-[460px] h-[320px] md:h-[650px]">
+                            <motion.div 
+                                initial={{ y: 20, opacity: 0 }} 
+                                animate={{ y: 0, opacity: 1 }} 
+                                className="pointer-events-auto w-full md:w-[460px] h-[320px] md:h-[650px] z-40"
+                            >
                                 <ChatBox onReport={handleReport} />
                             </motion.div>
                         )}

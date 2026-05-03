@@ -109,7 +109,7 @@ export default function AuthPage() {
                     </p>
                 </div>
 
-                <Card className="p-10 glass-card rounded-[40px] shadow-glow-lg">
+                <Card className="p-6 md:p-10 glass-card rounded-[40px] shadow-glow-lg">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <AnimatePresence mode="wait">
                             <motion.div
