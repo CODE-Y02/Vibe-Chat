@@ -81,7 +81,7 @@ export function FeedList() {
     }
 
     return (
-        <div className="border border-border rounded-[2.5rem] overflow-hidden bg-card/30 backdrop-blur-3xl shadow-2xl">
+        <div className="border border-border rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden bg-card/30 backdrop-blur-3xl shadow-2xl">
             <div className="divide-y divide-border">
                 {posts.map((post: Post) => (
                     <PostCard key={post.id} post={post} />

@@ -86,13 +86,13 @@ export function ProfileModal({ user, isOpen, onClose }: ProfileModalProps) {
                     <Button 
                         variant="destructive" 
                         onClick={() => signOut()} 
-                        className="sm:mr-auto gap-2 font-bold uppercase tracking-widest text-[10px] h-11"
+                        className="sm:mr-auto w-full sm:w-auto gap-2 font-bold uppercase tracking-widest text-[10px] h-11"
                     >
                         <LogOut className="w-4 h-4" /> Log Out
                     </Button>
-                    <div className="flex gap-2">
-                        <Button variant="ghost" onClick={onClose} disabled={loading} className="font-bold uppercase tracking-widest text-[10px] h-11">Cancel</Button>
-                        <Button onClick={handleSave} disabled={loading} className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-[10px] h-11">
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="ghost" onClick={onClose} disabled={loading} className="flex-1 sm:flex-none font-bold uppercase tracking-widest text-[10px] h-11">Cancel</Button>
+                        <Button onClick={handleSave} disabled={loading} className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest text-[10px] h-11">
                             {loading ? "Saving..." : "Save Changes"}
                         </Button>
                     </div>

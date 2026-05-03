@@ -41,7 +41,7 @@ export function PublicNavbar() {
             isLanding ? "border-foreground/5 bg-background/40 backdrop-blur-2xl" : "border-border bg-background/80 backdrop-blur-xl"
         )}>
             {/* 3-column grid: logo | nav links | cta — center column is always truly centered */}
-            <div className="container mx-auto px-4 md:px-6 h-16 md:h-20 grid grid-cols-3 items-center">
+            <div className="container mx-auto px-4 md:px-6 h-16 md:h-20 flex justify-between lg:grid lg:grid-cols-3 items-center">
 
                 {/* Col 1 — Logo (left) */}
                 <div className="flex items-center">

@@ -397,13 +397,13 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
 
                         <footer className="flex items-center justify-between max-w-sm pt-1 text-muted-foreground mt-1">
                             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setReplying(v => !v); setQuoting(false); setShowReplies(true); }} className="h-8 px-2 gap-2 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors group">
-                                <MessageCircle className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
+                                <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                                 {totalReplies > 0 && <span className="text-xs font-bold">{totalReplies}</span>}
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="sm" className={`h-8 px-2 gap-2 rounded-full transition-colors group ${reposted ? 'text-emerald-500' : 'hover:text-emerald-500 hover:bg-emerald-500/10'}`}>
-                                        <Repeat2 className={`w-4.5 h-4.5 group-hover:scale-110 transition-transform ${reposted ? 'scale-110' : ''}`} />
+                                        <Repeat2 className={`w-5 h-5 group-hover:scale-110 transition-transform ${reposted ? 'scale-110' : ''}`} />
                                         {repostCount > 0 && <span className="text-xs font-bold">{repostCount}</span>}
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -422,7 +422,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
                                     {dislikeCount > 0 && <span className="text-xs font-bold">{dislikeCount}</span>}
                                 </Button>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors"><Share2 className="w-4.5 h-4.5" /></Button>
+                            <Button variant="ghost" size="icon" onClick={handleShare} className="h-8 w-8 hover:text-sky-400 hover:bg-sky-400/10 rounded-full transition-colors"><Share2 className="w-5 h-5" /></Button>
                         </footer>
 
                         {(replying || quoting) && (
@@ -447,7 +447,7 @@ export function PostCard({ post, isReply = false, depth = 0 }: { post: Post; isR
             </div>
 
             {showReplies && allReplies.length > 0 && (
-                <div className="ml-9 border-l border-border">
+                <div className="ml-4 md:ml-9 border-l border-border">
                     <div className="divide-y divide-border">
                         {allReplies.map(reply => <PostCard key={reply.id} post={reply} isReply={true} depth={depth + 1} />)}
                     </div>

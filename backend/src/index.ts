@@ -8,6 +8,7 @@ import feedRoutes from './routes/feed.routes.js';
 import dmRoutes from './routes/dm.routes.js';
 import moderationRoutes from './routes/moderation.routes.js';
 import userRoutes from './routes/user.routes.js';
+import systemRoutes from './routes/system.routes.js';
 import dotenv from 'dotenv';
 import { Env } from './types.js';
 
@@ -46,6 +47,7 @@ app.route('/feed', feedRoutes);
 app.route('/messages', dmRoutes);
 app.route('/moderation', moderationRoutes);
 app.route('/users', userRoutes);
+app.route('/system', systemRoutes);
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 

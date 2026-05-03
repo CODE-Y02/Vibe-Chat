@@ -111,7 +111,7 @@ export default function FeedPage() {
                                 <Button
                                     onClick={handlePost}
                                     disabled={!content.trim()}
-                                    className="rounded-[1.25rem] shadow-xl shadow-primary/25 font-black px-10 py-7 gap-3 hover:-translate-y-1 active:scale-95 transition-all bg-primary text-primary-foreground"
+                                    className="rounded-[1.25rem] shadow-xl shadow-primary/25 font-black px-6 py-4 md:px-10 md:py-7 gap-2 md:gap-3 hover:-translate-y-1 active:scale-95 transition-all bg-primary text-primary-foreground text-xs md:text-sm"
                                 >
                                     VIBE IT <Send className="w-4 h-4 ml-1" />
                                 </Button>

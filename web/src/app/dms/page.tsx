@@ -413,10 +413,9 @@ export default function DMsPage() {
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Input — sits above MobileNav (96px) on mobile */}
+                            {/* Input — sits above MobileNav on mobile */}
                             <form
-                                className="p-3 md:p-4 border-t border-border bg-background/80 backdrop-blur-md flex gap-2 items-center z-10"
-                                style={{ paddingBottom: 'calc(max(0.75rem, env(safe-area-inset-bottom)) + 6rem)' }}
+                                className="p-3 md:p-4 pb-[calc(max(0.75rem,env(safe-area-inset-bottom))+6rem)] md:pb-4 border-t border-border bg-background/80 backdrop-blur-md flex gap-2 items-center z-10"
                                 onSubmit={handleSendMessage}
                             >
                                 <Input
