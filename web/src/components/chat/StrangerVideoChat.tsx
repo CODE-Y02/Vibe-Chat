@@ -340,14 +340,15 @@ export function StrangerVideoChat() {
               "md:bottom-10 md:left-10 md:w-80 md:aspect-[4/3] md:rounded-[3rem]",
               // Mobile: Bottom-Right, slides up when chat is open
               "right-4 w-28 aspect-[3/4] rounded-[2rem]",
-              session.isMatched && !isBlurred ? "bottom-[360px]" : "bottom-6"
+              session.isMatched && !isBlurred ? "bottom-[360px]" : "bottom-6",
             )}
           >
             <VideoPanel
               isLocal
+              isMatched={session.isMatched}
               className={cn(
                 "w-full h-full border border-white/10 shadow-glow-sm",
-                !videoEnabled && "grayscale opacity-50"
+                !videoEnabled && "grayscale opacity-50",
               )}
             />
           </motion.div>
@@ -362,7 +363,7 @@ export function StrangerVideoChat() {
                 // Desktop: Bottom-Right
                 "md:bottom-10 md:right-10 md:w-[460px] md:h-[650px]",
                 // Mobile: Stick to bottom
-                "bottom-0 left-0 right-0 h-[340px]"
+                "bottom-0 left-0 right-0 h-[340px]",
               )}
             >
               <ChatBox onReport={handleReport} />

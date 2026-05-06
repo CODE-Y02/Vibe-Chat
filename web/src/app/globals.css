@@ -93,11 +93,11 @@
 
 @layer utilities {
   .glass {
-    @apply bg-background/70 backdrop-blur-xl border border-border/60 shadow-sm;
+    @apply bg-background/80 dark:bg-background/70 backdrop-blur-xl border border-border shadow-sm;
   }
 
   .glass-card {
-    @apply bg-card/60 backdrop-blur-2xl border border-border/40 shadow-xl;
+    @apply bg-card/95 dark:bg-card/60 backdrop-blur-2xl border border-border/60 dark:border-border/40 shadow-xl;
   }
 
   .text-gradient {
