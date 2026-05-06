@@ -300,21 +300,21 @@ export function StrangerVideoChat() {
 
         {/* PIP + ChatBox overlay */}
         <div className="absolute inset-0 z-40 pointer-events-none">
-          {/* Local PIP - Positioned independently */}
+          {/* Local PIP */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className={cn(
               "pointer-events-auto shrink-0 z-50 transition-all duration-500 absolute",
               // Desktop: Always Bottom-Left
-              "md:bottom-10 md:left-10 md:w-72 lg:w-80 md:aspect-[4/3] md:rounded-[3rem]",
+              "md:bottom-12 md:left-12 md:w-72 lg:w-80 md:aspect-[4/3] md:rounded-[3rem]",
               // Mobile: Always Left, stacks above ChatBox ONLY when maximized
-              "left-6 w-28 aspect-[3/4] rounded-[2rem] shadow-2xl overflow-hidden",
+              "left-6 w-32 aspect-[3/4] rounded-[2rem] shadow-2xl overflow-hidden",
               session.isMatched && !isBlurred
                 ? isChatMinimized
-                  ? "bottom-10"
-                  : "bottom-[42vh] md:bottom-10"
-                : "bottom-6",
+                  ? "bottom-24" // Just above the minimized bar on mobile
+                  : "bottom-[42vh] md:bottom-12" // Above the open chat
+                : "bottom-12",
             )}
           >
             <VideoPanel
@@ -326,50 +326,51 @@ export function StrangerVideoChat() {
               )}
             />
 
-            {/* PIP CONTROLS */}
-            <div className="absolute top-3 right-3 flex flex-col gap-2 z-[60]">
+            {/* PREMIUM PIP CONTROLS */}
+            <div className="absolute inset-x-0 bottom-4 px-4 flex justify-center gap-3 z-[60]">
               <button
                 onClick={() => setAudioEnabled(!audioEnabled)}
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-lg",
+                  "w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-2xl transition-all shadow-xl border border-white/10",
                   audioEnabled
                     ? "bg-black/40 text-emerald-400"
-                    : "bg-red-500 text-white",
+                    : "bg-red-500/80 text-white border-red-500",
                 )}
               >
                 {audioEnabled ? (
-                  <Mic className="w-3.5 h-3.5" />
+                  <Mic className="w-4 h-4" />
                 ) : (
-                  <MicOff className="w-3.5 h-3.5" />
+                  <MicOff className="w-4 h-4" />
                 )}
               </button>
               <button
                 onClick={() => setVideoEnabled(!videoEnabled)}
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-lg",
+                  "w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-2xl transition-all shadow-xl border border-white/10",
                   videoEnabled
                     ? "bg-black/40 text-emerald-400"
-                    : "bg-red-500 text-white",
+                    : "bg-red-500/80 text-white border-red-500",
                 )}
               >
                 {videoEnabled ? (
-                  <VideoIcon className="w-3.5 h-3.5" />
+                  <VideoIcon className="w-4 h-4" />
                 ) : (
-                  <VideoOff className="w-3.5 h-3.5" />
+                  <VideoOff className="w-4 h-4" />
                 )}
               </button>
             </div>
           </motion.div>
 
-          {/* ChatBox - Positioned independently */}
+          {/* ChatBox Container */}
           {session.isMatched && !isBlurred && (
             <div
               className={cn(
                 "pointer-events-auto z-40 absolute transition-all duration-500",
                 // Desktop: Bottom-Right
-                "md:bottom-10 md:right-10 md:w-[460px] md:h-[650px]",
-                // Mobile: Stick to bottom, limited height
-                "bottom-0 left-0 right-0 h-[40vh] max-h-[50vh] md:h-auto",
+                "md:bottom-12 md:right-12",
+                isChatMinimized 
+                  ? "bottom-8 right-6 w-64 h-14 md:w-80 md:h-16" 
+                  : "bottom-0 left-0 right-0 h-[40vh] max-h-[50vh] md:bottom-12 md:right-12 md:left-auto md:w-[460px] md:h-[650px]",
               )}
             >
               <ChatBox

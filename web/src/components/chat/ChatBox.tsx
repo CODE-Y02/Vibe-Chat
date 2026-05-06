@@ -163,14 +163,14 @@ export const ChatBox = memo(
         {isMinimized ? (
           <motion.div
             key="minimized"
-            initial={{ scale: 0.8, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.8, opacity: 0, y: 20 }}
-            className="absolute bottom-4 right-4 md:bottom-12 md:right-12 w-[calc(100%-2rem)] md:w-80 z-50 pointer-events-auto"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            className="w-full h-full pointer-events-auto"
           >
             <Button
               onClick={() => onToggleMinimize?.(false)}
-              className="w-full h-14 md:h-16 rounded-2xl md:rounded-[2rem] shadow-glow glass border-border/50 flex items-center justify-between px-6 md:px-8 bg-primary text-primary-foreground hover:scale-[1.02] transition-all"
+              className="w-full h-full rounded-2xl md:rounded-[2.5rem] shadow-glow glass border-border/50 flex items-center justify-between px-6 md:px-8 bg-primary text-primary-foreground hover:scale-[1.02] transition-all"
             >
               <div className="flex items-center gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-glow-sm" />
@@ -184,10 +184,10 @@ export const ChatBox = memo(
         ) : (
           <motion.div
             key="maximized"
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className="flex flex-col h-full rounded-t-[2.5rem] md:rounded-[3rem] overflow-hidden glass-card border border-border/20 relative bg-card/60 backdrop-blur-3xl pointer-events-auto"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="flex flex-col w-full h-full rounded-t-[2.5rem] md:rounded-[3rem] overflow-hidden glass-card border border-border/20 bg-card/60 backdrop-blur-3xl pointer-events-auto"
           >
             {!session.isMatched ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-8 md:p-12 space-y-6 md:space-y-8">
