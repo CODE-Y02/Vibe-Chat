@@ -92,13 +92,22 @@ export function IncomingCallModal() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-3xl overflow-hidden p-6">
       <div className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(circle_at_50%_50%,var(--primary),transparent_70%)] animate-pulse" />
 
-      <div className="w-full max-w-sm rounded-[60px] p-12 text-center border border-white/20 shadow-[0_0_120px_rgba(34,197,94,0.4)] flex flex-col items-center bg-zinc-900/90 backdrop-blur-2xl relative">
-        {!audioAllowed && (
-          <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 text-primary text-[8px] font-black uppercase tracking-widest bg-primary/20 px-4 py-2 rounded-full border border-primary/30">
-            <Volume2 className="w-3 h-3" /> Tap to hear ring
-          </div>
-        )}
+      {/* 🔔 Autoplay Helper - Floating at Top */}
+      {!audioAllowed && (
+        <motion.div
+          initial={{ y: -100, x: "-50%", opacity: 0 }}
+          animate={{ y: 0, x: "-50%", opacity: 1 }}
+          className="fixed top-12 left-1/2 z-[110] flex items-center gap-3 bg-emerald-500 text-white px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(16,185,129,0.5)] border border-white/20 whitespace-nowrap"
+        >
+          <div className="w-2 h-2 bg-white rounded-full animate-ping" />
+          <Volume2 className="w-4 h-4 animate-bounce" />
+          <span className="font-black uppercase tracking-widest text-[10px]">
+            Tap anywhere to hear ringtone
+          </span>
+        </motion.div>
+      )}
 
+      <div className="w-full max-w-sm rounded-[60px] p-12 text-center border border-white/20 shadow-[0_0_120px_rgba(34,197,94,0.4)] flex flex-col items-center bg-zinc-900/90 backdrop-blur-2xl relative">
         <div className="relative mb-12">
           <Avatar className="w-32 h-32 border-4 border-emerald-500 shadow-2xl scale-110">
             <AvatarImage src={incomingCall.fromAvatar} />
@@ -135,10 +144,9 @@ export function IncomingCallModal() {
           </Button>
           <Button
             onClick={handleDecline}
-            variant="ghost"
-            className="w-full h-16 rounded-[2rem] gap-3 font-bold text-xs uppercase text-white/50 hover:text-white hover:bg-white/10"
+            className="w-full h-16 rounded-[2rem] gap-3 font-black text-xs uppercase bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all text-white border-none"
           >
-            <PhoneOff className="w-4 h-4" /> Not now
+            <PhoneOff className="w-4 h-4" /> Decline Vibe
           </Button>
         </div>
       </div>

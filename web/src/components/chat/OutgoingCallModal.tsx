@@ -105,7 +105,11 @@ export function OutgoingCallModal() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505]/95 backdrop-blur-3xl overflow-hidden p-6">
-      <div className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(circle_at_50%_50%,var(--primary),transparent_70%)] animate-pulse" />
+      <motion.div
+        animate={{ opacity: [0.1, 0.3, 0.1] }}
+        transition={{ repeat: Infinity, duration: isRinging ? 1.5 : 3 }}
+        className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,var(--primary),transparent_70%)]"
+      />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -122,7 +126,7 @@ export function OutgoingCallModal() {
           </Avatar>
           <motion.div
             animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0.1, 0.3] }}
-            transition={{ repeat: Infinity, duration: 2 }}
+            transition={{ repeat: Infinity, duration: isRinging ? 1 : 2 }}
             className="absolute inset-0 rounded-full border-4 border-primary/40"
           />
           <div className="absolute -bottom-2 -left-2 bg-primary p-3.5 rounded-2xl shadow-[0_10px_30px_rgba(243,75,59,0.5)]">
@@ -138,35 +142,55 @@ export function OutgoingCallModal() {
         <h1 className="text-4xl font-black text-white mb-2 uppercase tracking-tight italic leading-none">
           {outgoingCall.toName}
         </h1>
-        <div className="flex items-center gap-2 mb-12">
-          <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-          <p className="text-primary font-black uppercase tracking-[0.4em] text-[8px]">
-            {isRinging ? "Vibe Buddy Ringing..." : "Establishing Vibe..."}
-          </p>
+        <div className="flex items-center gap-2 mb-12 min-h-[20px]">
+          {!socket.connected ? (
+            <>
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <p className="text-amber-500 font-black uppercase tracking-[0.4em] text-[8px]">
+                Connecting to Server...
+              </p>
+            </>
+          ) : (
+            <>
+              <ShieldCheck
+                className={cn(
+                  "w-3.5 h-3.5",
+                  isRinging ? "text-emerald-400" : "text-primary",
+                )}
+              />
+              <p
+                className={cn(
+                  "font-black uppercase tracking-[0.4em] text-[8px]",
+                  isRinging ? "text-emerald-400" : "text-primary",
+                )}
+              >
+                {isRinging ? "Vibe Buddy Ringing..." : "Establishing Vibe..."}
+              </p>
+            </>
+          )}
         </div>
 
-        <div className="mb-12 h-6 flex items-center gap-1">
-          <motion.div
-            animate={{ height: [4, 20, 4] }}
-            transition={{ repeat: Infinity, duration: 0.6 }}
-            className="w-1.5 bg-primary/40 rounded-full"
-          />
-          <motion.div
-            animate={{ height: [8, 24, 8] }}
-            transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }}
-            className="w-1.5 bg-primary/70 rounded-full"
-          />
-          <motion.div
-            animate={{ height: [4, 20, 4] }}
-            transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }}
-            className="w-1.5 bg-primary/40 rounded-full"
-          />
+        <div className="mb-12 h-10 flex items-center gap-1.5">
+          {[0, 0.1, 0.2, 0.3, 0.4].map((delay) => (
+            <motion.div
+              key={delay}
+              animate={{ height: [8, 32, 8] }}
+              transition={{
+                repeat: Infinity,
+                duration: isRinging ? 0.4 : 0.8,
+                delay,
+              }}
+              className={cn(
+                "w-1.5 rounded-full transition-colors",
+                isRinging ? "bg-emerald-500/60" : "bg-primary/40",
+              )}
+            />
+          ))}
         </div>
 
         <Button
           onClick={handleCancel}
-          variant="destructive"
-          className="w-full h-20 rounded-[2.5rem] gap-4 font-black text-lg uppercase bg-red-500 hover:bg-red-600 shadow-xl shadow-red-500/40 hover:scale-[1.03] active:scale-95 transition-all text-white border-none"
+          className="w-full h-20 rounded-[2.5rem] gap-4 font-black text-lg uppercase bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-2xl shadow-red-500/40 hover:scale-[1.03] active:scale-95 transition-all text-white border-none"
         >
           <PhoneOff className="w-6 h-6" /> Cancel Vibe
         </Button>
