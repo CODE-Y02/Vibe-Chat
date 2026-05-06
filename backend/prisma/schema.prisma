@@ -89,6 +89,7 @@ model Post {
   @@index([authorId, createdAt(sort: Desc)])
   @@index([parentId, createdAt(sort: Asc)])
   @@index([repostOfId])
+  @@index([deletedAt, parentId, createdAt(sort: Desc)])
 }
 
 model Reaction {
@@ -116,8 +117,9 @@ model Message {
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
-  @@index([senderId, receiverId])
-  @@index([receiverId])
+  @@index([senderId, receiverId, createdAt(sort: Desc)])
+  @@index([receiverId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
 }
 
 model Session {

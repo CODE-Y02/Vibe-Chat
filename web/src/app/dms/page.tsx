@@ -1,447 +1,555 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { Navbar } from '@/components/layout/Navbar';
-import { Sidebar, Conversation } from '@/components/layout/Sidebar';
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
-import { getConversations, getMessages, sendMessage, markAsRead } from '@/actions/dm.actions';
-import { getFriends } from '@/actions/friend.actions';
-import { Loader2, MessageSquare, Send, Video, Sparkles, ArrowLeft } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useSocket } from '@/hooks/use-socket';
+import { useEffect, useState, useRef } from "react";
+import { Navbar } from "@/components/layout/Navbar";
+import { Sidebar, Conversation } from "@/components/layout/Sidebar";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
+import {
+  getConversations,
+  getMessages,
+  sendMessage,
+  markAsRead,
+} from "@/actions/dm.actions";
+import { getFriends } from "@/actions/friend.actions";
+import {
+  Loader2,
+  MessageSquare,
+  Send,
+  Video,
+  Sparkles,
+  ArrowLeft,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSocket } from "@/hooks/use-socket";
 import { useSession } from "@/components/layout/SessionProvider";
-import { useChatStore } from '@/store/useChatStore';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useChatStore } from "@/store/useChatStore";
+import { usePresenceStore } from "@/store/usePresenceStore";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { cn, formatTime } from "@/lib/utils";
-import { motion, AnimatePresence } from 'framer-motion';
-import { useDMStore } from '@/store/useDMStore';
+import { motion, AnimatePresence } from "framer-motion";
+import { useDMStore } from "@/store/useDMStore";
 
 export default function DMsPage() {
-    const { decrementUnread } = useDMStore();
-    const { data: session, status } = useSession();
-    const queryClient = useQueryClient();
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const userIdFromQuery = searchParams.get('userId');
+  const { decrementUnread } = useDMStore();
+  const { data: session, status } = useSession();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const userIdFromQuery = searchParams.get("userId");
 
-    useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/login');
-        }
-    }, [status, router]);
-    const { socket } = useSocket();
-    const [activePeer, setActivePeer] = useState<Conversation | null>(null);
-    const [peerStatus, setPeerStatus] = useState<'online' | 'offline'>('offline');
-    const [input, setInput] = useState("");
-    const { setMatched, setOutgoingCall } = useChatStore();
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+  const { socket } = useSocket();
+  const [activePeer, setActivePeer] = useState<Conversation | null>(null);
+  const onlineUsers = usePresenceStore((state) => state.onlineUsers);
+  const peerStatus =
+    activePeer && onlineUsers.has(activePeer.peer.id)
+      ? "online"
+      : (activePeer?.peer.status ?? "offline");
+  const [input, setInput] = useState("");
+  const { setMatched, setOutgoingCall } = useChatStore();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
 
-    const handleCall = () => {
-        if (!activePeer || !session?.user) return;
-        setMatched("direct-room", activePeer.peer.id, activePeer.peer.username, activePeer.peer.avatar, true, true);
-        setOutgoingCall({
-            to: activePeer.peer.id,
-            toName: activePeer.peer.username,
-            toAvatar: activePeer.peer.avatar || ""
-        });
-    };
-
-    const { 
-        data: convDataInfinite, 
-        isLoading: isLoadingConvs, 
-        fetchNextPage: fetchNextConvs, 
-        hasNextPage: hasNextConvs,
-        isFetchingNextPage: isFetchingNextConvs
-    } = useInfiniteQuery({
-        queryKey: ['conversations'],
-        queryFn: ({ pageParam = 1 }) => getConversations(pageParam as number),
-        getNextPageParam: (lastPage) => lastPage.conversations.length === lastPage.limit ? lastPage.page + 1 : undefined,
-        initialPageParam: 1,
-        staleTime: 30_000,
-        refetchOnWindowFocus: true,
-    });
-
-    const conversations = convDataInfinite?.pages.flatMap(p => p.conversations) || [];
-
-    const { data: friendsData } = useQuery({
-        queryKey: ['friends'],
-        queryFn: getFriends,
-        enabled: !!userIdFromQuery,
-    });
-
-    // Auto-select peer if userId is in query params
-    // Works even if no prior conversation exists (new friend)
-    useEffect(() => {
-        if (!userIdFromQuery) return;
-
-        // 1. Try to find an existing conversation
-        if (conversations.length > 0) {
-            const existing = conversations.find((c: Conversation) => c.peer.id === userIdFromQuery);
-            if (existing) {
-                setActivePeer(existing);
-                return;
-            }
-        }
-
-        // 2. No conversation yet — create a synthetic peer from friends list
-        if (friendsData) {
-            const friend = friendsData.find((f: any) => f.id === userIdFromQuery);
-            if (friend) {
-                setActivePeer({
-                    peer: {
-                        id: friend.id,
-                        username: friend.username || 'Vibe Buddy',
-                        avatar: friend.avatar,
-                    },
-                    lastMessage: '',
-                    createdAt: new Date().toISOString(),
-                    isUnread: false,
-                });
-            }
-        }
-    }, [userIdFromQuery, conversations.length, friendsData]);
-
-    const { 
-        data: msgDataInfinite, 
-        isLoading: isLoadingMessages,
-        fetchNextPage: fetchNextMessages,
-        hasNextPage: hasNextMessages,
-        isFetchingNextPage: isFetchingMoreMessages
-    } = useInfiniteQuery({
-        queryKey: ['messages', activePeer?.peer.id],
-        queryFn: ({ pageParam = 1 }) => activePeer ? getMessages(activePeer.peer.id, pageParam as number) : Promise.resolve([]),
-        getNextPageParam: (lastPage: any[], allPages: any[]) => lastPage.length === 50 ? allPages.length + 1 : undefined,
-        enabled: !!activePeer,
-        initialPageParam: 1,
-        staleTime: 10_000,
-    });
-
-    const messages = msgDataInfinite ? [...msgDataInfinite.pages].reverse().flat() : [];
-
-    const sendMutation = useMutation({
-        mutationFn: ({ to, content }: { to: string, content: string }) => sendMessage(to, content),
-        onMutate: async ({ to, content }) => {
-            await queryClient.cancelQueries({ queryKey: ['messages', to] });
-
-            const tempMsg = {
-                id: `opt-${Date.now()}`,
-                senderId: 'me-optimistic', 
-                receiverId: to,
-                content,
-                isRead: false,
-                createdAt: new Date().toISOString(),
-            };
-            
-            // Append to the LAST page (newest messages — page[0] is oldest in infinite query)
-            queryClient.setQueryData(
-                ['messages', to],
-                (old: any) => {
-                    if (!old || !old.pages || old.pages.length === 0) {
-                        return { pages: [[tempMsg]], pageParams: [1] };
-                    }
-                    const newPages = [...old.pages];
-                    newPages[newPages.length - 1] = [...newPages[newPages.length - 1], tempMsg];
-                    return { ...old, pages: newPages };
-                }
-            );
-            return { to };
-        },
-        onSuccess: (_data, { to }) => {
-            setInput("");
-            queryClient.invalidateQueries({ queryKey: ['messages', to] });
-            queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        },
-        onError: (_err, { to }) => {
-            queryClient.invalidateQueries({ queryKey: ['messages', to] });
-        },
-    });
-
-    // ── Live presence tracking for active peer ──────────────────────────────
-    useEffect(() => {
-        // Seed from the stale conversation data immediately
-        setPeerStatus(activePeer?.peer.status ?? 'offline');
-
-        if (!socket || !activePeer) return;
-
-        const handlePresence = ({ userId, status }: { userId: string; status: 'online' | 'offline' }) => {
-            if (userId === activePeer.peer.id) {
-                setPeerStatus(status);
-            }
-        };
-
-        socket.on('presence', handlePresence);
-        return () => { socket.off('presence', handlePresence); };
-    }, [socket, activePeer?.peer.id]);
-
-    // ── Real-time incoming DM listener ──────────────────────────────────────
-    useEffect(() => {
-        if (!socket) return;
-
-        const handleIncoming = (msg: {
-            id: string; senderId: string; receiverId: string;
-            content: string; createdAt: string; isRead: boolean;
-        }) => {
-            queryClient.invalidateQueries({ queryKey: ['conversations'] });
-
-            if (activePeer?.peer.id === msg.senderId) {
-                queryClient.setQueryData(
-                    ['messages', msg.senderId],
-                    (old: any) => {
-                        if (!old || !old.pages || old.pages.length === 0) {
-                            return { pages: [[msg]], pageParams: [1] };
-                        }
-                        const newPages = [...old.pages];
-                        newPages[0] = [...newPages[0], msg];
-                        return { ...old, pages: newPages };
-                    }
-                );
-            }
-        };
-
-        socket.on('dm', handleIncoming);
-        return () => { socket.off('dm', handleIncoming); };
-    }, [socket, activePeer?.peer.id, queryClient]);
-
-    useEffect(() => {
-        // Only auto-scroll to bottom if we are NOT fetching older messages
-        // This prevents the screen from violently jumping to the bottom when history loads
-        if (!isFetchingMoreMessages) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [messages.length, messages[messages.length - 1]?.id]);
-
-    // Handle mobile hardware back button to close chat instead of leaving page
-    useEffect(() => {
-        const handlePopState = () => {
-            if (activePeer) {
-                setActivePeer(null);
-            }
-        };
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, [activePeer]);
-
-    const handleSendMessage = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim() || !activePeer) return;
-        sendMutation.mutate({ to: activePeer.peer.id, content: input.trim() });
-    };
-
-    const isChatOpen = !!activePeer;
-
-    return (
-        <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden transition-colors duration-300">
-            <Navbar className={cn(isChatOpen && "hidden md:flex")} />
-
-            <main className="flex-1 overflow-hidden flex flex-col md:flex-row container mx-auto py-0 md:py-4 px-0 md:px-4 gap-4 max-w-7xl pb-24 md:pb-0">
-                {/* Conversations Sidebar */}
-                <div className={cn(
-                    "w-full md:w-80 h-full flex flex-col gap-4 shrink-0 px-4 md:px-0 py-4 md:py-0 transition-all",
-                    isChatOpen ? "hidden md:flex" : "flex"
-                )}>
-                    <Link href="/chat">
-                        <Button size="lg" className="w-full h-14 rounded-2xl shadow-xl shadow-primary/10 font-black text-sm uppercase tracking-widest gap-3 bg-gradient-to-r from-primary to-indigo-600 hover:scale-[1.02] active:scale-[0.98] transition-all border-none">
-                            <Video className="w-5 h-5" />
-                            Start Anonymous
-                            <Sparkles className="w-3 h-3 text-white/50" />
-                        </Button>
-                    </Link>
-
-                    <div className="flex-1 rounded-3xl overflow-hidden glass-card border border-border relative">
-                        {isLoadingConvs ? (
-                            <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-                        ) : (
-                            <Sidebar
-                                conversations={conversations}
-                                activePeerId={activePeer?.peer.id}
-                                onSelectConversation={(conv) => {
-                                    if (!activePeer) {
-                                        window.history.pushState({ isChatOpen: true }, '', '');
-                                    }
-                                    if (conv.isUnread) {
-                                        decrementUnread();
-                                    }
-                                    setActivePeer(conv);
-                                    markAsRead(conv.peer.id).catch(() => {
-                                        // Swallow — unread count may briefly desync but re-syncs on next load
-                                    });
-                                }}
-                                onEndReached={() => {
-                                    if (hasNextConvs && !isFetchingNextConvs) {
-                                        fetchNextConvs();
-                                    }
-                                }}
-                                isFetchingNextPage={isFetchingNextConvs}
-                            />
-                        )}
-                    </div>
-                </div>
-
-                {/* Chat Area */}
-                <div className={cn(
-                    "flex-1 h-full md:rounded-3xl overflow-hidden glass-card border-x-0 md:border border-border flex flex-col relative bg-card/10 transition-all",
-                    isChatOpen ? "flex" : "hidden md:flex"
-                )}>
-                    {!activePeer ? (
-                        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-                                <MessageSquare className="w-10 h-10 text-primary" />
-                            </div>
-                            <h2 className="text-2xl font-black mb-2">Your Inbox</h2>
-                            <p className="text-muted-foreground max-w-xs font-medium">Select a vibe to start chatting or hit the anonymous button to meet someone new.</p>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Chat Header */}
-                            <div className="p-4 border-b border-border bg-muted/30 backdrop-blur-3xl flex items-center justify-between shadow-sm z-10 transition-all">
-                                <div className="flex items-center gap-3">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                            if (window.history.state?.isChatOpen) {
-                                                window.history.back();
-                                            } else {
-                                                setActivePeer(null);
-                                            }
-                                        }}
-                                        className="md:hidden -ml-2 rounded-xl text-muted-foreground"
-                                    >
-                                        <ArrowLeft className="w-5 h-5" />
-                                    </Button>
-                                    <Avatar className="w-10 h-10 border border-primary/20 shadow-lg shrink-0">
-                                        <AvatarImage src={activePeer.peer.avatar} />
-                                        <AvatarFallback className="bg-muted text-primary">{activePeer.peer.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="min-w-0">
-                                        <h3 className="font-bold text-sm tracking-tight truncate uppercase tracking-widest text-[10px]">{activePeer.peer.username}</h3>
-                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className={cn(
-                                                "w-1.5 h-1.5 rounded-full transition-all",
-                                                peerStatus === 'online' ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
-                                            )}></span>
-                                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">
-                                                {peerStatus === 'online' ? 'Online' : 'Offline'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        onClick={handleCall}
-                                        variant="ghost"
-                                        size="icon"
-                                        className="rounded-2xl w-10 h-10 md:w-12 md:h-12 bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-primary/10"
-                                    >
-                                        <Video className="w-5 h-5" />
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* Messages Area */}
-                            <div 
-                                className="flex-1 overflow-y-auto px-4 py-6 space-y-2 custom-scrollbar"
-                                onScroll={(e) => {
-                                    if (e.currentTarget.scrollTop === 0 && hasNextMessages && !isFetchingMoreMessages) {
-                                        fetchNextMessages();
-                                    }
-                                }}
-                            >
-                                <AnimatePresence initial={false}>
-                                    {isLoadingMessages ? (
-                                        <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-                                    ) : messages?.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-full py-20 text-center gap-3">
-                                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                                                <MessageSquare className="w-7 h-7 text-primary/50" />
-                                            </div>
-                                            <p className="text-sm font-bold text-muted-foreground/50 uppercase tracking-widest">No messages yet</p>
-                                            <p className="text-xs text-muted-foreground/30">Say hello! 👋</p>
-                                        </div>
-                                    ) : (
-                                        messages?.map((msg: any, idx: number) => {
-                                            // KEY FIX: compare against peer's DB id, not Supabase auth UUID
-                                            const isMe = msg.senderId !== activePeer.peer.id;
-                                            const prevMsg = messages[idx - 1];
-                                            const isFirstInGroup = !prevMsg || prevMsg.senderId !== msg.senderId;
-                                            return (
-                                                <motion.div
-                                                    key={msg.id}
-                                                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    transition={{ duration: 0.15 }}
-                                                    className={cn(
-                                                        "flex items-end gap-2 max-w-[80%] md:max-w-[70%]",
-                                                        isMe ? "ml-auto flex-row-reverse" : "mr-auto"
-                                                    )}
-                                                >
-                                                    {/* Peer avatar — only on first of a group */}
-                                                    {!isMe && (
-                                                        <Avatar className={cn("w-7 h-7 shrink-0", !isFirstInGroup && "invisible")}>
-                                                            <AvatarImage src={activePeer.peer.avatar} />
-                                                            <AvatarFallback className="bg-muted text-primary text-[10px] font-black">
-                                                                {activePeer.peer.username.slice(0, 2).toUpperCase()}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                    )}
-
-                                                    <div className={cn("flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>
-                                                        {/* Sender label on first bubble of group */}
-                                                        {!isMe && isFirstInGroup && (
-                                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 px-1 mb-0.5">
-                                                                {activePeer.peer.username}
-                                                            </span>
-                                                        )}
-                                                        <div className={cn(
-                                                            "px-4 py-2.5 text-sm leading-relaxed shadow-sm break-words max-w-full",
-                                                            isMe ? "msg-me" : "msg-them"
-                                                        )}>
-                                                            {msg.content}
-                                                        </div>
-                                                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30 px-1">
-                                                            {formatTime(msg.createdAt)}
-                                                        </span>
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        })
-                                    )}
-                                </AnimatePresence>
-                                <div ref={messagesEndRef} />
-                            </div>
-
-                            {/* Input — sits above MobileNav on mobile */}
-                            <form
-                                className="p-3 md:p-4 pb-[calc(max(0.75rem,env(safe-area-inset-bottom))+6rem)] md:pb-4 border-t border-border bg-background/80 backdrop-blur-md flex gap-2 items-center z-10"
-                                onSubmit={handleSendMessage}
-                            >
-                                <Input
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e as any); }}
-                                    placeholder="Message…"
-                                    autoComplete="off"
-                                    className="h-11 px-4 flex-1 rounded-2xl bg-muted/60 border-border/60 focus-visible:ring-primary/30 placeholder:text-muted-foreground/40 text-foreground text-sm"
-                                />
-                                <Button
-                                    type="submit"
-                                    disabled={!input.trim() || sendMutation.isPending}
-                                    size="icon"
-                                    className="rounded-2xl w-11 h-11 shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-30 active:scale-95 transition-all shadow-md"
-                                >
-                                    {sendMutation.isPending
-                                        ? <Loader2 className="w-4 h-4 text-white animate-spin" />
-                                        : <Send className="w-4 h-4 text-white" />
-                                    }
-                                </Button>
-                            </form>
-                        </>
-                    )}
-                </div>
-            </main>
-        </div>
+  const handleCall = () => {
+    if (!activePeer || !session?.user) return;
+    setMatched(
+      "direct-room",
+      activePeer.peer.id,
+      activePeer.peer.username,
+      activePeer.peer.avatar,
+      true,
+      true,
     );
+    setOutgoingCall({
+      to: activePeer.peer.id,
+      toName: activePeer.peer.username,
+      toAvatar: activePeer.peer.avatar || "",
+    });
+  };
+
+  const {
+    data: convDataInfinite,
+    isLoading: isLoadingConvs,
+    fetchNextPage: fetchNextConvs,
+    hasNextPage: hasNextConvs,
+    isFetchingNextPage: isFetchingNextConvs,
+  } = useInfiniteQuery({
+    queryKey: ["conversations"],
+    queryFn: ({ pageParam = 1 }) => getConversations(pageParam as number),
+    getNextPageParam: (lastPage) =>
+      lastPage.conversations.length === lastPage.limit
+        ? lastPage.page + 1
+        : undefined,
+    initialPageParam: 1,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
+
+  const conversations =
+    convDataInfinite?.pages.flatMap((p) => p.conversations) || [];
+
+  const { data: friendsData } = useQuery({
+    queryKey: ["friends"],
+    queryFn: getFriends,
+    enabled: !!userIdFromQuery,
+  });
+
+  // Auto-select peer if userId is in query params
+  // Works even if no prior conversation exists (new friend)
+  useEffect(() => {
+    if (!userIdFromQuery) return;
+
+    // 1. Try to find an existing conversation
+    if (conversations.length > 0) {
+      const existing = conversations.find(
+        (c: Conversation) => c.peer.id === userIdFromQuery,
+      );
+      if (existing) {
+        setActivePeer(existing);
+        return;
+      }
+    }
+
+    // 2. No conversation yet — create a synthetic peer from friends list
+    if (friendsData) {
+      const friend = friendsData.find((f: any) => f.id === userIdFromQuery);
+      if (friend) {
+        setActivePeer({
+          peer: {
+            id: friend.id,
+            username: friend.username || "Vibe Buddy",
+            avatar: friend.avatar,
+          },
+          lastMessage: "",
+          createdAt: new Date().toISOString(),
+          isUnread: false,
+        });
+      }
+    }
+  }, [userIdFromQuery, conversations.length, friendsData]);
+
+  const {
+    data: msgDataInfinite,
+    isLoading: isLoadingMessages,
+    fetchNextPage: fetchNextMessages,
+    hasNextPage: hasNextMessages,
+    isFetchingNextPage: isFetchingMoreMessages,
+  } = useInfiniteQuery({
+    queryKey: ["messages", activePeer?.peer.id],
+    queryFn: ({ pageParam }) =>
+      activePeer
+        ? getMessages(activePeer.peer.id, pageParam as string | undefined)
+        : Promise.resolve({ messages: [], nextCursor: undefined }),
+    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
+    enabled: !!activePeer,
+    initialPageParam: undefined as string | undefined,
+    staleTime: 10_000,
+  });
+
+  const messages = msgDataInfinite
+    ? msgDataInfinite.pages.flatMap((page) => page.messages)
+    : [];
+
+  const sendMutation = useMutation({
+    mutationFn: ({ to, content }: { to: string; content: string }) =>
+      sendMessage(to, content),
+    onMutate: async ({ to, content }) => {
+      await queryClient.cancelQueries({ queryKey: ["messages", to] });
+
+      const tempMsg = {
+        id: `opt-${Date.now()}`,
+        senderId: "me-optimistic",
+        receiverId: to,
+        content,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Append to the LAST page (newest messages — page[0] is oldest in infinite query)
+      queryClient.setQueryData(["messages", to], (old: any) => {
+        if (!old || !old.pages || old.pages.length === 0) {
+          return { pages: [[tempMsg]], pageParams: [1] };
+        }
+        const newPages = [...old.pages];
+        newPages[newPages.length - 1] = [
+          ...newPages[newPages.length - 1],
+          tempMsg,
+        ];
+        return { ...old, pages: newPages };
+      });
+      return { to };
+    },
+    onSuccess: (_data, { to }) => {
+      setInput("");
+      queryClient.invalidateQueries({ queryKey: ["messages", to] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+    onError: (_err, { to }) => {
+      queryClient.invalidateQueries({ queryKey: ["messages", to] });
+    },
+  });
+
+  // ── Live presence tracking for active peer ──────────────────────────────
+  // Presence is now handled globally via PresenceStore and synced in peerStatus variable above
+  // (We removed the local effect and state to keep it single-source-of-truth)
+
+  // ── Real-time incoming DM listener ──────────────────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleIncoming = (msg: {
+      id: string;
+      senderId: string;
+      receiverId: string;
+      content: string;
+      createdAt: string;
+      isRead: boolean;
+    }) => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+
+      if (activePeer?.peer.id === msg.senderId) {
+        queryClient.setQueryData(["messages", msg.senderId], (old: any) => {
+          if (!old || !old.pages || old.pages.length === 0) {
+            return {
+              pages: [{ messages: [msg], nextCursor: undefined }],
+              pageParams: [undefined],
+            };
+          }
+          const newPages = [...old.pages];
+          // Prepend to the first page (newest messages)
+          newPages[0] = {
+            ...newPages[0],
+            messages: [...newPages[0].messages, msg],
+          };
+          return { ...old, pages: newPages };
+        });
+      }
+    };
+
+    socket.on("dm", handleIncoming);
+    return () => {
+      socket.off("dm", handleIncoming);
+    };
+  }, [socket, activePeer?.peer.id, queryClient]);
+
+  // ── Intersection Observer for infinite scrolling ────────────────────────
+  useEffect(() => {
+    if (!hasNextMessages || isFetchingMoreMessages) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextMessages();
+        }
+      },
+      { threshold: 0.1 }, // Trigger early for smooth loading
+    );
+
+    if (topSentinelRef.current) {
+      observer.observe(topSentinelRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextMessages, isFetchingMoreMessages, fetchNextMessages]);
+
+  useEffect(() => {
+    // Only auto-scroll to bottom if we are NOT fetching older messages
+    // This prevents the screen from violently jumping to the bottom when history loads
+    if (!isFetchingMoreMessages) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length, messages[messages.length - 1]?.id]);
+
+  // Handle mobile hardware back button to close chat instead of leaving page
+  useEffect(() => {
+    const handlePopState = () => {
+      if (activePeer) {
+        setActivePeer(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [activePeer]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || !activePeer) return;
+    sendMutation.mutate({ to: activePeer.peer.id, content: input.trim() });
+  };
+
+  const isChatOpen = !!activePeer;
+
+  return (
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden transition-colors duration-300">
+      <Navbar className={cn(isChatOpen && "hidden md:flex")} />
+
+      <main className="flex-1 overflow-hidden flex flex-col md:flex-row container mx-auto py-0 md:py-4 px-0 md:px-4 gap-4 max-w-7xl pb-24 md:pb-0">
+        {/* Conversations Sidebar */}
+        <div
+          className={cn(
+            "w-full md:w-80 h-full flex flex-col gap-4 shrink-0 px-4 md:px-0 py-4 md:py-0 transition-all",
+            isChatOpen ? "hidden md:flex" : "flex",
+          )}
+        >
+          <Link href="/chat">
+            <Button
+              size="lg"
+              className="w-full h-14 rounded-2xl shadow-xl shadow-primary/10 font-black text-sm uppercase tracking-widest gap-3 bg-gradient-to-r from-primary to-indigo-600 hover:scale-[1.02] active:scale-[0.98] transition-all border-none"
+            >
+              <Video className="w-5 h-5" />
+              Start Anonymous
+              <Sparkles className="w-3 h-3 text-white/50" />
+            </Button>
+          </Link>
+
+          <div className="flex-1 rounded-3xl overflow-hidden glass-card border border-border relative">
+            {isLoadingConvs ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <Sidebar
+                conversations={conversations}
+                activePeerId={activePeer?.peer.id}
+                onSelectConversation={(conv) => {
+                  if (!activePeer) {
+                    window.history.pushState({ isChatOpen: true }, "", "");
+                  }
+                  if (conv.isUnread) {
+                    decrementUnread();
+                  }
+                  setActivePeer(conv);
+                  markAsRead(conv.peer.id).catch(() => {
+                    // Swallow — unread count may briefly desync but re-syncs on next load
+                  });
+                }}
+                onEndReached={() => {
+                  if (hasNextConvs && !isFetchingNextConvs) {
+                    fetchNextConvs();
+                  }
+                }}
+                isFetchingNextPage={isFetchingNextConvs}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Chat Area */}
+        <div
+          className={cn(
+            "flex-1 h-full md:rounded-3xl overflow-hidden glass-card border-x-0 md:border border-border flex flex-col relative bg-card/10 transition-all",
+            isChatOpen ? "flex" : "hidden md:flex",
+          )}
+        >
+          {!activePeer ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                <MessageSquare className="w-10 h-10 text-primary" />
+              </div>
+              <h2 className="text-2xl font-black mb-2">Your Inbox</h2>
+              <p className="text-muted-foreground max-w-xs font-medium">
+                Select a vibe to start chatting or hit the anonymous button to
+                meet someone new.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Chat Header */}
+              <div className="p-4 border-b border-border bg-muted/30 backdrop-blur-3xl flex items-center justify-between shadow-sm z-10 transition-all">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (window.history.state?.isChatOpen) {
+                        window.history.back();
+                      } else {
+                        setActivePeer(null);
+                      }
+                    }}
+                    className="md:hidden -ml-2 rounded-xl text-muted-foreground"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                  <Avatar className="w-10 h-10 border border-primary/20 shadow-lg shrink-0">
+                    <AvatarImage src={activePeer.peer.avatar} />
+                    <AvatarFallback className="bg-muted text-primary">
+                      {activePeer.peer.username.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm tracking-tight truncate uppercase tracking-widest text-[10px]">
+                      {activePeer.peer.username}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full transition-all",
+                          peerStatus === "online"
+                            ? "bg-emerald-500 animate-pulse"
+                            : "bg-muted-foreground/30",
+                        )}
+                      ></span>
+                      <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">
+                        {peerStatus === "online" ? "Online" : "Offline"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleCall}
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-2xl w-10 h-10 md:w-12 md:h-12 bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-primary/10"
+                  >
+                    <Video className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2 custom-scrollbar flex flex-col-reverse">
+                {/* Visual Bottom (Actual Start) */}
+                <div ref={messagesEndRef} />
+
+                <AnimatePresence initial={false}>
+                  {messages?.map((msg: any, idx: number) => {
+                    const isMe = msg.senderId !== activePeer.peer.id;
+                    const prevMsg = messages[idx + 1]; // In reversed flex, "prev" is index + 1
+                    const isFirstInGroup =
+                      !prevMsg || prevMsg.senderId !== msg.senderId;
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.15 }}
+                        className={cn(
+                          "flex items-end gap-2 max-w-[80%] md:max-w-[70%] mt-2",
+                          isMe ? "ml-auto flex-row-reverse" : "mr-auto",
+                        )}
+                      >
+                        {!isMe && (
+                          <Avatar
+                            className={cn(
+                              "w-7 h-7 shrink-0",
+                              !isFirstInGroup && "invisible",
+                            )}
+                          >
+                            <AvatarImage src={activePeer.peer.avatar} />
+                            <AvatarFallback className="bg-muted text-primary text-[10px] font-black">
+                              {activePeer.peer.username
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+
+                        <div
+                          className={cn(
+                            "flex flex-col gap-0.5",
+                            isMe ? "items-end" : "items-start",
+                          )}
+                        >
+                          {!isMe && isFirstInGroup && (
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 px-1 mb-0.5">
+                              {activePeer.peer.username}
+                            </span>
+                          )}
+                          <div
+                            className={cn(
+                              "px-4 py-2.5 text-sm leading-relaxed shadow-sm break-words max-w-full",
+                              isMe ? "msg-me" : "msg-them",
+                            )}
+                          >
+                            {msg.content}
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30 px-1">
+                            {formatTime(msg.createdAt)}
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+                {/* Sentinel for loading more at the Visual Top (Actual End) */}
+                {hasNextMessages && (
+                  <div
+                    ref={topSentinelRef}
+                    className="h-20 flex items-center justify-center py-4"
+                  >
+                    <Loader2 className="w-5 h-5 animate-spin text-primary/30" />
+                  </div>
+                )}
+
+                {isLoadingMessages && (
+                  <div className="flex justify-center p-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                )}
+
+                {messages?.length === 0 && !isLoadingMessages && (
+                  <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                      <MessageSquare className="w-7 h-7 text-primary/50" />
+                    </div>
+                    <p className="text-sm font-bold text-muted-foreground/50 uppercase tracking-widest">
+                      No messages yet
+                    </p>
+                    <p className="text-xs text-muted-foreground/30">
+                      Say hello! 👋
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Input — sits above MobileNav on mobile */}
+              <form
+                className="p-3 md:p-4 pb-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.5rem)] md:pb-4 border-t border-border bg-background/80 backdrop-blur-md flex gap-2 items-center z-10"
+                onSubmit={handleSendMessage}
+              >
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey)
+                      handleSendMessage(e as any);
+                  }}
+                  placeholder="Message…"
+                  autoComplete="off"
+                  className="h-11 px-4 flex-1 rounded-2xl bg-muted/60 border-border/60 focus-visible:ring-primary/30 placeholder:text-muted-foreground/40 text-foreground text-sm"
+                />
+                <Button
+                  type="submit"
+                  disabled={!input.trim() || sendMutation.isPending}
+                  size="icon"
+                  className="rounded-2xl w-11 h-11 shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-30 active:scale-95 transition-all shadow-md"
+                >
+                  {sendMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 text-white animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 text-white" />
+                  )}
+                </Button>
+              </form>
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
 }

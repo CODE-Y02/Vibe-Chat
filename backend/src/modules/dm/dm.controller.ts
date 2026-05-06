@@ -1,62 +1,74 @@
-import { Context } from 'hono';
-import { dmService } from './dm.service.js';
-import { Env } from '../../types.js';
-import { matchmakingService } from '../../services/matchmaking.service.js';
-import { AppError } from '../../lib/utils.js';
+import { Context } from "hono";
+import { dmService } from "./dm.service.js";
+import { Env } from "../../types.js";
+import { matchmakingService } from "../../services/matchmaking.service.js";
+import { AppError } from "../../lib/utils.js";
 
-import { Server } from 'socket.io';
+import { Server } from "socket.io";
 
 // io injected at socket setup time via setIO()
 let _io: Server | null = null;
-export const setIO = (io: Server) => { _io = io; };
+export const setIO = (io: Server) => {
+  _io = io;
+};
 
 export const sendMessage = async (c: Context<Env>) => {
-    const user = c.get('user');
-    const { receiverId, content } = (await c.req.json()) as { receiverId: string; content: string };
-    if (!receiverId || !content?.trim()) throw new AppError(400, 'receiverId and content are required');
+  const user = c.get("user");
+  const { receiverId, content } = (await c.req.json()) as {
+    receiverId: string;
+    content: string;
+  };
+  if (!receiverId || !content?.trim())
+    throw new AppError(400, "receiverId and content are required");
 
-    const result = await dmService.sendMessage(user.userId, receiverId, content);
+  const result = await dmService.sendMessage(user.userId, receiverId, content);
 
-    // 🔔 Real-time push to recipient via their dedicated user room
-    if (_io) {
-        _io.to(receiverId).emit('dm', {
-            id: result.id,
-            senderId: user.userId,
-            receiverId,
-            content,
-            createdAt: result.createdAt,
-            isRead: false,
-        });
-    }
+  // 🔔 Real-time push to recipient via their dedicated user room
+  if (_io) {
+    _io.to(receiverId).emit("dm", {
+      id: result.id,
+      senderId: user.userId,
+      receiverId,
+      content,
+      createdAt: result.createdAt,
+      isRead: false,
+    });
+  }
 
-    return c.json(result, 201);
+  return c.json(result, 201);
 };
 
 export const getMessages = async (c: Context<Env>) => {
-    const user = c.get('user');
-    const peerId = c.req.param('userId');
-    const page = Number(c.req.query('page')) || 1;
-    const result = await dmService.getMessages(user.userId, peerId, page);
-    return c.json(result);
+  const user = c.get("user");
+  const peerId = c.req.param("userId");
+  const cursor = c.req.query("cursor");
+  const limit = Number(c.req.query("limit")) || 50;
+  const result = await dmService.getMessages(
+    user.userId,
+    peerId,
+    cursor,
+    limit,
+  );
+  return c.json(result);
 };
 
 export const markAsRead = async (c: Context<Env>) => {
-    const user = c.get('user');
-    const peerId = c.req.param('userId');
-    const result = await dmService.markAsRead(user.userId, peerId);
-    return c.json(result);
+  const user = c.get("user");
+  const peerId = c.req.param("userId");
+  const result = await dmService.markAsRead(user.userId, peerId);
+  return c.json(result);
 };
 
 export const getUnreadCount = async (c: Context<Env>) => {
-    const user = c.get('user');
-    const result = await dmService.getUnreadCount(user.userId);
-    return c.json(result);
+  const user = c.get("user");
+  const result = await dmService.getUnreadCount(user.userId);
+  return c.json(result);
 };
 
 export const getConversations = async (c: Context<Env>) => {
-    const user = c.get('user');
-    const page = Number(c.req.query('page')) || 1;
-    const limit = Number(c.req.query('limit')) || 20;
-    const result = await dmService.getConversations(user.userId, page, limit);
-    return c.json(result);
+  const user = c.get("user");
+  const page = Number(c.req.query("page")) || 1;
+  const limit = Number(c.req.query("limit")) || 20;
+  const result = await dmService.getConversations(user.userId, page, limit);
+  return c.json(result);
 };
