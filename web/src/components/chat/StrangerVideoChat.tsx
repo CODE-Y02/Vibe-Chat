@@ -46,12 +46,14 @@ export function StrangerVideoChat() {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [isBlurred, setIsBlurred] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const retryInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleMatch = useCallback(
     (data: { peerId: string }) => {
       setMatched("anonymous-room", data.peerId, "Stranger", "");
       setIsBlurred(true);
+      setIsChatOpen(true);
       toast.success("Matched!", {
         description: "Say hello to your new vibe buddy.",
       });
@@ -61,6 +63,7 @@ export function StrangerVideoChat() {
 
   const handleStart = useCallback(() => {
     setSearching(true);
+    setIsChatOpen(true);
     socket.emit("joinQueue");
     toast.info("Searching...", { description: "Finding a vibe for you." });
   }, [setSearching, socket]);
@@ -70,6 +73,7 @@ export function StrangerVideoChat() {
     disconnect();
     webrtc.resetPeerConnection();
     setIsBlurred(true);
+    setIsChatOpen(true);
     handleStart();
   }, [disconnect, handleStart]);
 
@@ -80,6 +84,7 @@ export function StrangerVideoChat() {
     disconnect();
     webrtc.resetPeerConnection();
     setIsBlurred(true);
+    setIsChatOpen(true);
     setSearching(true);
   }, [session.strangerId, socket, disconnect, setSearching]);
 
@@ -164,6 +169,7 @@ export function StrangerVideoChat() {
   return (
     <div className="h-screen w-full flex flex-col bg-background text-foreground transition-colors duration-300 relative overflow-hidden">
       {/* Header */}
+      {/* Header */}
       <header className="absolute top-6 inset-x-0 h-20 md:h-24 z-50 px-4 md:px-10 flex items-center justify-between pointer-events-none">
         <div className="pointer-events-auto">
           <Button
@@ -174,41 +180,6 @@ export function StrangerVideoChat() {
           >
             <X className="w-5 h-5 md:w-6 md:h-6" />
           </Button>
-        </div>
-
-        <div className="pointer-events-auto flex items-center gap-2">
-          <div className="glass px-4 md:px-8 py-2 md:py-3.5 rounded-full flex items-center gap-4 shadow-2xl border border-border/10 bg-muted/30 backdrop-blur-xl">
-            <div className="flex items-center pr-4 border-r border-border/10">
-              <motion.div
-                animate={isSearching ? { opacity: [0.3, 0.8, 0.3] } : {}}
-                transition={{ repeat: Infinity, duration: 4 }}
-                className={cn(
-                  "w-2.5 h-2.5 rounded-full",
-                  isSearching
-                    ? "bg-primary"
-                    : session.isMatched
-                      ? "bg-emerald-500"
-                      : "bg-muted-foreground/20",
-                )}
-              />
-            </div>
-            <div className="flex items-center gap-4 text-muted-foreground/60">
-              <button onClick={() => setAudioEnabled(!audioEnabled)}>
-                {audioEnabled ? (
-                  <Mic className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <MicOff className="w-4 h-4 text-red-400" />
-                )}
-              </button>
-              <button onClick={() => setVideoEnabled(!videoEnabled)}>
-                {videoEnabled ? (
-                  <VideoIcon className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <VideoOff className="w-4 h-4 text-red-400" />
-                )}
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="pointer-events-auto">
@@ -330,40 +301,97 @@ export function StrangerVideoChat() {
 
         {/* PIP + ChatBox overlay */}
         <div className="absolute inset-0 z-40 pointer-events-none">
+          {/* Mobile Chat Toggle Button */}
+          {session.isMatched && !isBlurred && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="md:hidden absolute bottom-8 left-8 z-[60] pointer-events-auto"
+            >
+              <button
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-2xl transition-all active:scale-90",
+                  isChatOpen ? "bg-white/10 text-white backdrop-blur-xl border border-white/20" : "bg-primary text-white shadow-glow"
+                )}
+              >
+                <Sparkles className={cn("w-3.5 h-3.5", isChatOpen ? "text-primary" : "text-white")} />
+                {isChatOpen ? "Close Chat" : "Open Chat"}
+              </button>
+            </motion.div>
+          )}
+
           {/* Local PIP - Positioned independently */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className={cn(
               "pointer-events-auto shrink-0 z-50 transition-all duration-500 absolute",
-              // Desktop: Solid Bottom-Left
-              "md:bottom-10 md:left-10 md:w-80 md:aspect-[4/3] md:rounded-[3rem]",
-              // Mobile: Bottom-Right, slides up when chat is open
-              "right-4 w-28 aspect-[3/4] rounded-[2rem]",
-              session.isMatched && !isBlurred ? "bottom-[360px]" : "bottom-6",
+              // Desktop: Bottom-Left
+              "md:bottom-10 md:left-10 md:w-72 lg:w-80 md:aspect-[4/3] md:rounded-[3rem]",
+              // Mobile: Bottom-Right, stacks above ChatBox when chat is open
+              "right-4 w-28 aspect-[3/4] rounded-[2rem] shadow-2xl overflow-hidden",
+              session.isMatched && !isBlurred 
+                ? (isChatOpen ? "bottom-[42vh]" : "bottom-8") 
+                : "bottom-6",
             )}
           >
             <VideoPanel
               isLocal
               isMatched={session.isMatched}
               className={cn(
-                "w-full h-full border border-white/10 shadow-glow-sm",
+                "w-full h-full border border-white/10",
                 !videoEnabled && "grayscale opacity-50",
               )}
             />
+
+            {/* PIP CONTROLS */}
+            <div className="absolute top-3 right-3 flex flex-col gap-2 z-[60]">
+              <button
+                onClick={() => setAudioEnabled(!audioEnabled)}
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-lg",
+                  audioEnabled
+                    ? "bg-black/40 text-emerald-400"
+                    : "bg-red-500 text-white",
+                )}
+              >
+                {audioEnabled ? (
+                  <Mic className="w-3.5 h-3.5" />
+                ) : (
+                  <MicOff className="w-3.5 h-3.5" />
+                )}
+              </button>
+              <button
+                onClick={() => setVideoEnabled(!videoEnabled)}
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-lg",
+                  videoEnabled
+                    ? "bg-black/40 text-emerald-400"
+                    : "bg-red-500 text-white",
+                )}
+              >
+                {videoEnabled ? (
+                  <VideoIcon className="w-3.5 h-3.5" />
+                ) : (
+                  <VideoOff className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
           </motion.div>
 
           {/* ChatBox - Positioned independently */}
-          {session.isMatched && !isBlurred && (
+          {session.isMatched && !isBlurred && isChatOpen && (
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 20, opacity: 0 }}
               className={cn(
                 "pointer-events-auto z-40 absolute transition-all duration-500",
                 // Desktop: Bottom-Right
                 "md:bottom-10 md:right-10 md:w-[460px] md:h-[650px]",
-                // Mobile: Stick to bottom
-                "bottom-0 left-0 right-0 h-[340px]",
+                // Mobile: Stick to bottom, limited height
+                "bottom-0 left-0 right-0 h-[40vh] max-h-[50vh]",
               )}
             >
               <ChatBox onReport={handleReport} />
