@@ -11,15 +11,34 @@ import { motion } from "framer-motion";
 
 export function IncomingCallModal() {
   const incomingCall = useChatStore((state) => state.incomingCall);
+  const { isMatched, isDirectCall } = useChatStore((state) => ({
+    isMatched: state.session.isMatched,
+    isDirectCall: state.session.isDirectCall,
+  }));
+
   const setIncomingCall = useChatStore((state) => state.setIncomingCall);
   const setMatched = useChatStore((state) => state.setMatched);
-  const isMatched = useChatStore((state) => state.session.isMatched);
   const router = useRouter();
   const [audioAllowed, setAudioAllowed] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Only hide if we are ALREADY in a direct call.
+  const isAlreadyInDirectCall = isMatched && isDirectCall;
+
+  // ✅ DEBUG: Log exactly why we are/aren't showing
   useEffect(() => {
-    if (incomingCall && !isMatched) {
+    if (incomingCall) {
+      console.log("[IncomingCallModal] Reactive Sync:", {
+        hasCall: true,
+        isMatched,
+        isDirectCall,
+        isAlreadyInDirectCall,
+      });
+    }
+  }, [incomingCall, isMatched, isDirectCall, isAlreadyInDirectCall]);
+
+  useEffect(() => {
+    if (incomingCall && !isAlreadyInDirectCall) {
       // ✅ Sync: Let the caller know we received the signal
       socket.emit("call-received", { to: incomingCall.from });
 
@@ -44,9 +63,9 @@ export function IncomingCallModal() {
         audioRef.current = null;
       }
     };
-  }, [incomingCall, isMatched]);
+  }, [incomingCall, isAlreadyInDirectCall]);
 
-  if (!incomingCall || isMatched) return null;
+  if (!incomingCall || isAlreadyInDirectCall) return null;
 
   const handleAccept = () => {
     if (audioRef.current) audioRef.current.pause();

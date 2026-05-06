@@ -39,11 +39,26 @@ export function SocketManager({ children }: { children: React.ReactNode }) {
     // 📞 CALL SIGNALING
     const handleCallMade = (data: any) => {
       console.log("[SocketManager] Incoming call from:", data.fromName);
+      console.log("[SocketManager] Current session state:", {
+        isMatched: storeRef.current.session.isMatched,
+        isDirectCall: storeRef.current.session.isDirectCall,
+      });
       storeRef.current.setIncomingCall(data);
     };
 
     const handleCallAccepted = (data: any) => {
       console.log("[SocketManager] Call accepted by peer");
+      const outgoing = storeRef.current.outgoingCall;
+      if (outgoing) {
+        storeRef.current.setMatched(
+          "direct-room",
+          outgoing.to,
+          outgoing.toName,
+          outgoing.toAvatar,
+          true,
+          true,
+        );
+      }
       storeRef.current.setOutgoingCall(null);
       routerRef.current.push("/chat");
     };

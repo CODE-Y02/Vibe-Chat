@@ -53,6 +53,16 @@ export function OutgoingCallModal() {
 
     socket.on("call-received", onCallReceived);
 
+    // ✅ RELIABILITY FALLBACK: If we don't get an acknowledgement in 2s, ring anyway
+    const fallbackTimer = setTimeout(() => {
+      if (!isRinging) {
+        console.log(
+          "[OutgoingCall] No acknowledgement in 2s, ringing anyway...",
+        );
+        onCallReceived();
+      }
+    }, 2000);
+
     const ring = new Audio("/ringtone2.mp3");
     ring.loop = true;
     ring.volume = 0.5;
@@ -83,6 +93,7 @@ export function OutgoingCallModal() {
     return () => {
       socket.off("call-received", onCallReceived);
       clearTimeout(timer);
+      clearTimeout(fallbackTimer);
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
