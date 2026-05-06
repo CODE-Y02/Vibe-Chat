@@ -11,10 +11,8 @@ import { motion } from "framer-motion";
 
 export function IncomingCallModal() {
   const incomingCall = useChatStore((state) => state.incomingCall);
-  const { isMatched, isDirectCall } = useChatStore((state) => ({
-    isMatched: state.session.isMatched,
-    isDirectCall: state.session.isDirectCall,
-  }));
+  const isMatched = useChatStore((state) => state.session.isMatched);
+  const isDirectCall = useChatStore((state) => state.session.isDirectCall);
 
   const setIncomingCall = useChatStore((state) => state.setIncomingCall);
   const setMatched = useChatStore((state) => state.setMatched);
