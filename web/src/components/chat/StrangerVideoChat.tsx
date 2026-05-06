@@ -46,14 +46,14 @@ export function StrangerVideoChat() {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [isBlurred, setIsBlurred] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
   const retryInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleMatch = useCallback(
     (data: { peerId: string }) => {
       setMatched("anonymous-room", data.peerId, "Stranger", "");
       setIsBlurred(true);
-      setIsChatOpen(true);
+      setIsChatMinimized(false);
       toast.success("Matched!", {
         description: "Say hello to your new vibe buddy.",
       });
@@ -63,7 +63,7 @@ export function StrangerVideoChat() {
 
   const handleStart = useCallback(() => {
     setSearching(true);
-    setIsChatOpen(true);
+    setIsChatMinimized(false);
     socket.emit("joinQueue");
     toast.info("Searching...", { description: "Finding a vibe for you." });
   }, [setSearching, socket]);
@@ -73,7 +73,7 @@ export function StrangerVideoChat() {
     disconnect();
     webrtc.resetPeerConnection();
     setIsBlurred(true);
-    setIsChatOpen(true);
+    setIsChatMinimized(false);
     handleStart();
   }, [disconnect, handleStart]);
 
@@ -84,7 +84,7 @@ export function StrangerVideoChat() {
     disconnect();
     webrtc.resetPeerConnection();
     setIsBlurred(true);
-    setIsChatOpen(true);
+    setIsChatMinimized(false);
     setSearching(true);
   }, [session.strangerId, socket, disconnect, setSearching]);
 
@@ -168,7 +168,6 @@ export function StrangerVideoChat() {
 
   return (
     <div className="h-screen w-full flex flex-col bg-background text-foreground transition-colors duration-300 relative overflow-hidden">
-      {/* Header */}
       {/* Header */}
       <header className="absolute top-6 inset-x-0 h-20 md:h-24 z-50 px-4 md:px-10 flex items-center justify-between pointer-events-none">
         <div className="pointer-events-auto">
@@ -301,38 +300,20 @@ export function StrangerVideoChat() {
 
         {/* PIP + ChatBox overlay */}
         <div className="absolute inset-0 z-40 pointer-events-none">
-          {/* Mobile Chat Toggle Button */}
-          {session.isMatched && !isBlurred && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="md:hidden absolute bottom-8 left-8 z-[60] pointer-events-auto"
-            >
-              <button
-                onClick={() => setIsChatOpen(!isChatOpen)}
-                className={cn(
-                  "flex items-center gap-2 px-6 py-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-2xl transition-all active:scale-90",
-                  isChatOpen ? "bg-white/10 text-white backdrop-blur-xl border border-white/20" : "bg-primary text-white shadow-glow"
-                )}
-              >
-                <Sparkles className={cn("w-3.5 h-3.5", isChatOpen ? "text-primary" : "text-white")} />
-                {isChatOpen ? "Close Chat" : "Open Chat"}
-              </button>
-            </motion.div>
-          )}
-
           {/* Local PIP - Positioned independently */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className={cn(
               "pointer-events-auto shrink-0 z-50 transition-all duration-500 absolute",
-              // Desktop: Bottom-Left
+              // Desktop: Always Bottom-Left
               "md:bottom-10 md:left-10 md:w-72 lg:w-80 md:aspect-[4/3] md:rounded-[3rem]",
-              // Mobile: Bottom-Right, stacks above ChatBox when chat is open
-              "right-4 w-28 aspect-[3/4] rounded-[2rem] shadow-2xl overflow-hidden",
-              session.isMatched && !isBlurred 
-                ? (isChatOpen ? "bottom-[42vh]" : "bottom-8") 
+              // Mobile: Always Left, stacks above ChatBox ONLY when maximized
+              "left-6 w-28 aspect-[3/4] rounded-[2rem] shadow-2xl overflow-hidden",
+              session.isMatched && !isBlurred
+                ? isChatMinimized
+                  ? "bottom-10"
+                  : "bottom-[42vh] md:bottom-10"
                 : "bottom-6",
             )}
           >
@@ -381,21 +362,22 @@ export function StrangerVideoChat() {
           </motion.div>
 
           {/* ChatBox - Positioned independently */}
-          {session.isMatched && !isBlurred && isChatOpen && (
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 20, opacity: 0 }}
+          {session.isMatched && !isBlurred && (
+            <div
               className={cn(
                 "pointer-events-auto z-40 absolute transition-all duration-500",
                 // Desktop: Bottom-Right
                 "md:bottom-10 md:right-10 md:w-[460px] md:h-[650px]",
                 // Mobile: Stick to bottom, limited height
-                "bottom-0 left-0 right-0 h-[40vh] max-h-[50vh]",
+                "bottom-0 left-0 right-0 h-[40vh] max-h-[50vh] md:h-auto",
               )}
             >
-              <ChatBox onReport={handleReport} />
-            </motion.div>
+              <ChatBox
+                onReport={handleReport}
+                isMinimized={isChatMinimized}
+                onToggleMinimize={setIsChatMinimized}
+              />
+            </div>
           )}
         </div>
       </main>
