@@ -306,10 +306,11 @@ export function StrangerVideoChat() {
             animate={{ scale: 1, opacity: 1 }}
             className={cn(
               "pointer-events-auto shrink-0 z-50 transition-all duration-500 absolute",
+              "bg-black shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] backdrop-blur-3xl",
               // Desktop: Always Bottom-Left
               "md:bottom-12 md:left-12 md:w-72 lg:w-80 md:aspect-[4/3] md:rounded-[3rem]",
               // Mobile: Always Left, stacks above ChatBox ONLY when maximized
-              "left-6 w-32 aspect-[3/4] rounded-[2rem] shadow-2xl overflow-hidden",
+              "left-6 w-32 aspect-[3/4] rounded-[2rem] overflow-hidden",
               session.isMatched && !isBlurred
                 ? isChatMinimized
                   ? "bottom-24" // Just above the minimized bar on mobile
@@ -321,8 +322,8 @@ export function StrangerVideoChat() {
               isLocal
               isMatched={session.isMatched}
               className={cn(
-                "w-full h-full border border-white/10",
-                !videoEnabled && "grayscale opacity-50",
+                "w-full h-full border border-white/10 bg-black",
+                !videoEnabled && "grayscale opacity-40",
               )}
             />
 
@@ -368,8 +369,8 @@ export function StrangerVideoChat() {
                 "pointer-events-auto z-40 absolute transition-all duration-500",
                 // Desktop: Bottom-Right
                 "md:bottom-12 md:right-12",
-                isChatMinimized 
-                  ? "bottom-8 right-6 w-64 h-14 md:w-80 md:h-16" 
+                isChatMinimized
+                  ? "bottom-8 right-6 w-64 h-14 md:w-80 md:h-16"
                   : "bottom-0 left-0 right-0 h-[40vh] max-h-[50vh] md:bottom-12 md:right-12 md:left-auto md:w-[460px] md:h-[650px]",
               )}
             >
